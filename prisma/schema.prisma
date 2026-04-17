@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id             String          @id @default(uuid())
+  email          String          @unique
+  name           String?
+  preferences    String?         // Stored as JSON string for now
+  cases          Case[]
+  notes          Note[]
+  tasks          Task[]
+  calendarEvents CalendarEvent[]
+  payments       Payment[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Case {
+  id             String          @id @default(uuid())
+  userId         String
+  title          String
+  clientName     String?
+  courtName      String?
+  status         String          @default("active") // active, closed, inactive
+  user           User            @relation(fields: [userId], references: [id])
+  notes          Note[]
+  tasks          Task[]
+  calendarEvents CalendarEvent[]
+  payments       Payment[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+model Note {
+  id            String   @id @default(uuid())
+  caseId        String
+  userId        String
+  rawTranscript String?
+  cleanContent  String
+  category      String   // Client Update, Next Date, Task, General Note
+  case          Case     @relation(fields: [caseId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  caseId      String
+  userId      String
+  description String
+  status      String    @default("pending") // pending, completed
+  dueDate     DateTime?
+  case        Case      @relation(fields: [caseId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model CalendarEvent {
+  id          String   @id @default(uuid())
+  caseId      String
+  userId      String
+  title       String
+  hearingDate DateTime
+  description String?
+  case        Case     @relation(fields: [caseId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Payment {
+  id        String    @id @default(uuid())
+  caseId    String
+  userId    String
+  amount    Float
+  status    String    @default("pending") // pending, paid
+  dueDate   DateTime?
+  case      Case      @relation(fields: [caseId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
