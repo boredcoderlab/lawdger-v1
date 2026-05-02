@@ -11,6 +11,7 @@ model User {
   id             String          @id @default(uuid())
   email          String          @unique
   name           String?
+  password       String?
   preferences    String?         // Stored as JSON string for now
   cases          Case[]
   notes          Note[]
