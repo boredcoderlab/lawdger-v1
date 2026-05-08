@@ -5,7 +5,7 @@ import {
   Plus, X, CheckCircle2, Trash2, Clock, AlertCircle,
   Calendar as CalendarIcon, ChevronLeft, ChevronRight,
   Pencil, Check, Briefcase, Building2, IndianRupee, FileText,
-  StickyNote,
+  StickyNote, BriefcaseBusiness
 } from "lucide-react";
 import {
   format, isPast, isToday, isTomorrow, differenceInDays,
@@ -38,9 +38,9 @@ const STATUS_OPTIONS = ["active", "inactive", "closed"] as const;
 type Status = (typeof STATUS_OPTIONS)[number];
 
 const STATUS_STYLES: Record<Status, string> = {
-  active:   "bg-green-500/10 text-green-400 border-green-500/20",
-  inactive: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-  closed:   "bg-white/5 text-muted-foreground border-white/10",
+  active:   "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
+  inactive: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+  closed:   "bg-black/5 dark:bg-white/5 text-muted-foreground border-black/10 dark:border-white/10",
 };
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -126,9 +126,9 @@ export default function CaseDetailClient({
 
   const getDueLabel = (date: Date | null) => {
     if (!date) return null;
-    if (isToday(date))    return { label: "Today",    cls: "text-orange-400" };
-    if (isTomorrow(date)) return { label: "Tomorrow", cls: "text-yellow-400" };
-    if (isPast(date))     return { label: "Overdue",  cls: "text-red-400" };
+    if (isToday(date))    return { label: "Today",    cls: "text-orange-600 dark:text-orange-400" };
+    if (isTomorrow(date)) return { label: "Tomorrow", cls: "text-amber-600 dark:text-amber-400" };
+    if (isPast(date))     return { label: "Overdue",  cls: "text-red-600 dark:text-red-400" };
     const diff = differenceInDays(date, new Date());
     if (diff < 7)         return { label: `In ${diff}d`, cls: "text-muted-foreground" };
     return { label: format(date, "d MMM"), cls: "text-muted-foreground" };
@@ -155,292 +155,315 @@ export default function CaseDetailClient({
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-5">
+    <div className="relative flex flex-col flex-1 p-8 lg:p-12 min-h-[900px] bg-transparent text-foreground font-sans z-0">
+      
+      {/* Background Shapes Specific to Case Detail */}
+      <div className="absolute top-[5%] right-[-10%] w-[50%] h-[70%] bg-primary/5 rounded-full blur-[140px] -z-10 pointer-events-none" />
 
-      {/* ── Next Hearing ─────────────────────────────────── */}
-      {nextHearing && (
-        <div>
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-400" />
-            Next Hearing
-          </h3>
-          <div className="flex items-start gap-4 rounded-2xl border border-orange-500/20 bg-gradient-to-r from-orange-500/8 to-transparent p-5 shadow-sm">
-            <div className="flex flex-col items-center justify-center rounded-xl bg-orange-500/10 border border-orange-500/20 h-14 w-14 shrink-0">
-              <span className="text-[9px] font-bold uppercase tracking-widest text-orange-400">
-                {format(new Date(nextHearing.hearingDate), "MMM")}
-              </span>
-              <span className="text-2xl font-serif font-bold text-orange-300 leading-tight">
-                {format(new Date(nextHearing.hearingDate), "d")}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0 pt-0.5">
-              <p className="font-serif text-base font-medium text-foreground leading-snug truncate">
-                {nextHearing.title}
-              </p>
-              {nextHearing.description && (
-                <p className="text-sm text-muted-foreground font-light mt-0.5 truncate">
-                  {nextHearing.description}
-                </p>
-              )}
-              <p className="text-xs text-orange-400/70 mt-1.5">
-                {format(new Date(nextHearing.hearingDate), "EEEE, d MMMM yyyy")}
-              </p>
-            </div>
+      {/* Header */}
+      <div className="flex justify-between items-end mb-10 z-10">
+          <div>
+            <h1 className="font-serif text-[2.8rem] font-bold tracking-tight text-foreground leading-none mb-2 max-w-[800px] truncate pr-4">
+              {info.title}
+            </h1>
+            <p className="text-[12px] font-bold uppercase tracking-widest text-primary/60">
+              Active Matter File
+            </p>
           </div>
-        </div>
-      )}
-
-      {/* ── Case Details ─────────────────────────────────── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-white/20" />
-            Case Details
-          </h3>
-          {!isEditing && (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent transition-colors"
-            >
-              <Pencil className="h-3 w-3" />
-              Edit
-            </button>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-white/5 bg-card/60 backdrop-blur-md shadow-xl overflow-hidden">
-          {isEditing ? (
-            <div className="p-5 space-y-3">
-              {/* Edit fields */}
-              <EditField label="Case Title">
-                <input
-                  value={info.title}
-                  onChange={(e) => setInfo({ ...info, title: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-accent transition-all"
-                />
-              </EditField>
-              <EditField label="Client">
-                <input
-                  value={info.clientName}
-                  onChange={(e) => setInfo({ ...info, clientName: e.target.value })}
-                  placeholder="e.g. Amit Gupta"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-accent transition-all"
-                />
-              </EditField>
-              <EditField label="Court / Forum">
-                <input
-                  value={info.courtName}
-                  onChange={(e) => setInfo({ ...info, courtName: e.target.value })}
-                  placeholder="e.g. High Court of Delhi"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-accent transition-all"
-                />
-              </EditField>
-              <EditField label="Agreed Fee">
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={info.agreedFee}
-                    onChange={(e) => setInfo({ ...info, agreedFee: e.target.value })}
-                    placeholder="0"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-7 pr-3 py-2.5 text-sm focus:outline-none focus:border-accent transition-all"
-                  />
-                </div>
-              </EditField>
-              <EditField label="Status">
-                <div className="flex gap-2">
-                  {STATUS_OPTIONS.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setInfo({ ...info, status: s })}
-                      className={`flex-1 py-1.5 rounded-xl text-xs font-medium capitalize border transition-colors ${
-                        info.status === s
-                          ? STATUS_STYLES[s]
-                          : "border-white/10 text-muted-foreground hover:border-white/20"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </EditField>
-              <div className="flex gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  className="flex-1 py-2 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-white/5 border border-white/10 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl bg-accent text-white text-xs font-medium hover:bg-accent/90 transition-colors disabled:opacity-60"
-                >
-                  <Check className="h-3.5 w-3.5" />
-                  {saving ? "Saving…" : "Save"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="divide-y divide-white/5">
-              <div className="px-5 py-3.5 flex items-center gap-3">
-                <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold capitalize ${STATUS_STYLES[info.status as Status] ?? STATUS_STYLES.active}`}>
-                  {info.status}
-                </span>
-              </div>
-              <InfoRow icon={<Briefcase className="h-3.5 w-3.5" />} label="Client"     value={info.clientName || null} />
-              <InfoRow icon={<Building2  className="h-3.5 w-3.5" />} label="Court"      value={info.courtName  || null} />
-              <InfoRow
-                icon={<IndianRupee className="h-3.5 w-3.5" />}
-                label="Agreed Fee"
-                value={info.agreedFee ? `₹${parseFloat(info.agreedFee).toLocaleString("en-IN")}` : null}
-              />
-            </div>
-          )}
-        </div>
+          <button
+            onClick={() => setIsEditing(!isEditing)}
+            className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-6 py-2.5 rounded-full hover:bg-primary hover:text-primary-foreground transition-all font-bold tracking-widest uppercase text-[10px] shadow-sm"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            {isEditing ? "Cancel Edit" : "Edit Profile"}
+          </button>
       </div>
 
-      {/* ── Tasks ────────────────────────────────────────── */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-white/20" />
-            Tasks
-          </h3>
-          {pendingTasks.length > 0 && (
-            <span className="text-xs bg-accent/10 text-accent border border-accent/20 rounded-full px-2 py-0.5 font-medium">
-              {pendingTasks.length} pending
-            </span>
-          )}
-        </div>
+      {/* ── OVERLAPPING PANES LAYOUT ────────────────────────────────────────── */}
+      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto">
+        
+        {/* Left: Dark Anchor (Case Profile) */}
+        <div className="w-[42%] rounded-[2.5rem] bg-gradient-to-b from-[#3a2c23] to-[#291e16] p-10 pr-20 shadow-[0_30px_60px_rgba(0,0,0,0.4)] min-h-[500px] flex flex-col z-10 border border-white/5 shrink-0">
+          
+          <div className="flex items-center gap-4 mb-8">
+             <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center text-white shadow-inner">
+                 <BriefcaseBusiness className="w-6 h-6" />
+             </div>
+             <div>
+                <h2 className="text-[1.5rem] font-serif font-bold text-[#f4efe8] dark:text-white leading-tight">Case Profile</h2>
+                <p className="text-[10px] text-[#f4efe8]/60 dark:text-white/50 uppercase tracking-widest font-bold">Details & Meta</p>
+             </div>
+          </div>
 
-        <div className="rounded-2xl border border-white/5 bg-card/60 backdrop-blur-md shadow-xl overflow-hidden">
-          {pendingTasks.length === 0 && completedTasks.length === 0 ? (
-            <p className="px-5 py-4 text-sm text-muted-foreground font-light">No tasks yet.</p>
-          ) : (
-            <div className="divide-y divide-white/5">
-              {pendingTasks.map((task) => {
-                const due = getDueLabel(task.dueDate);
-                return (
-                  <div key={task.id} className="group flex items-start gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors">
-                    <button
-                      onClick={() => toggleCaseTaskStatus(task.id, task.status, caseId)}
-                      className="mt-0.5 h-4 w-4 rounded-full border border-white/25 shrink-0 hover:border-accent transition-colors"
+          <div className="bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5 mb-8">
+              {isEditing ? (
+                <div className="space-y-4">
+                  {/* Edit fields */}
+                  <EditField label="Case Title">
+                    <input
+                      value={info.title}
+                      onChange={(e) => setInfo({ ...info, title: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner"
                     />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-light text-foreground/90 leading-snug">{task.description}</p>
-                      {due && (
-                        <p className={`text-xs mt-0.5 flex items-center gap-1 ${due.cls}`}>
-                          {due.label === "Overdue" ? <AlertCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                          {due.label}
-                        </p>
-                      )}
+                  </EditField>
+                  <EditField label="Client">
+                    <input
+                      value={info.clientName}
+                      onChange={(e) => setInfo({ ...info, clientName: e.target.value })}
+                      placeholder="e.g. Amit Gupta"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner"
+                    />
+                  </EditField>
+                  <EditField label="Court / Forum">
+                    <input
+                      value={info.courtName}
+                      onChange={(e) => setInfo({ ...info, courtName: e.target.value })}
+                      placeholder="e.g. High Court of Delhi"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner"
+                    />
+                  </EditField>
+                  <EditField label="Agreed Fee">
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-white/50">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={info.agreedFee}
+                        onChange={(e) => setInfo({ ...info, agreedFee: e.target.value })}
+                        placeholder="0"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner"
+                      />
                     </div>
+                  </EditField>
+                  <EditField label="Status">
+                    <div className="flex gap-2">
+                      {STATUS_OPTIONS.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setInfo({ ...info, status: s })}
+                          className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors border ${
+                            info.status === s
+                              ? "bg-primary border-primary text-primary-foreground shadow-md"
+                              : "border-white/10 text-white/50 hover:bg-white/5"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </EditField>
+                  <div className="flex gap-2 pt-2">
                     <button
-                      onClick={() => deleteCaseTask(task.id, caseId)}
-                      className="p-1 text-muted-foreground hover:text-red-400 rounded-full transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                      type="button"
+                      onClick={cancelEdit}
+                      className="flex-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white hover:bg-white/5 border border-white/10 transition-colors"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest hover:shadow-[0_0_15px_rgba(200,150,62,0.4)] transition-all disabled:opacity-60"
+                    >
+                      {saving ? "Saving…" : "Save Profile"}
                     </button>
                   </div>
-                );
-              })}
-              {completedTasks.length > 0 && (
-                <>
-                  {completedTasks.slice(0, 2).map((task) => (
-                    <div key={task.id} className="flex items-center gap-3 px-4 py-3 opacity-40">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-accent shrink-0" />
-                      <p className="text-sm font-light text-muted-foreground line-through truncate">{task.description}</p>
-                    </div>
-                  ))}
-                  {completedTasks.length > 2 && (
-                    <p className="px-4 py-2 text-xs text-muted-foreground/40 font-light">
-                      +{completedTasks.length - 2} more completed
-                    </p>
-                  )}
-                </>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-flex items-center rounded-lg border px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-white/5 ${
+                        info.status === 'active' ? 'text-primary border-primary/30' :
+                        info.status === 'inactive' ? 'text-amber-400 border-amber-400/30' :
+                        'text-white/40 border-white/10'
+                    }`}>
+                      {info.status}
+                    </span>
+                  </div>
+                  <InfoRow icon={<Briefcase className="h-4 w-4" />} label="Client Identifier" value={info.clientName || null} />
+                  <InfoRow icon={<Building2  className="h-4 w-4" />} label="Court / Jurisdiction" value={info.courtName  || null} />
+                  <InfoRow
+                    icon={<IndianRupee className="h-4 w-4" />}
+                    label="Agreed Fee Structure"
+                    value={info.agreedFee ? `₹${parseFloat(info.agreedFee).toLocaleString("en-IN")}` : null}
+                  />
+                </div>
               )}
-            </div>
-          )}
-          <div className="border-t border-white/5 px-4 py-3">
-            <button
-              onClick={() => setTaskModalOpen(true)}
-              className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:text-accent hover:bg-accent/5 transition-all"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add Task
-            </button>
+          </div>
+
+          {/* Quick Notes inside dark panel */}
+          <div>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#f4efe8]/50 dark:text-white/50 mb-3 ml-2">Quick Case Notes</h3>
+            {noteOpen ? (
+              <form onSubmit={handleAddNote} className="space-y-3">
+                <textarea
+                  autoFocus
+                  value={noteContent}
+                  onChange={(e) => setNoteContent(e.target.value)}
+                  rows={3}
+                  placeholder="Drop a quick thought..."
+                  className="w-full bg-black/20 dark:bg-card/80 border border-white/5 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none shadow-inner"
+                />
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => { setNoteOpen(false); setNoteContent(""); }}
+                    className="flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white rounded-xl hover:bg-white/5 transition-colors border border-transparent">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={noteSubmitting || !noteContent.trim()}
+                    className="flex-1 bg-primary/20 text-primary border border-primary/30 text-[10px] font-bold uppercase tracking-widest py-2.5 rounded-xl hover:bg-primary hover:text-primary-foreground transition-all disabled:opacity-60 shadow-sm">
+                    {noteSubmitting ? "Saving…" : "Attach Note"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => setNoteOpen(true)}
+                className="w-full flex items-center justify-center gap-2.5 px-5 py-4 rounded-xl bg-black/20 dark:bg-card/80 border border-white/5 text-[12px] font-bold uppercase tracking-widest text-white/50 hover:text-white hover:border-primary/30 transition-all group"
+              >
+                <StickyNote className="h-4 w-4 text-white/30 group-hover:text-primary transition-colors" />
+                Jot down note
+              </button>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* ── Add Note ─────────────────────────────────────── */}
-      <div>
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-3">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-white/20" />
-          Add a Note
-        </h3>
-        <div className="rounded-2xl border border-white/5 bg-card/60 backdrop-blur-md shadow-xl overflow-hidden">
-          {noteOpen ? (
-            <form onSubmit={handleAddNote} className="p-4 space-y-3">
-              <textarea
-                autoFocus
-                value={noteContent}
-                onChange={(e) => setNoteContent(e.target.value)}
-                rows={3}
-                placeholder="Write your note here…"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-all resize-none"
-              />
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setNoteOpen(false); setNoteContent(""); }}
-                  className="px-4 py-2 text-xs text-muted-foreground hover:text-foreground rounded-xl hover:bg-white/5 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={noteSubmitting || !noteContent.trim()}
-                  className="flex-1 bg-accent text-white text-xs font-medium py-2 rounded-xl hover:bg-accent/90 transition-colors disabled:opacity-60"
-                >
-                  {noteSubmitting ? "Saving…" : "Save Note"}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <button
-              onClick={() => setNoteOpen(true)}
-              className="w-full flex items-center gap-2.5 px-5 py-4 text-sm font-light text-muted-foreground hover:bg-white/5 transition-colors"
-            >
-              <StickyNote className="h-4 w-4 shrink-0 text-muted-foreground/50" />
-              Write a note…
-            </button>
-          )}
+        {/* Right: Frosted Glass Timeline/Docket Area overlapping ON TOP of the control panel */}
+        <div className="w-[64%] -ml-[6%] mt-8 rounded-[2.5rem] bg-white/95 dark:bg-card/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.1)] p-10 min-h-[600px] flex flex-col z-30 pl-[16%]">
+           
+           <div className="grid grid-cols-1 gap-12">
+               
+               {/* ── Next Hearing ─────────────────────────────────── */}
+               {nextHearing && (
+                 <div>
+                   <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3 mb-6 pb-2 border-b border-primary/10">
+                     <span className="inline-block h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
+                     Next Hearing Schedule
+                   </h3>
+                   <div className="flex items-start gap-6 rounded-[2rem] border border-orange-500/20 bg-orange-500/5 p-6 shadow-sm">
+                     <div className="flex flex-col items-center justify-center rounded-[1.5rem] bg-orange-500 text-white shadow-lg h-24 w-24 shrink-0 hover:scale-105 transition-transform">
+                       <span className="text-[12px] font-bold uppercase tracking-widest opacity-90 mb-1">
+                         {format(new Date(nextHearing.hearingDate), "MMM")}
+                       </span>
+                       <span className="text-[2.2rem] font-serif font-bold leading-none">
+                         {format(new Date(nextHearing.hearingDate), "d")}
+                       </span>
+                     </div>
+                     <div className="flex-1 min-w-0 pt-2">
+                       <p className="font-serif text-[1.8rem] font-bold text-foreground leading-none truncate mb-2 text-orange-600 dark:text-orange-400">
+                         {nextHearing.title}
+                       </p>
+                       <p className="text-[13px] text-foreground font-bold uppercase tracking-widest mb-3">
+                         {format(new Date(nextHearing.hearingDate), "EEEE, d MMMM yyyy")}
+                       </p>
+                       {nextHearing.description && (
+                         <p className="text-[14px] text-muted-foreground font-medium truncate bg-white/95 dark:bg-card/80 px-4 py-2 rounded-xl inline-block border border-primary/10">
+                           {nextHearing.description}
+                         </p>
+                       )}
+                     </div>
+                   </div>
+                 </div>
+               )}
+
+               {/* ── Case Docket (Tasks) ─────────────────────────────────── */}
+               <div>
+                 <div className="flex items-center justify-between mb-6 pb-2 border-b border-primary/10">
+                   <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3">
+                     <span className="inline-block h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                     Case Docket
+                   </h3>
+                   <button
+                     onClick={() => setTaskModalOpen(true)}
+                     className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all shadow-sm"
+                   >
+                     <Plus className="h-3 w-3" />
+                     Append Task
+                   </button>
+                 </div>
+
+                 <div className="rounded-[2rem] border border-white/50 dark:border-white/5 bg-white/70 dark:bg-card/80 shadow-inner overflow-hidden">
+                   {pendingTasks.length === 0 && completedTasks.length === 0 ? (
+                     <div className="flex flex-col items-center justify-center p-12 text-center">
+                         <CheckCircle2 className="w-12 h-12 text-primary/30 mb-4" />
+                         <p className="text-[14px] font-bold text-foreground">Docket is clear.</p>
+                         <p className="text-[12px] text-muted-foreground mt-1">No pending actions for this matter.</p>
+                     </div>
+                   ) : (
+                     <div className="divide-y divide-primary/5">
+                       {pendingTasks.map((task) => {
+                         const due = getDueLabel(task.dueDate);
+                         return (
+                           <div key={task.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-white dark:hover:bg-white/5 transition-colors cursor-pointer">
+                             <button
+                               onClick={() => toggleCaseTaskStatus(task.id, task.status, caseId)}
+                               className="h-5 w-5 rounded-full border-2 border-primary/30 shrink-0 hover:border-primary transition-colors flex items-center justify-center"
+                             />
+                             <div className="flex-1 min-w-0 pr-4 border-r border-primary/10">
+                               <p className="text-[14px] font-bold text-foreground leading-snug group-hover:text-primary transition-colors">{task.description}</p>
+                             </div>
+                             <div className="w-24 shrink-0 flex items-center justify-end">
+                                 {due && (
+                                   <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md bg-black/5 dark:bg-white/5 ${due.cls}`}>
+                                     {due.label}
+                                   </span>
+                                 )}
+                             </div>
+                             <button
+                               onClick={() => deleteCaseTask(task.id, caseId)}
+                               className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </button>
+                           </div>
+                         );
+                       })}
+                       {completedTasks.length > 0 && (
+                         <div className="bg-black/5 dark:bg-card/80 px-6 py-4">
+                           <h4 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Completed History</h4>
+                           <div className="space-y-2">
+                               {completedTasks.slice(0, 3).map((task) => (
+                                 <div key={task.id} className="flex items-center gap-3 opacity-50 hover:opacity-100 transition-opacity">
+                                   <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                                   <p className="text-[13px] font-medium text-muted-foreground line-through truncate">{task.description}</p>
+                                 </div>
+                               ))}
+                               {completedTasks.length > 3 && (
+                                 <p className="text-[10px] font-bold uppercase tracking-widest text-primary pt-2 pl-7 cursor-pointer hover:underline">
+                                   View all {completedTasks.length} completed
+                                 </p>
+                               )}
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   )}
+                 </div>
+               </div>
+
+           </div>
         </div>
+
       </div>
 
       {/* ── Add Task Modal ────────────────────────────────── */}
       {taskModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-visible relative">
-            <div className="flex justify-between items-center p-6 border-b border-white/5">
-              <h2 className="font-serif text-2xl font-medium">Add Task</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-background  rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-visible relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center p-6 bg-white dark:bg-[#1A1918] border-b border-primary/10">
+              <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-white leading-none">Append Task</h2>
               <button
                 onClick={() => { setTaskModalOpen(false); setDatePickerOpen(false); }}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-white/5"
+                className="text-foreground/40 hover:text-foreground transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddTask} className="p-6 space-y-5">
+            <form onSubmit={handleAddTask} className="p-8 space-y-6">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-                  Description
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Action Item Description
                 </label>
                 <input
                   type="text"
@@ -448,45 +471,45 @@ export default function CaseDetailClient({
                   autoFocus
                   value={newTask.desc}
                   onChange={(e) => setNewTask({ ...newTask, desc: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
+                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
                   placeholder="e.g. Draft reply affidavit"
                 />
               </div>
 
               <div className="relative">
-                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-                  Due Date <span className="normal-case font-normal tracking-normal text-muted-foreground/60">(optional)</span>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Target Deadline <span className="normal-case font-medium tracking-normal text-primary/60">(optional)</span>
                 </label>
                 <button
                   type="button"
                   onClick={() => setDatePickerOpen(!datePickerOpen)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent transition-all text-left flex justify-between items-center"
+                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary transition-all text-left flex justify-between items-center shadow-sm"
                 >
-                  <span className={newTask.due ? "text-foreground" : "text-muted-foreground/60"}>
+                  <span className={newTask.due ? "text-foreground font-bold" : "text-muted-foreground/60"}>
                     {newTask.due
-                      ? format(parse(newTask.due, "yyyy-MM-dd", new Date()), "d MMM yyyy")
-                      : "No date set"}
+                      ? format(parse(newTask.due, "yyyy-MM-dd", new Date()), "d MMMM yyyy")
+                      : "Open Deadline"}
                   </span>
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
                 </button>
 
                 {datePickerOpen && (
-                  <div className="absolute top-full left-0 mt-2 p-4 bg-card border border-white/10 rounded-2xl shadow-2xl z-50 w-[280px] backdrop-blur-3xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <button type="button" onClick={() => setPickerMonth(subMonths(pickerMonth, 1))} className="p-1 hover:bg-white/10 rounded-full transition-colors">
+                  <div className="absolute top-full left-0 mt-2 p-5 bg-card border border-white/10 rounded-[1.5rem] shadow-2xl z-50 w-[300px] backdrop-blur-3xl">
+                    <div className="flex justify-between items-center mb-5 border-b border-primary/10 pb-3">
+                      <button type="button" onClick={() => setPickerMonth(subMonths(pickerMonth, 1))} className="p-1.5 hover:bg-white/40 rounded-full transition-colors bg-white/5">
                         <ChevronLeft className="h-4 w-4" />
                       </button>
-                      <span className="font-serif text-sm font-medium">{format(pickerMonth, "MMMM yyyy")}</span>
-                      <button type="button" onClick={() => setPickerMonth(addMonths(pickerMonth, 1))} className="p-1 hover:bg-white/10 rounded-full transition-colors">
+                      <span className="font-serif text-[16px] font-bold">{format(pickerMonth, "MMMM yyyy")}</span>
+                      <button type="button" onClick={() => setPickerMonth(addMonths(pickerMonth, 1))} className="p-1.5 hover:bg-white/40 rounded-full transition-colors bg-white/5">
                         <ChevronRight className="h-4 w-4" />
                       </button>
                     </div>
-                    <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                    <div className="grid grid-cols-7 gap-1 text-center mb-3">
                       {["S","M","T","W","T","F","S"].map((d, i) => (
-                        <div key={i} className="text-[10px] font-medium text-muted-foreground">{d}</div>
+                        <div key={i} className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{d}</div>
                       ))}
                     </div>
-                    <div className="grid grid-cols-7 gap-1">
+                    <div className="grid grid-cols-7 gap-1 text-[13px] font-medium">
                       {eachDayOfInterval({
                         start: startOfWeek(startOfMonth(pickerMonth)),
                         end:   endOfWeek(endOfMonth(pickerMonth)),
@@ -498,8 +521,8 @@ export default function CaseDetailClient({
                             key={i}
                             type="button"
                             onClick={() => { setNewTask({ ...newTask, due: format(day, "yyyy-MM-dd") }); setDatePickerOpen(false); }}
-                            className={`p-2 rounded-full text-xs transition-colors flex items-center justify-center ${
-                              selected ? "bg-accent text-white font-medium" : inMonth ? "hover:bg-white/10 text-foreground" : "text-muted-foreground/30"
+                            className={`p-2 rounded-full h-9 flex items-center justify-center transition-colors ${
+                              selected ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(200,150,62,0.4)]" : inMonth ? "hover:bg-primary/10 text-foreground" : "text-muted-foreground/30 hover:bg-white/5"
                             }`}
                           >
                             {format(day, "d")}
@@ -511,13 +534,15 @@ export default function CaseDetailClient({
                 )}
               </div>
 
-              <button
-                type="submit"
-                disabled={taskSubmitting}
-                className="w-full mt-2 bg-accent text-white font-medium py-3 rounded-xl hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20 disabled:opacity-60"
-              >
-                {taskSubmitting ? "Saving…" : "Save Task"}
-              </button>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={taskSubmitting}
+                  className="w-full bg-primary text-primary-foreground font-bold py-4 rounded-xl hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-[1.01] transition-all uppercase tracking-widest text-[12px] disabled:opacity-60"
+                >
+                  {taskSubmitting ? "Writing to Docket…" : "Add to Docket"}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -531,7 +556,7 @@ export default function CaseDetailClient({
 function EditField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+      <label className="block text-[9px] font-bold uppercase tracking-widest text-[#f4efe8]/50 dark:text-white/50 mb-1.5 ml-1">
         {label}
       </label>
       {children}
@@ -549,14 +574,16 @@ function InfoRow({
   value: string | null | undefined;
 }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-3.5">
-      <span className="text-muted-foreground/50 shrink-0">{icon}</span>
+    <div className="flex items-center gap-4 bg-white/5 rounded-2xl px-5 py-4 border border-white/5">
+      <div className="w-10 h-10 rounded-full bg-white/40 flex items-center justify-center text-white/70 shadow-inner shrink-0">
+          {icon}
+      </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50 mb-0.5">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-[#f4efe8]/50 dark:text-white/50 mb-0.5">
           {label}
         </p>
-        <p className="text-sm font-light text-foreground/90 truncate">
-          {value ?? <span className="text-muted-foreground/30 italic text-xs">—</span>}
+        <p className="text-[14px] font-bold text-[#f4efe8] dark:text-white truncate">
+          {value ?? <span className="text-white/30 italic text-[12px]">—</span>}
         </p>
       </div>
     </div>

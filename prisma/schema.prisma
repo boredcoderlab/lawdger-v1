@@ -28,6 +28,7 @@ model Case {
   title          String
   clientName     String?
   courtName      String?
+  agreedFee      Float?
   status         String          @default("active") // active, closed, inactive
   user           User            @relation(fields: [userId], references: [id])
   notes          Note[]
@@ -57,6 +58,7 @@ model Task {
   userId      String
   description String
   status      String    @default("pending") // pending, completed
+  assignee    String    @default("Unassigned")
   dueDate     DateTime?
   case        Case      @relation(fields: [caseId], references: [id])
   user        User      @relation(fields: [userId], references: [id])

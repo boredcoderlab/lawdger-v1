@@ -55,39 +55,16 @@ export default async function DashboardPage() {
   if (totalTasks > 0) summaryParts.push(`${totalTasks} pending task${totalTasks > 1 ? "s" : ""}`);
 
   return (
-    <div className="flex flex-col">
-      <div className="px-8 py-6 border-b border-white/5 flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-            {todayLabel}
-          </p>
-          <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground leading-tight">
-            {greeting}, {userName}.
-          </h1>
-          <p className="text-sm text-muted-foreground font-light mt-1.5">
-            {summaryParts.join(" · ")}
-          </p>
-        </div>
-        <div className="flex items-center gap-3 mt-1">
-          <button className="h-10 w-10 flex items-center justify-center rounded-xl border border-white/5 bg-card/60 text-muted-foreground hover:text-foreground transition-colors">
-            <Bell className="h-5 w-5" />
-          </button>
-          <button className="h-10 w-10 flex items-center justify-center rounded-xl border border-accent/20 bg-accent/10 text-accent hover:bg-accent/20 transition-colors">
-            <Scale className="h-5 w-5" />
-          </button>
-        </div>
-      </div>
-      <div className="p-8">
-        <DashboardClient
-          userName={userName}
-          pendingTasks={pendingTasks}
-          todayEvents={todayEvents}
-          upcomingEvents={upcomingEvents}
-          allCases={allCases}
-          totalCases={totalCases}
-          totalTasks={totalTasks}
-        />
-      </div>
+    <div className="flex flex-col min-h-screen">
+      <DashboardClient
+        userName={userName}
+        pendingTasks={pendingTasks}
+        todayEvents={todayEvents}
+        upcomingEvents={upcomingEvents}
+        allCases={allCases}
+        totalCases={totalCases}
+        totalTasks={totalTasks}
+      />
     </div>
   );
 }

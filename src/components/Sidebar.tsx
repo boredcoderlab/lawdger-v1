@@ -4,91 +4,88 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import { Home, Briefcase, Calendar, CheckSquare, Settings, IndianRupee, Sparkles, Search, LogOut } from 'lucide-react';
-
-import ThemeToggle from '@/components/ThemeToggle';
+import { useTheme } from 'next-themes';
+import { Home, LayoutGrid, Calendar, Users, Settings, LogOut, CheckSquare, Inbox, Sun, Moon } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Legal Brain', href: '/chat', icon: Sparkles },
-  { name: 'Cases', href: '/cases', icon: Briefcase },
-  { name: 'Tasks', href: '/tasks', icon: CheckSquare },
-  { name: 'Finances', href: '/finances', icon: IndianRupee },
+  { name: 'Inbox', href: '/inbox', icon: Inbox },
+  { name: 'Cases', href: '/cases', icon: LayoutGrid },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
+  { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
 
   async function handleSignOut() {
     await signOut({ redirectTo: '/' });
   }
 
   return (
-    <div className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-white/5 bg-card/60 backdrop-blur-xl z-20 shadow-[10px_0_30px_rgba(0,0,0,0.2)]">
-      <div className="flex h-20 items-center px-6 border-b border-white/5 shrink-0">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="relative h-12 w-12 rounded-xl overflow-hidden shadow-sm border border-white/10">
-            <Image src="/lawdger-logo.png" alt="Lawdger" fill className="object-cover" priority />
-          </div>
-          <span className="font-serif text-2xl font-bold tracking-tight text-foreground">Lawdger</span>
-        </Link>
-      </div>
-
-      <div className="px-6 py-6 shrink-0">
-        <div className="relative flex items-center">
-          <Search className="absolute left-4 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="w-full bg-black/20 border border-white/5 rounded-full pl-10 pr-4 py-2.5 text-sm font-light focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-all placeholder:text-muted-foreground/50"
-          />
+    <div className="sticky top-4 left-4 flex h-[calc(100vh-2rem)] w-[90px] shrink-0 flex-col items-center py-8 ml-4 my-4 z-40 bg-[#291e16]/95 backdrop-blur-3xl rounded-[2.5rem] shadow-[15px_0_50px_rgba(0,0,0,0.15)] border border-white/10 transition-colors">
+      {/* Logo */}
+      <Link href="/dashboard" className="flex items-center justify-center mb-10 group">
+        <div className="relative h-12 w-12 drop-shadow-lg group-hover:scale-105 transition-transform">
+          <Image src="/lawdger-logo.png" alt="Lawdger Logo" fill className="object-contain filter brightness-125 contrast-125" priority />
         </div>
-      </div>
+      </Link>
 
-      <div className="flex flex-1 flex-col overflow-y-auto pb-4">
-        <nav className="flex-1 space-y-1.5 px-4">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+      {/* Nav Icons */}
+      <nav className="flex flex-1 flex-col items-center space-y-5 w-full">
+        {navigation.map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className="relative group flex items-center justify-center w-full"
+              title={item.name}
+            >
+              <div
+                className={`flex h-[50px] w-[50px] items-center justify-center rounded-[1.2rem] transition-all duration-300 ${
                   isActive
-                    ? 'bg-accent/10 text-accent border border-accent/20 shadow-[0_0_12px_rgba(243,225,215,0.08)]'
-                    : 'text-muted-foreground hover:bg-white/5 hover:text-foreground border border-transparent'
+                    ? 'bg-primary text-primary-foreground shadow-[0_0_25px_rgba(200,150,62,0.35)] scale-105'
+                    : 'bg-transparent text-white/50 hover:text-white hover:bg-white/10'
                 }`}
               >
                 <item.icon
-                  className={`mr-3 h-5 w-5 flex-shrink-0 transition-colors ${
-                    isActive ? 'text-accent' : 'text-muted-foreground group-hover:text-foreground'
+                  className={`h-[22px] w-[22px] transition-all ${
+                    isActive ? 'opacity-100' : 'opacity-80 group-hover:opacity-100 group-hover:scale-110'
                   }`}
-                  aria-hidden="true"
+                  strokeWidth={isActive ? 2.5 : 2}
                 />
-                {item.name}
-                {isActive && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-accent" />
+                {item.name === 'Inbox' && (
+                  <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-red-500 ring-2 ring-[#291e16]" />
                 )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+              </div>
+            </Link>
+          );
+        })}
+      </nav>
 
-      <div className="shrink-0 space-y-2 border-t border-white/5 px-4 py-4">
-        <ThemeToggle placement="inline" />
+      {/* Bottom Actions */}
+      <div className="mt-auto flex flex-col items-center space-y-4 w-full">
         <button
-          type="button"
-          onClick={handleSignOut}
-          className="group flex w-full items-center rounded-xl border border-transparent px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          title="Toggle Theme"
+          className="group flex h-[50px] w-[50px] items-center justify-center rounded-[1.2rem] transition-all duration-300 bg-transparent text-white/50 hover:text-white hover:bg-white/10"
         >
-          <LogOut
-            className="mr-3 h-5 w-5 flex-shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-            aria-hidden="true"
-          />
-          Sign Out
+          {theme === 'dark' ? (
+            <Sun className="h-[22px] w-[22px] transition-all group-hover:scale-110" strokeWidth={2} />
+          ) : (
+            <Moon className="h-[22px] w-[22px] transition-all group-hover:scale-110" strokeWidth={2} />
+          )}
+        </button>
+        
+        <button
+          onClick={handleSignOut}
+          title="Sign Out"
+          className="group flex h-[50px] w-[50px] items-center justify-center rounded-[1.2rem] transition-all duration-300 bg-transparent text-white/50 hover:text-red-400 hover:bg-red-500/10"
+        >
+          <LogOut className="h-[22px] w-[22px] transition-all group-hover:scale-110" strokeWidth={2} />
         </button>
       </div>
     </div>

@@ -55,7 +55,6 @@ export async function createCase(data: {
       title: data.title,
       clientName: data.clientName ?? null,
       courtName: data.courtName ?? null,
-      agreedFee: data.agreedFee ?? null,
       status: "active",
     },
   });
@@ -80,7 +79,6 @@ export async function updateCaseDetails(
       ...(data.title !== undefined && { title: data.title }),
       ...(data.clientName !== undefined && { clientName: data.clientName }),
       ...(data.courtName !== undefined && { courtName: data.courtName }),
-      ...(data.agreedFee !== undefined && { agreedFee: data.agreedFee }),
       ...(data.status !== undefined && { status: data.status }),
     },
   });

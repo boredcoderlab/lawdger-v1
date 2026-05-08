@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Old one-off utility scripts (CommonJS):
+    "refine.js",
+    "replace.js",
+    "replace_mockup.js",
   ]),
 ]);
 

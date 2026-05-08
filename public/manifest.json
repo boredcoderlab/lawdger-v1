@@ -1,0 +1,37 @@
+{
+  "name": "Lawdger",
+  "short_name": "Lawdger",
+  "description": "Premium Legal Practice Management",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#e3d5c8",
+  "theme_color": "#291e16",
+  "icons": [
+    {
+      "src": "/lawdger-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/lawdger-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "share_target": {
+    "action": "/inbox",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "file",
+          "accept": ["image/*", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+        }
+      ]
+    }
+  }
+}

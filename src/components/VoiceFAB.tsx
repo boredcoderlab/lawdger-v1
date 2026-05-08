@@ -6,21 +6,25 @@ export default function VoiceFAB() {
   const [isOpen, setIsOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<{caseName: string; cleanNote: string; category: string; date?: string} | null>(null);
   
   // Mock waveform animation
   const [bars, setBars] = useState<number[]>(Array(10).fill(10));
   
   useEffect(() => {
     let interval: NodeJS.Timeout;
+    let tm: NodeJS.Timeout;
     if (isRecording) {
       interval = setInterval(() => {
         setBars(Array(10).fill(0).map(() => Math.floor(Math.random() * 40) + 10));
       }, 100);
     } else {
-      setBars(Array(10).fill(10));
+      tm = setTimeout(() => setBars(Array(10).fill(10)), 0);
     }
-    return () => clearInterval(interval);
+    return () => {
+        clearInterval(interval);
+        clearTimeout(tm);
+    };
   }, [isRecording]);
 
   const handleRecordToggle = async () => {

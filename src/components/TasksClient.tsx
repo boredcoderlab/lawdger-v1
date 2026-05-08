@@ -2,16 +2,13 @@
 
 import { useState } from 'react';
 import {
-  CheckCircle2, Clock, AlertCircle, Plus, SortDesc, SortAsc,
-  X, Trash2, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Link2,
+  CheckCircle2, Clock, Plus, X, Trash2, Calendar as CalendarIcon, MoreHorizontal, Inbox, Users, Briefcase, FileText, Activity
 } from 'lucide-react';
 import Link from 'next/link';
 import {
-  format, isPast, isToday, isTomorrow, differenceInDays, parse,
-  subMonths, addMonths, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
-  eachDayOfInterval, isSameMonth,
+  format, isPast, isToday, isTomorrow, differenceInDays
 } from 'date-fns';
-import { createTask, updateTaskStatus, deleteTask } from '@/actions/taskActions';
+import { createTask, updateTaskStatus, deleteTask, updateTaskAssignee } from '@/actions/taskActions';
 
 type Task = {
   id: string;
@@ -20,9 +17,12 @@ type Task = {
   dueDate: Date | null;
   createdAt: Date;
   case: { id: string; title: string } | null;
+  assignee?: string; 
 };
 
 type CaseOption = { id: string; title: string };
+
+const ASSIGNMENT_COLS = ["My Plate", "Associates", "Clerks & Filings"];
 
 export default function TasksClient({
   initialTasks,
@@ -31,56 +31,53 @@ export default function TasksClient({
   initialTasks: Task[];
   cases: CaseOption[];
 }) {
-  const [filter, setFilter] = useState<'All' | 'Pending' | 'Completed'>('All');
-  const [sortAscending, setSortAscending] = useState(true);
+  const [tasks, setTasks] = useState<Task[]>(
+    initialTasks.map((t) => ({
+      ...t,
+      assignee: t.assignee || 'Unassigned'
+    }))
+  );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTask, setNewTask] = useState({
     desc: '',
     due: format(new Date(), 'yyyy-MM-dd'),
     caseId: cases[0]?.id ?? '',
+    assignee: 'Unassigned',
   });
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [pickerMonth, setPickerMonth] = useState(new Date());
 
   const openModal = () => {
-    setNewTask({ desc: '', due: format(new Date(), 'yyyy-MM-dd'), caseId: cases[0]?.id ?? '' });
-    setPickerMonth(new Date());
+    setNewTask({ desc: '', due: format(new Date(), 'yyyy-MM-dd'), caseId: cases[0]?.id ?? '', assignee: 'Unassigned' });
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setIsDatePickerOpen(false);
-  };
-
-  const filteredTasks = initialTasks
-    .filter((task) => {
-      if (filter === 'Pending') return task.status === 'pending';
-      if (filter === 'Completed') return task.status === 'completed';
-      return true;
-    })
-    .sort((a, b) => {
-      const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-      const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-      if (aDate === bDate) return 0;
-      return sortAscending ? aDate - bDate : bDate - aDate;
-    });
-
-  const handleToggleStatus = async (id: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'pending' ? 'completed' : 'pending';
-    await updateTaskStatus(id, newStatus as 'pending' | 'completed');
   };
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTask.caseId) return;
+    
+    const tempTask: Task = {
+      id: Math.random().toString(),
+      description: newTask.desc,
+      status: 'pending',
+      dueDate: newTask.due ? new Date(newTask.due) : null,
+      createdAt: new Date(),
+      case: cases.find(c => c.id === newTask.caseId) || null,
+      assignee: newTask.assignee,
+    };
+    
+    setTasks([tempTask, ...tasks]);
+    closeModal();
+    
     await createTask({
       caseId: newTask.caseId,
       description: newTask.desc,
       dueDate: newTask.due ? new Date(newTask.due) : undefined,
+      assignee: newTask.assignee,
     });
-    closeModal();
   };
 
   const getDueLabel = (date: Date | null) => {
@@ -90,228 +87,383 @@ export default function TasksClient({
     if (isPast(date)) return 'Overdue';
     const diff = differenceInDays(date, new Date());
     if (diff < 7) return `In ${diff} days`;
-    return format(date, 'MMM d, yyyy');
+    return format(date, 'MMM d');
+  };
+
+  const getDueColor = (date: Date | null) => {
+    if (!date) return 'text-muted-foreground bg-muted/50 border-transparent';
+    if (isPast(date) && !isToday(date)) return 'text-red-600 dark:text-red-400 bg-red-500/10 border-red-500/20';
+    if (isToday(date)) return 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20';
+    return 'text-muted-foreground bg-muted/50 border-border/50';
+  };
+
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    e.dataTransfer.setData("taskId", taskId);
+    setTimeout(() => {
+        const el = document.getElementById(`task-${taskId}`);
+        if(el) el.classList.add('opacity-40', 'scale-95');
+    }, 0);
+  };
+  
+  const handleDragEnd = (e: React.DragEvent, taskId: string) => {
+    const el = document.getElementById(`task-${taskId}`);
+    if(el) el.classList.remove('opacity-40', 'scale-95');
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); 
+  };
+  
+  const handleDragEnter = (e: React.DragEvent, colName: string) => {
+      e.preventDefault();
+      const colEl = document.getElementById(`col-${colName.replace(/ /g, '-')}`);
+      if(colEl) colEl.classList.add('bg-primary/5', 'border-primary/30');
+  };
+  
+  const handleDragLeave = (e: React.DragEvent, colName: string) => {
+      e.preventDefault();
+      const colEl = document.getElementById(`col-${colName.replace(/ /g, '-')}`);
+      if(colEl) colEl.classList.remove('bg-primary/5', 'border-primary/30');
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetColumn: string) => {
+    e.preventDefault();
+    const colEl = document.getElementById(`col-${targetColumn.replace(/ /g, '-')}`);
+    if(colEl) colEl.classList.remove('bg-primary/5', 'border-primary/30');
+    
+    const taskId = e.dataTransfer.getData("taskId");
+    
+    setTasks(prev => 
+      prev.map(t => t.id === taskId ? { ...t, assignee: targetColumn } : t)
+    );
+    
+    try {
+      await updateTaskAssignee(taskId, targetColumn);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, taskId: string) => {
+     e.stopPropagation();
+     setTasks(tasks.filter(t => t.id !== taskId));
+     await deleteTask(taskId);
   };
 
   if (cases.length === 0) {
     return (
-      <>
-        <div className="relative border-b border-white/5 bg-card/60 backdrop-blur-xl px-10 py-8 shrink-0 z-10 shadow-sm">
-          <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground mb-2">Master Task List</h1>
-          <p className="text-muted-foreground text-lg font-light">Your actionable items across all cases.</p>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center p-12">
-          <p className="text-muted-foreground font-light">Tasks belong to cases. Create a case first to add tasks.</p>
-          <Link href="/cases" className="bg-accent text-accent-foreground px-6 py-2.5 rounded-full text-sm font-medium hover:scale-105 transition-transform">
-            Go to Cases →
-          </Link>
-        </div>
-      </>
+      <div className="flex flex-col items-center justify-center min-h-screen text-center p-12 bg-background  text-foreground">
+        <Briefcase className="w-16 h-16 text-primary opacity-30 mb-6" />
+        <h2 className="font-serif text-[2rem] font-bold mb-3">Workspace Empty</h2>
+        <p className="text-muted-foreground text-[15px] font-medium max-w-md leading-relaxed">Create a master case file first to begin delegating assignments and orchestrating your team.</p>
+        <Link href="/cases" className="mt-8 px-8 py-3.5 bg-primary text-primary-foreground rounded-full text-[13px] font-bold shadow-lg hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-105 transition-all tracking-wide uppercase">
+          Initialize First Case
+        </Link>
+      </div>
     );
   }
 
+  const overdueCount = tasks.filter(t => t.dueDate && isPast(t.dueDate) && !isToday(t.dueDate)).length;
+  const pendingCount = tasks.length;
+  const todayCount = tasks.filter(t => t.dueDate && isToday(t.dueDate)).length;
+  const unassignedTasks = tasks.filter(t => t.assignee === "Unassigned");
+
   return (
-    <>
-      <div className="relative border-b border-white/5 bg-card/60 backdrop-blur-xl px-10 py-8 shrink-0 z-10 shadow-sm">
-        <div className="flex justify-between items-end">
-          <div>
-            <h1 className="font-serif text-4xl font-semibold tracking-tight text-foreground mb-2">Master Task List</h1>
-            <p className="text-muted-foreground text-lg font-light">Your actionable items across all cases.</p>
+    <div className="flex flex-col min-h-screen bg-background  text-foreground relative selection:bg-primary/30 p-8 lg:p-12 overflow-x-hidden">
+      
+      {/* Background Ambience */}
+      <div className="fixed top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0"></div>
+      
+      {/* ── OVERLAPPING PANES LAYOUT ────────────────────────────────────────── */}
+      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto">
+        
+        {/* Left: Dark Command Center */}
+        <div className="w-[28%] rounded-[2.5rem] bg-gradient-to-b from-[#3a2c23] to-[#291e16] p-8 shadow-[0_30px_60px_rgba(0,0,0,0.4)] h-full flex flex-col z-10 border border-white/5 shrink-0 relative overflow-hidden">
+          
+          <div className="flex items-center justify-between mb-8 shrink-0">
+             <div className="flex items-center gap-4">
+               <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center text-white shadow-inner">
+                  <Activity className="w-6 h-6" />
+               </div>
+               <div>
+                  <h1 className="font-serif text-[1.5rem] font-serif font-bold text-[#f4efe8] dark:text-white leading-none">Matrix</h1>
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-primary/80 mt-1.5">Orchestration & Delegation</p>
+               </div>
+             </div>
+             <button
+                onClick={openModal}
+                className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 px-4 py-2 rounded-xl transition-all font-bold tracking-wider uppercase text-[10px] flex items-center gap-2 shadow-sm"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Task
+              </button>
           </div>
-          <button
-            onClick={openModal}
-            className="flex items-center gap-2 bg-accent text-accent-foreground px-6 py-3 rounded-full hover:scale-105 transition-transform font-medium shadow-[0_0_20px_rgba(243,225,215,0.2)]"
-          >
-            <Plus className="h-4 w-4" />
-            Add Task
-          </button>
-        </div>
-      </div>
 
-      <div className="p-8 relative z-10">
-        <div className="max-w-6xl mx-auto space-y-8">
-
-          <div className="flex flex-col sm:flex-row justify-between gap-4 items-center">
-            <div className="flex bg-card/60 backdrop-blur-xl border border-white/10 rounded-full p-1.5 shadow-sm">
-              {(['All', 'Pending', 'Completed'] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-5 py-2 rounded-full text-sm transition-colors ${filter === f ? 'bg-white/10 font-medium text-foreground shadow-sm' : 'font-light text-muted-foreground hover:text-foreground'}`}
-                >
-                  {f}{f === 'All' ? ' Tasks' : ''}
-                </button>
-              ))}
+          {/* Metrics Ribbon inside the dark pane */}
+          <div className="grid grid-cols-1 gap-4 mb-10 shrink-0">
+            <div className="bg-white/5 rounded-3xl p-6 border border-white/10 shadow-inner backdrop-blur-md">
+              <span className="text-[11px] uppercase tracking-[0.2em] text-white/30 font-bold">Total Pending</span>
+              <p className="text-[2.5rem] font-serif font-bold text-[#f4efe8] mt-1">{tasks.filter(t => t.status !== 'done').length}</p>
             </div>
-            <button
-              onClick={() => setSortAscending(!sortAscending)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-card/60 backdrop-blur-xl border border-white/10 rounded-full text-foreground hover:bg-white/5 transition-colors text-sm font-medium"
-            >
-              {sortAscending ? <SortAsc className="h-4 w-4 text-accent" /> : <SortDesc className="h-4 w-4 text-accent" />}
-              Sort by Due Date
-            </button>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-[#3A2E26]/50 rounded-3xl p-5 border border-white/5 backdrop-blur-sm">
+                <span className="text-[10px] uppercase tracking-widest text-orange-200/50 font-bold">Due Today</span>
+                <p className="text-[1.6rem] font-bold text-orange-400 mt-1">{tasks.filter(t => t.dueDate && isToday(t.dueDate)).length}</p>
+              </div>
+              <div className="bg-[#3A2E26]/50 rounded-3xl p-5 border border-white/5 backdrop-blur-sm">
+                <span className="text-[10px] uppercase tracking-widest text-red-200/50 font-bold">Overdue</span>
+                <p className="text-[1.6rem] font-bold text-red-400 mt-1">{tasks.filter(t => t.dueDate && isPast(t.dueDate) && !isToday(t.dueDate) && t.status !== 'done').length}</p>
+              </div>
+            </div>
           </div>
 
-          <div className="rounded-3xl border border-white/5 bg-card/60 backdrop-blur-xl overflow-hidden shadow-2xl">
-            {filteredTasks.length === 0 ? (
-              <div className="p-12 text-center text-muted-foreground font-light">No tasks found.</div>
-            ) : (
-              <div className="divide-y divide-white/5">
-                {filteredTasks.map((task) => {
-                  const dueLabel = getDueLabel(task.dueDate);
-                  const isOverdue = dueLabel === 'Overdue' && task.status !== 'completed';
+          {/* Unassigned Tasks Hopper */}
+          <div 
+             id="col-Unassigned" 
+             className="flex-1 bg-black/20 border border-white/10 rounded-3xl p-5 overflow-y-auto scrollbar-hide flex flex-col gap-3 transition-colors"
+             onDragOver={handleDragOver}
+             onDragEnter={(e) => handleDragEnter(e, "Unassigned")}
+             onDragLeave={(e) => handleDragLeave(e, "Unassigned")}
+             onDrop={(e) => handleDrop(e, "Unassigned")}
+          >
+             <div className="flex items-center gap-2 mb-4 px-2">
+                <Inbox className="w-4 h-4 text-white/50" />
+                <h3 className="font-bold text-[12px] uppercase tracking-widest text-white/70">Inbox Tray ({tasks.filter(t => t.assignee === "Unassigned").length})</h3>
+             </div>
 
-                  return (
-                    <div
-                      key={task.id}
-                      className={`p-6 transition-all hover:bg-white/5 flex items-start gap-5 group ${task.status === 'completed' ? 'opacity-50' : ''}`}
-                    >
-                      <button
-                        onClick={() => handleToggleStatus(task.id, task.status)}
-                        className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors shadow-sm ${task.status === 'completed' ? 'bg-accent border-accent text-accent-foreground' : 'border-white/20 bg-background group-hover:border-accent text-transparent group-hover:text-accent/50'}`}
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                      </button>
-
-                      <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                          <p className={`font-medium text-lg transition-colors ${task.status === 'completed' ? 'text-muted-foreground line-through' : 'text-foreground group-hover:text-accent'}`}>
-                            {task.description}
-                          </p>
-                          <div className="flex items-center gap-3 mt-2">
-                            {task.case && (
-                              <>
-                                <Link href={`/cases/${task.case.id}`} className="flex items-center gap-1 text-sm font-light text-muted-foreground hover:text-accent transition-colors underline decoration-white/20 underline-offset-4">
-                                  <Link2 className="h-3 w-3" />
-                                  {task.case.title}
-                                </Link>
-                                <span className="w-1 h-1 rounded-full bg-border" />
-                              </>
-                            )}
-                            <span className="text-xs font-light text-muted-foreground">
-                              {format(new Date(task.createdAt), 'MMM d, yyyy')}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 flex items-center gap-4">
-                          {task.dueDate && (
-                            <span className={`flex items-center gap-1.5 text-sm font-medium ${isOverdue ? 'text-red-400' : dueLabel === 'Today' ? 'text-orange-400' : 'text-muted-foreground'}`}>
-                              {isOverdue ? <AlertCircle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
-                              {dueLabel}
-                            </span>
-                          )}
-                          <button
-                            onClick={() => deleteTask(task.id)}
-                            className="p-2 text-muted-foreground hover:text-red-400 hover:bg-red-400/10 rounded-full transition-colors opacity-0 group-hover:opacity-100"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
+             {tasks.filter(t => t.assignee === "Unassigned").map((task) => (
+                <div 
+                  key={task.id}
+                  id={`task-${task.id}`}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, task.id)}
+                  onDragEnd={(e) => handleDragEnd(e, task.id)}
+                  className="bg-[#291e16] rounded-xl p-4 shadow-sm border border-white/10 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:-translate-y-1 transition-all duration-200 group relative overflow-hidden shrink-0"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="bg-white/10 px-2 py-0.5 rounded-md">
+                      <span className="font-serif text-[11px] font-semibold italic text-[#f4efe8]/80 block truncate max-w-[150px]">
+                        {task.case?.title || 'General'}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  </div>
+                  <p className="font-medium text-[13px] leading-snug mb-3 text-[#f4efe8]/90 line-clamp-2">{task.description}</p>
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border ${getDueColor(task.dueDate)} shadow-sm`}>
+                      <Clock className="w-3 h-3" />
+                      {getDueLabel(task.dueDate)}
+                    </div>
+                    <button onClick={(e) => handleDelete(e, task.id)} className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+             ))}
           </div>
         </div>
+
+        {/* Right: Assignment Matrix Grid */}
+        <div className="flex-1 -ml-[4%] mt-8 rounded-[2.5rem] bg-white/95 dark:bg-card/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.1)] flex flex-col z-30 overflow-hidden">
+           
+           <div className="flex items-center justify-between border-b border-white/20 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-md px-10 py-6 shrink-0">
+              <div className="flex items-center gap-4">
+                <h2 className="font-serif text-[1.6rem] font-serif font-bold text-foreground">Active Assignments</h2>
+                <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full border border-primary/20">LIVE</span>
+              </div>
+              <button
+                onClick={openModal}
+                className="bg-primary text-primary-foreground px-5 py-2.5 rounded-xl transition-all font-bold tracking-wider uppercase text-[11px] flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95"
+              >
+                <Plus className="h-4 w-4" />
+                New Assignment
+              </button>
+           </div>
+
+           {/* Responsive Grid - No Horizontal Scroll */}
+           <div className="flex-1 overflow-y-auto p-8 scrollbar-hide">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full min-h-0">
+             {ASSIGNMENT_COLS.map((colName) => {
+               const colTasks = tasks.filter(t => t.assignee === colName);
+               
+               let Icon = Users;
+               if (colName === "My Plate") Icon = Briefcase;
+               if (colName === "Clerks & Filings") Icon = FileText;
+
+               return (
+                  <div 
+                    key={colName}
+                    id={`col-${colName.replace(/ /g, '-')}`}
+                    className="flex flex-col h-full bg-white/70 dark:bg-card/40 backdrop-blur-xl border border-white/80 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm transition-all"
+                   onDragOver={handleDragOver}
+                   onDragEnter={(e) => handleDragEnter(e, colName)}
+                   onDragLeave={(e) => handleDragLeave(e, colName)}
+                   onDrop={(e) => handleDrop(e, colName)}
+                 >
+                   {/* Column Header */}
+                   <div className="px-6 py-5 border-b border-white/50 dark:border-white/10 flex items-center justify-between bg-white/70 dark:bg-white/5">
+                     <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary shadow-inner">
+                             <Icon className="w-4 h-4" />
+                         </div>
+                          <h3 className="font-serif font-bold text-[1.2rem] tracking-tight text-foreground dark:text-white">{colName}</h3>
+                      </div>
+                      <span className="flex items-center justify-center w-7 h-7 rounded-full bg-white/95 dark:bg-black/50 border border-white/50 dark:border-white/10 text-foreground dark:text-white text-[11px] font-bold shadow-sm">
+                       {colTasks.length}
+                     </span>
+                   </div>
+
+                   {/* Column Body */}
+                   <div className="flex-1 flex flex-col gap-4 overflow-y-auto p-5 pb-10 scrollbar-hide">
+                     {colTasks.map((task) => (
+                       <div 
+                         key={task.id}
+                         id={`task-${task.id}`}
+                         draggable
+                         onDragStart={(e) => handleDragStart(e, task.id)}
+                         onDragEnd={(e) => handleDragEnd(e, task.id)}
+                         // IMPLEMENTING THE USER SUGGESTION: "tasks that will ultimately fill these tabs should follow the theme and have some dark elements"
+                         className="bg-white/90 dark:bg-[#1A1918]/90 backdrop-blur-sm rounded-xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-white/50 dark:border-white/10 cursor-grab active:cursor-grabbing hover:shadow-[0_8px_25px_rgba(200,150,62,0.15)] hover:border-primary/40 transition-all duration-200 group relative shrink-0"
+                       >
+                         {/* Dark element header for the task card to make it look premium and fit the theme */}
+                         <div className="bg-[#291e16] dark:bg-black/60 px-4 py-3 flex justify-between items-start border-b border-white/10">
+                           <div className="bg-white/40 border border-white/10 px-2.5 py-1 rounded-md shadow-inner">
+                             <span className="font-serif text-[11.5px] font-semibold italic text-white/90 truncate max-w-[150px] block">
+                               {task.case?.title || 'General Directive'}
+                             </span>
+                           </div>
+                           <button className="text-white/40 opacity-0 group-hover:opacity-100 hover:text-white transition-all p-1">
+                             <MoreHorizontal className="w-4 h-4" />
+                           </button>
+                         </div>
+                         
+                         <div className="p-4">
+                           <p className="font-medium text-[14px] leading-relaxed mb-5 text-gray-800 dark:text-gray-200">{task.description}</p>
+                           
+                           <div className="flex items-center justify-between mt-auto">
+                             <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md border ${getDueColor(task.dueDate)} shadow-sm`}>
+                               <Clock className="w-3 h-3" />
+                               {getDueLabel(task.dueDate)}
+                             </div>
+                             
+                             <button 
+                               onClick={(e) => handleDelete(e, task.id)}
+                               className="opacity-0 group-hover:opacity-100 text-red-500/70 hover:text-red-500 hover:bg-red-500/10 p-1.5 rounded-md transition-all"
+                             >
+                               <Trash2 className="w-4 h-4" />
+                             </button>
+                           </div>
+                         </div>
+                       </div>
+                     ))}
+
+                     {/* Empty State */}
+                     {colTasks.length === 0 && (
+                       <div className="flex flex-col items-center justify-center h-32 text-center px-4 rounded-xl border border-dashed border-primary/30 bg-white/95 dark:bg-black/10 shrink-0">
+                         <CheckCircle2 className="w-5 h-5 text-primary/40 mb-2" />
+                         <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">The desk is clear</p>
+                       </div>
+                     )}
+                   </div>
+                 </div>
+               );
+             })}
+           </div>
+        </div>
+
       </div>
+    </div>
 
       {/* New Task Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-card border border-white/10 rounded-3xl shadow-2xl w-full max-w-md overflow-visible relative">
-            <div className="flex justify-between items-center p-6 border-b border-white/5">
-              <h2 className="font-serif text-2xl font-medium">New Task</h2>
-              <button onClick={closeModal} className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-white/5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-background  rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-lg overflow-hidden relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-6 bg-white dark:bg-[#1A1918] border-b border-primary/10">
+              <div className="flex items-center gap-4">
+                 <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                    <Plus className="w-5 h-5" />
+                 </div>
+                 <div>
+                    <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-white leading-none">Delegate Task</h2>
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-primary/60 mt-1.5">Issue a new directive</p>
+                 </div>
+              </div>
+              <button onClick={closeModal} className="text-foreground/40 hover:text-foreground transition-colors p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddTask} className="p-6 space-y-5">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Case</label>
-                <select
-                  required
-                  value={newTask.caseId}
-                  onChange={(e) => setNewTask({ ...newTask, caseId: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all appearance-none"
-                >
-                  {cases.map((c) => (
-                    <option key={c.id} value={c.id} className="bg-card">{c.title}</option>
-                  ))}
-                </select>
+            <form onSubmit={handleAddTask} className="p-8 space-y-6">
+              
+              <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Assign To</label>
+                    <select
+                      value={newTask.assignee}
+                      onChange={(e) => setNewTask({ ...newTask, assignee: e.target.value })}
+                      className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all font-medium text-foreground shadow-sm appearance-none"
+                    >
+                      <option value="Unassigned">Unassigned (Inbox)</option>
+                      {ASSIGNMENT_COLS.map(col => <option key={col} value={col}>{col}</option>)}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Target Date</label>
+                    <div className="relative">
+                        <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                        <input
+                          type="date"
+                          required
+                          value={newTask.due}
+                          onChange={(e) => setNewTask({ ...newTask, due: e.target.value })}
+                          className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl pl-10 pr-4 py-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm text-foreground [&::-webkit-calendar-picker-indicator]:opacity-50"
+                        />
+                    </div>
+                  </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Description</label>
-                <input
-                  type="text"
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Master Case File</label>
+                <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                    <select
+                      required
+                      value={newTask.caseId}
+                      onChange={(e) => setNewTask({ ...newTask, caseId: e.target.value })}
+                      className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl pl-10 pr-4 py-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all font-medium text-foreground shadow-sm appearance-none"
+                    >
+                      {cases.map((c) => (
+                        <option key={c.id} value={c.id}>{c.title}</option>
+                      ))}
+                    </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Task Directive</label>
+                <textarea
                   required
+                  rows={3}
                   value={newTask.desc}
                   onChange={(e) => setNewTask({ ...newTask, desc: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
-                  placeholder="e.g. Draft settlement agreement"
+                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm text-foreground resize-none"
+                  placeholder="e.g. Draft the rejoinder for the interim application..."
                 />
               </div>
 
-              <div className="relative">
-                <label className="block text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">Due Date</label>
-                <button
-                  type="button"
-                  onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent transition-all text-left flex justify-between items-center"
-                >
-                  <span>{newTask.due ? format(parse(newTask.due, 'yyyy-MM-dd', new Date()), 'MMM d, yyyy') : 'No Date Set'}</span>
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-                </button>
-
-                {isDatePickerOpen && (
-                  <div className="absolute top-full left-0 mt-2 p-4 bg-card border border-white/10 rounded-2xl shadow-2xl z-50 w-[280px] backdrop-blur-3xl">
-                    <div className="flex justify-between items-center mb-4">
-                      <button type="button" onClick={() => setPickerMonth(subMonths(pickerMonth, 1))} className="p-1 hover:bg-white/10 rounded-full transition-colors"><ChevronLeft className="h-4 w-4" /></button>
-                      <span className="font-serif text-sm font-medium">{format(pickerMonth, 'MMMM yyyy')}</span>
-                      <button type="button" onClick={() => setPickerMonth(addMonths(pickerMonth, 1))} className="p-1 hover:bg-white/10 rounded-full transition-colors"><ChevronRight className="h-4 w-4" /></button>
-                    </div>
-                    <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                      {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                        <div key={i} className="text-[10px] font-medium text-muted-foreground">{d}</div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-7 gap-1">
-                      {eachDayOfInterval({
-                        start: startOfWeek(startOfMonth(pickerMonth)),
-                        end: endOfWeek(endOfMonth(pickerMonth)),
-                      }).map((day, i) => {
-                        const isSelected = newTask.due === format(day, 'yyyy-MM-dd');
-                        const inMonth = isSameMonth(day, pickerMonth);
-                        return (
-                          <button
-                            key={i}
-                            type="button"
-                            onClick={() => { setNewTask({ ...newTask, due: format(day, 'yyyy-MM-dd') }); setIsDatePickerOpen(false); }}
-                            className={`p-2 rounded-full text-xs transition-colors flex items-center justify-center ${isSelected ? 'bg-accent text-accent-foreground font-medium' : inMonth ? 'hover:bg-white/10 text-foreground' : 'text-muted-foreground/30'}`}
-                          >
-                            {format(day, 'd')}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+              <div className="pt-2">
+                  <button
+                    type="submit"
+                    className="w-full bg-primary text-primary-foreground font-bold py-4 rounded-xl hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-[1.01] transition-all uppercase tracking-widest text-[12px]"
+                  >
+                    Dispatch Assignment
+                  </button>
               </div>
-
-              <button
-                type="submit"
-                className="w-full mt-4 bg-accent text-accent-foreground font-medium py-3 rounded-xl hover:bg-accent/90 transition-colors shadow-lg shadow-accent/20"
-              >
-                Save Task
-              </button>
             </form>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

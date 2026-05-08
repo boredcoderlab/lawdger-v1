@@ -17,6 +17,7 @@ export async function createTask(data: {
   caseId?: string;
   description: string;
   dueDate?: Date;
+  assignee?: string;
 }) {
   const userId = await requireUserId();
 
@@ -34,6 +35,7 @@ export async function createTask(data: {
       caseId: data.caseId ?? null,
       description: data.description,
       dueDate: data.dueDate ?? null,
+      assignee: data.assignee ?? "Unassigned",
       status: "pending",
     },
   });
@@ -76,6 +78,20 @@ export async function updateTaskStatus(id: string, status: "pending" | "complete
   const result = await prisma.task.updateMany({
     where: { id, userId },
     data: { status },
+  });
+
+  if (!result.count) {
+    throw new Error("Unauthorized");
+  }
+
+  revalidatePath("/tasks");
+}
+
+export async function updateTaskAssignee(id: string, assignee: string) {
+  const userId = await requireUserId();
+  const result = await prisma.task.updateMany({
+    where: { id, userId },
+    data: { assignee },
   });
 
   if (!result.count) {
