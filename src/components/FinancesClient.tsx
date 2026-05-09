@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { IndianRupee, AlertCircle, Plus, Receipt, History, Send, X, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { createPayment, updateCaseAgreedFee, deletePayment } from "@/actions/financeActions";
+import { PageLayout, DarkPaneHeaderTitle, ContentHeading, DashboardLink } from "@/components/ui/LayoutShell";
 import { format } from "date-fns";
 
 type Payment = { id: string; amount: number; status: string; dueDate: Date | null; createdAt: Date };
@@ -61,113 +62,91 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
   };
 
   return (
-    <div className="relative flex flex-col flex-1 p-8 lg:p-12 min-h-screen bg-transparent text-foreground font-sans z-0">
-      
-      {/* Background Shapes */}
-      <div className="absolute top-[20%] left-[-10%] w-[50%] h-[60%] bg-accent/5 rounded-full blur-[140px] -z-10 pointer-events-none" />
-
-      {/* Header */}
-      <div className="flex justify-between items-end mb-10 z-10">
-          <div>
-            <h1 className="font-serif text-[2.8rem] font-bold tracking-tight text-foreground leading-none">
-              Finances
-            </h1>
-          </div>
+    <>
+      <PageLayout
+        pageTitle="Finances"
+        backToDashboard={true}
+        headerAction={
           <button onClick={() => setModalCaseId(cases[0]?.id ?? null)}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3 rounded-full hover:scale-[1.02] transition-transform font-bold tracking-widest uppercase text-[12px] shadow-[0_0_20px_rgba(200,150,62,0.3)]">
             <Plus className="h-4 w-4" /> Log Payment
           </button>
-      </div>
-
-      {/* ── OVERLAPPING PANES LAYOUT ────────────────────────────────────────── */}
-      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto">
-        
-        {/* Left: Dark Control Panel */}
-        <div className="w-[42%] rounded-[2.5rem] bg-gradient-to-b from-[#3a2c23] to-[#291e16] p-10 pr-20 shadow-[0_30px_60px_rgba(0,0,0,0.4)] min-h-[500px] flex flex-col z-10 border border-white/5 shrink-0">
-          
-          <div className="flex items-center gap-4 mb-8">
-             <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center text-white shadow-inner">
-                 <IndianRupee className="w-6 h-6" />
-             </div>
-             <div>
-                <h2 className="text-[1.5rem] font-serif font-bold text-[#f4efe8] dark:text-white leading-tight">Overview</h2>
-                <p className="text-[12px] text-[#f4efe8]/60 dark:text-white/50 uppercase tracking-widest font-bold">Metrics & Alerts</p>
-             </div>
-          </div>
-
-          {/* KPI Cards */}
-          <div className="space-y-4 mb-8">
-            <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">Total Agreed Fees</p>
-              <h3 className="font-serif text-[1.5rem] font-serif font-bold text-[#f4efe8] dark:text-white">{fmt(totalExpected)}</h3>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex-1 bg-green-500/10 rounded-2xl p-5 border border-green-500/20">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-green-400 mb-1">Total Received</p>
-                <h3 className="font-serif text-[1.4rem] font-bold text-green-400">{fmt(totalReceived)}</h3>
+        }
+        darkPaneHeader={
+          <DarkPaneHeaderTitle icon={IndianRupee} title="Overview" subtitle="Metrics & Alerts" />
+        }
+        darkPaneContent={
+          <>
+            {/* KPI Cards */}
+            <div className="space-y-4 mb-8">
+              <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">Total Agreed Fees</p>
+                <h3 className="font-serif text-[1.5rem] font-bold text-[#f4efe8] dark:text-white">{fmt(totalExpected)}</h3>
               </div>
-              <div className="flex-1 bg-red-500/10 rounded-2xl p-5 border border-red-500/20">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-1">Outstanding</p>
-                <h3 className="font-serif text-[1.4rem] font-bold text-red-400">{fmt(Math.max(0, totalBalance))}</h3>
+              <div className="flex gap-4">
+                <div className="flex-1 bg-green-500/10 rounded-2xl p-5 border border-green-500/20">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-green-400 mb-1">Total Received</p>
+                  <h3 className="font-serif text-[1.4rem] font-bold text-green-400">{fmt(totalReceived)}</h3>
+                </div>
+                <div className="flex-1 bg-red-500/10 rounded-2xl p-5 border border-red-500/20">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-1">Outstanding</p>
+                  <h3 className="font-serif text-[1.4rem] font-bold text-red-400">{fmt(Math.max(0, totalBalance))}</h3>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Collection Rate Progress Bar */}
-          <div className="mb-8 bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5">
-            <div className="flex justify-between items-end mb-3">
-              <span className="text-[12px] font-bold uppercase tracking-widest text-[#f4efe8]/70 dark:text-white/70">Collection Rate</span>
-              <span className="text-[18px] font-bold text-[#f4efe8] dark:text-white">{collectionRate}%</span>
-            </div>
-            <div className="h-2 w-full bg-white/40 rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${collectionRate}%` }} />
-            </div>
-          </div>
-
-          {/* Forgotten Dues */}
-          <div className="flex-1 rounded-3xl border border-red-500/20 bg-red-500/5 p-6 relative overflow-hidden flex flex-col">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/50 to-orange-500/50" />
-            <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="h-5 w-5 text-red-400" />
-              <div>
-                <h3 className="font-serif text-lg font-medium text-red-400">Forgotten Dues</h3>
+            {/* Collection Rate Progress Bar */}
+            <div className="mb-8 bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5">
+              <div className="flex justify-between items-end mb-3">
+                <span className="text-[12px] font-bold uppercase tracking-widest text-[#f4efe8]/70 dark:text-white/70">Collection Rate</span>
+                <span className="text-[18px] font-bold text-[#f4efe8] dark:text-white">{collectionRate}%</span>
+              </div>
+              <div className="h-2 w-full bg-white/40 rounded-full overflow-hidden">
+                <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${collectionRate}%` }} />
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-hide">
-              {forgottenDues.length === 0 ? (
-                <p className="text-xs text-white/50 font-medium">No stagnant dues. All good!</p>
-              ) : (
-                forgottenDues.map((c) => {
-                  const balance = (c.agreedFee ?? 0) - c.payments.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount, 0);
-                  return (
-                    <div key={c.id} className="rounded-xl border border-red-500/10 bg-black/20 p-4">
-                      <p className="font-medium text-[13px] text-white truncate mb-2">{c.title}</p>
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm font-bold text-red-400">{fmt(balance)}</p>
-                        <button title="Send Reminder" className="h-7 w-7 flex items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors">
-                          <Send className="h-3 w-3 ml-0.5" />
-                        </button>
+
+            {/* Forgotten Dues */}
+            <div className="flex-1 rounded-3xl border border-red-500/20 bg-red-500/5 p-6 relative overflow-hidden flex flex-col">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/50 to-orange-500/50" />
+              <div className="flex items-center gap-3 mb-4">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+                <div>
+                  <h3 className="font-serif text-lg font-medium text-red-400">Forgotten Dues</h3>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-hide">
+                {forgottenDues.length === 0 ? (
+                  <p className="text-xs text-white/50 font-medium">No stagnant dues. All good!</p>
+                ) : (
+                  forgottenDues.map((c) => {
+                    const balance = (c.agreedFee ?? 0) - c.payments.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount, 0);
+                    return (
+                      <div key={c.id} className="rounded-xl border border-red-500/10 bg-black/20 p-4">
+                        <p className="font-medium text-[13px] text-white truncate mb-2">{c.title}</p>
+                        <div className="flex justify-between items-center">
+                          <p className="text-sm font-bold text-red-400">{fmt(balance)}</p>
+                          <button title="Send Reminder" className="h-7 w-7 flex items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors">
+                            <Send className="h-3 w-3 ml-0.5" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
+              </div>
             </div>
-          </div>
-
-        </div>
-
-        {/* Right: Frosted Glass Main Area */}
-        <div className="w-[64%] -ml-[6%] mt-8 rounded-[2.5rem] bg-white/95 dark:bg-card/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.1)] p-0 min-h-[750px] flex flex-col z-30 pl-[12%] overflow-hidden">
-           
-           <div className="flex items-center justify-between border-b border-white/20 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-md px-10 py-6 shrink-0 rounded-tr-[2.5rem]">
-              <h2 className="font-serif text-[1.6rem] font-bold flex items-center gap-4 text-foreground">
-                <Receipt className="h-6 w-6 text-primary" />
-                Case Fee Tracker
-              </h2>
-           </div>
-
-           <div className="flex-1 overflow-y-auto p-10 scrollbar-hide">
+          </>
+        }
+        mainPaneHeader={
+          <ContentHeading className="flex items-center gap-4 text-[1.6rem]">
+            <Receipt className="h-6 w-6 text-primary" />
+            Case Fee Tracker
+          </ContentHeading>
+        }
+        mainPaneContent={
+          <div className="p-10 h-full">
+            <div className="flex-1 overflow-y-auto scrollbar-hide h-full">
               {cases.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-60">
                   <Receipt className="h-12 w-12 mb-4" />
@@ -279,10 +258,10 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                   })}
                 </div>
               )}
-           </div>
-
-        </div>
-      </div>
+            </div>
+          </div>
+        }
+      />
 
       {/* Log Payment Modal */}
       {modalCaseId && (
@@ -293,7 +272,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                  <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
                     <Receipt className="w-4 h-4 text-primary" />
                  </div>
-                 <h2 className="font-serif text-[1.2rem] font-bold text-[#f4efe8] leading-none">Log Payment</h2>
+                 <ContentHeading className="text-[1.2rem] text-[#f4efe8] leading-none">Log Payment</ContentHeading>
               </div>
               <button onClick={() => setModalCaseId(null)} className="text-white/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/40"><X className="h-5 w-5" /></button>
             </div>
@@ -319,6 +298,6 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

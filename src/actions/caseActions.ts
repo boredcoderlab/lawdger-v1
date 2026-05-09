@@ -201,7 +201,6 @@ export async function createNote(data: {
       cleanContent: data.cleanContent,
       category: data.category,
       rawTranscript: data.rawTranscript ?? null,
-      source: data.source ?? "manual",
     },
   });
   revalidatePath(`/cases/${data.caseId}`);

@@ -346,6 +346,13 @@ export default function CalendarClient({
       {/* Header */}
       <div className="flex justify-between items-end mb-10 z-10">
           <div>
+            <Link 
+              href="/dashboard" 
+              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-4"
+            >
+              <ChevronLeft className="h-3 w-3" />
+              Back to Dashboard
+            </Link>
             <h1 className="font-serif text-[2.8rem] font-bold tracking-tight text-foreground leading-none">
               Schedule
             </h1>
