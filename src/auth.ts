@@ -1,7 +1,6 @@
 import { compare } from "bcryptjs"
 import NextAuth, { type DefaultSession } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-
 import prisma from "@/lib/prisma"
 
 declare module "next-auth" {
@@ -34,18 +33,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email
-        const password = credentials?.password
-
-        if (typeof email !== "string" || typeof password !== "string") {
+        if (!credentials?.email || !credentials?.password) {
           return null
         }
+
+        const email = credentials.email as string
+        const password = credentials.password as string
 
         const user = await prisma.user.findUnique({
           where: { email },
         })
 
-        if (!user?.password) {
+        if (!user || !user.password) {
           return null
         }
 
@@ -68,15 +67,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id
       }
-
       return token
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string
       }
-
       return session
     },
+  },
+  pages: {
+    signIn: "/login",
   },
 })

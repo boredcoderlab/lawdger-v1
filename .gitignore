@@ -63,3 +63,6 @@ CLAUDE.md
 
 # misc
 Lawdger Pitch Deck.pdf
+
+# Prisma generated client
+/src/generated

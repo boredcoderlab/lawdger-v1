@@ -1,4 +1,4 @@
-import Sidebar from "@/components/Sidebar";
+import Sidebar from "@/components/ui/Sidebar";
 import VoiceFAB from "@/components/VoiceFAB";
 
 export default function LawdgerLayout({
