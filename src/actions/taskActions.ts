@@ -1,7 +1,7 @@
 "use server";
 
 import { requireUserId } from "@/actions/requireUserId";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 export async function getTasks() {

@@ -1,7 +1,7 @@
 "use server";
 
 import { requireUserId } from "@/actions/requireUserId";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay } from "date-fns";
 
 export async function getDashboardData() {

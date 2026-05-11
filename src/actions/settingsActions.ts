@@ -4,7 +4,7 @@ import { compare, hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 
 import { requireUserId } from "@/actions/requireUserId";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 
 export type SettingsState = { success?: string; error?: string };
 

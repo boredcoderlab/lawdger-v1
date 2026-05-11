@@ -4,7 +4,7 @@ import { hash } from "bcryptjs"
 import { Prisma } from "@prisma/client"
 
 import { signIn } from "@/auth"
-import prisma from "@/lib/prisma"
+import { prisma } from "@/lib/prisma"
 
 export type SignupState = {
   message: string

@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import DashboardClient from "@/components/DashboardClient";
 import { format } from "date-fns";
 import { Bell, Scale } from "lucide-react";
