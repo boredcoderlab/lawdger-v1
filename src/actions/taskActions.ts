@@ -32,7 +32,7 @@ export async function createTask(data: {
   await prisma.task.create({
     data: {
       userId,
-      caseId: data.caseId ?? null,
+      caseId: data.caseId as string,
       description: data.description,
       dueDate: data.dueDate ?? null,
       assignee: data.assignee ?? "Unassigned",
@@ -63,7 +63,7 @@ export async function updateTask(
     data: {
       ...(data.description !== undefined && { description: data.description }),
       ...(data.dueDate !== undefined && { dueDate: data.dueDate }),
-      ...(data.caseId !== undefined && { caseId: data.caseId }),
+      ...(data.caseId != null && { caseId: data.caseId }),
     },
   });
 

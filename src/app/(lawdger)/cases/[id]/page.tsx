@@ -27,8 +27,8 @@ export default async function CaseDetail({
   const caseData = await getCaseById(id);
   if (!caseData) notFound();
 
-  const manualNotes  = caseData.notes.filter((n) => n.source !== "voice");
-  const voiceArchive = caseData.notes.filter((n) => n.source === "voice");
+  const manualNotes  = caseData.notes;
+  const voiceArchive: typeof caseData.notes = [];
 
   type TimelineItem =
     | { kind: "note";  id: string; date: Date; content: string; category: string }

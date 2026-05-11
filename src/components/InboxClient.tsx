@@ -4,7 +4,8 @@ import { useState } from "react";
 import { UploadCloud, FileText, Image as ImageIcon, Inbox as InboxIcon, MoreHorizontal, CheckCircle2 } from "lucide-react";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
-export default function InboxClient({ initialDocuments, userName }: { initialDocuments: Record<string, unknown>[], userName: string }) {
+interface InboxDocument { title: string; size: string; time: string; }
+export default function InboxClient({ initialDocuments, userName }: { initialDocuments: InboxDocument[], userName: string }) {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragOver = (e: React.DragEvent) => {
