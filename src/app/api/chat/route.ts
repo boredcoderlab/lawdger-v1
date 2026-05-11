@@ -11,6 +11,7 @@ import {
   createCase,
   updateCaseStatus,
   createNote,
+  type NoteCategory,
 } from "@/actions/caseActions";
 import {
   getTasks,
@@ -321,9 +322,24 @@ function similarity(a: string, b: string): number {
 
 async function executeTool(
   name: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args: Record<string, any>
+  rawArgs: Record<string, unknown>
 ): Promise<{ result: string; action?: string }> {
+  const args = rawArgs as {
+    title: string;
+    clientName: string;
+    courtName: string;
+    agreedFee: number;
+    description: string;
+    caseId: string;
+    dueDate: string | null;
+    hearingDate: string;
+    cleanContent: string;
+    category: NoteCategory;
+    amount: number;
+    status: string;
+    taskId: string;
+    hearingId: string;
+  };
   switch (name) {
     case "get_dashboard": {
       const data = await getDashboardData();
@@ -415,7 +431,7 @@ async function executeTool(
       };
     }
     case "update_task_status": {
-      await updateTaskStatus(args.taskId, args.status);
+      await updateTaskStatus(args.taskId, args.status as "pending" | "completed");
       return {
         result: "Task status updated.",
         action: `✅ Marked task as ${args.status}`,

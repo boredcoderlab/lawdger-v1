@@ -15,16 +15,14 @@ export interface LLMMessage {
 export interface LLMToolCall {
   id: string;
   name: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args: Record<string, any>;
+  args: Record<string, unknown>;
 }
 
 export interface LLMTool {
   name: string;
   description: string;
   // JSON Schema object describing the parameters
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
 }
 
 export interface LLMResponse {
