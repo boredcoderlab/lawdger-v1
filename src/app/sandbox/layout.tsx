@@ -10,8 +10,7 @@ export default function SandboxLayout({
 }) {
   return (
     <div 
-      className="min-h-screen flex overflow-hidden font-sans selection:bg-[#D4AF37]/30" 
-      style={{ backgroundColor: '#F5F2EC', color: '#2A2320' }}
+      className="min-h-screen flex overflow-hidden font-sans selection:bg-lawdger-gold/30 bg-lawdger-base text-lawdger-espresso"
     >
       {/* 1. GLOBAL SIDEBAR INJECTED HERE */}
       <Sidebar />
