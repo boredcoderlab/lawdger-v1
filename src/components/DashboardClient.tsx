@@ -78,11 +78,6 @@ export default function DashboardClient({
       <div className="absolute top-[12%] left-0 w-[85%] h-[85%] bg-muted rounded-r-[5rem] -z-10 pointer-events-none" />
       <div className="absolute -bottom-20 -right-20 w-[60%] h-[75%] bg-black/5 dark:bg-white/5 rounded-tl-[8rem] rounded-bl-[4rem] -z-20 pointer-events-none" />
 
-      {/* ── PAGE TITLE ────────────────────────────────────────────────────── */}
-      <h1 className="font-serif text-[2.5rem] font-bold tracking-tight text-foreground mb-6 z-10 shrink-0">
-        Web Dashboard
-      </h1>
-
       {/* ── MAIN BENTO GRID ────────────────────────────────────────────────── */}
       <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-x-8 gap-y-4 z-10 flex-1 min-h-0">
         

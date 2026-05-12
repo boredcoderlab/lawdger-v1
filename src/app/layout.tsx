@@ -3,15 +3,17 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import SyncIndicator from "@/components/SyncIndicator";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { SessionProvider } from "next-auth/react";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
+// Initialize fonts once
+const inter = Inter({ 
+  subsets: ["latin"], 
+  variable: "--font-inter" 
 });
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
+const playfair = Playfair_Display({ 
+  subsets: ["latin"], 
+  variable: "--font-playfair" 
 });
 
 export const metadata: Metadata = {
@@ -35,15 +37,17 @@ export default function RootLayout({
         <meta name="theme-color" content="#291e16" />
         <link rel="apple-touch-icon" href="/lawdger-logo.png" />
       </head>
-      <body className="min-h-full bg-background text-foreground font-sans">
+      <body className={`${inter.variable} ${playfair.variable} bg-lawdger-base font-sans antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
-          <SyncIndicator />
-          {children}
+          <SessionProvider>
+            <SyncIndicator />
+            {children}
+          </SessionProvider>
         </ThemeProvider>
       </body>
     </html>

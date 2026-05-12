@@ -1,28 +1,63 @@
 "use client";
 
 import React, { useState } from "react";
-import { 
+import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import {
   Search, Bell, Briefcase, Receipt, Calendar as CalIcon, CheckCircle2,
   ChevronDown, Wallet, MessageSquare, ChevronRight
 } from "lucide-react";
 
+// ── Route metadata ───────────────────────────────────────────────────────────
+
+const PAGE_META: Record<string, { title: string; subtitle: string }> = {
+  "/dashboard": { title: "Web Dashboard",   subtitle: `Today, ${new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}` },
+  "/cases":     { title: "Case Registry",   subtitle: "Your matters" },
+  "/calendar":  { title: "Schedule",        subtitle: "Hearings & deadlines" },
+  "/tasks":     { title: "Tasks",           subtitle: "Your plate" },
+  "/finances":  { title: "Finances",        subtitle: "Fee tracking" },
+  "/chat":      { title: "Legal Brain",     subtitle: "AI assistant" },
+  "/inbox":     { title: "Document Intake", subtitle: "Uploads & sorting" },
+  "/settings":  { title: "Settings",        subtitle: "" },
+};
+
+const DEFAULT_META = { title: "Lawdger", subtitle: "" };
+
+// ── Component ────────────────────────────────────────────────────────────────
+
 export default function Header() {
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const { data: session } = useSession();
+
+  const meta = PAGE_META[pathname] ?? DEFAULT_META;
+  const subtitle =
+    pathname === "/settings" && session?.user?.email
+      ? session.user.email
+      : meta.subtitle;
 
   return (
     <header className="flex items-center justify-between px-10 py-5 border-b border-lawdger-espresso/5 relative z-30 bg-lawdger-base/70 backdrop-blur-3xl">
         <div className="flex items-center gap-8">
             <div className="flex flex-col">
-                <h1 className="font-serif text-3xl text-lawdger-espresso tracking-tight leading-none">Web Dashboard</h1>
-                <span className="text-[8px] font-black uppercase tracking-[0.4em] text-lawdger-espresso/40 mt-1.5">Verified Session</span>
+                <h1 className="font-serif text-2xl font-bold text-lawdger-espresso dark:text-foreground tracking-tight leading-none">
+                  {meta.title}
+                </h1>
+                {subtitle && (
+                  <p className="text-xs uppercase tracking-widest text-lawdger-muted mt-0.5">
+                    {subtitle}
+                  </p>
+                )}
             </div>
 
-            <nav className="flex items-center gap-1.5 p-1 bg-white/40 border border-white/80 rounded-[14px] shadow-sm">
-                <ModeLink label="Finance" icon={<Wallet size={14}/>} />
-                <ModeLink label="Legal Brain AI" icon={<MessageSquare size={14}/>} isNew />
-            </nav>
+            {pathname === "/dashboard" && (
+              <nav className="flex items-center gap-1.5 p-1 bg-white/40 border border-white/80 rounded-[14px] shadow-sm">
+                  <ModeLink label="Finance" icon={<Wallet size={14}/>} />
+                  <ModeLink label="Legal Brain AI" icon={<MessageSquare size={14}/>} isNew />
+              </nav>
+            )}
         </div>
-        
+
         <div className="flex items-center gap-4">
             <div className="relative group">
                 <Search className="absolute left-4 top-2.5 text-lawdger-espresso/40 group-focus-within:text-lawdger-espresso transition-colors" size={16} />

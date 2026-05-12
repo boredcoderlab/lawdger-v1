@@ -344,10 +344,7 @@ export default function CalendarClient({
       <div className="absolute top-[20%] left-[-10%] w-[50%] h-[60%] bg-accent/5 rounded-full blur-[140px] -z-10 pointer-events-none" />
 
       {/* Header */}
-      <div className="flex justify-between items-end mb-10 z-10">
-        <h1 className="font-serif text-[2.8rem] font-bold tracking-tight text-foreground leading-none">
-          Schedule
-        </h1>
+      <div className="flex justify-end mb-10 z-10">
         <button
           onClick={() => openNew(format(currentDate, "yyyy-MM-dd"))}
           className="flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3 rounded-full hover:scale-[1.02] transition-transform font-bold tracking-widest uppercase text-[12px] shadow-[0_0_20px_rgba(200,150,62,0.3)]"

@@ -125,10 +125,7 @@ export function PageLayout(props: PageLayoutProps) {
               Back to Dashboard
             </Link>
           )}
-          {/* h1 inherits global heading typography from globals.css */}
-          <h1 className="text-[2.8rem] leading-none">
-            {title}
-          </h1>
+          {/* h1 suppressed — Header.tsx renders the route-aware page title */}
         </div>
         {actionButton && <div>{actionButton}</div>}
       </div>
