@@ -79,7 +79,7 @@ export default function VoiceFAB() {
                   {isRecording ? "Listening..." : isProcessing ? "Processing..." : result ? "Processed" : "Ready to Record"}
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {isRecording ? "Speak naturally. Mention the case name." : "Tap the mic to start your AI legal brain."}
+                  {isRecording ? "Your Legal Brain is listening." : "Tap to dictate a case note, task, or hearing date."}
                 </p>
               </div>
 

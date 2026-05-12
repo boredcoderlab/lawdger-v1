@@ -14,7 +14,7 @@ import {
   Moon,
   LogOut,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 type NavItem = {
   id: string;
@@ -35,6 +35,10 @@ const navItems: NavItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const firstName = session?.user?.name?.split(" ")[0]
+    ?? session?.user?.email?.split("@")[0]
+    ?? "?";
   const activeIndex = navItems.findIndex(
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
   );
@@ -107,8 +111,10 @@ export default function Sidebar() {
         >
           <LogOut strokeWidth={1.5} size={22} />
         </button>
-        <div className="w-10 h-10 rounded-full bg-[#1A1512] flex items-center justify-center text-lawdger-base text-sm font-bold shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] border border-[#3D332D] mt-2 cursor-pointer hover:ring-2 hover:ring-white/10 transition-all">
-          SJ
+        <div className="w-10 h-10 rounded-full bg-lawdger-base flex items-center justify-center shadow-inner mt-2 cursor-pointer hover:ring-2 hover:ring-white/10 transition-all">
+          <span className="text-lawdger-espresso text-sm font-semibold font-sans">
+            {firstName.charAt(0).toUpperCase()}
+          </span>
         </div>
       </div>
     </aside>

@@ -26,7 +26,9 @@ export default function Header() {
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const { data: session } = useSession();
 
-  const firstName = session?.user?.name?.split(" ")[0] ?? "Counsellor";
+  const firstName = session?.user?.name?.split(" ")[0]
+    ?? session?.user?.email?.split("@")[0]
+    ?? "Counsellor";
 
   return (
     <header className="flex items-center justify-between px-10 py-5 border-b border-lawdger-espresso/5 relative z-30 bg-lawdger-base/70 backdrop-blur-3xl">

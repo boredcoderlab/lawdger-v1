@@ -20,7 +20,7 @@ export default function LoginPage() {
           <Link href="/" className="mb-8 inline-flex items-center gap-3">
             <div className="relative h-12 w-12 overflow-hidden rounded-2xl border border-[color:var(--surface-strong)] bg-surface-soft">
               <Image
-                src="/lawdger-logo.png"
+                src="/lawdger-logo-transparent.png"
                 alt="Lawdger"
                 fill
                 className="object-cover"
