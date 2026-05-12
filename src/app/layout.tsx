@@ -35,7 +35,7 @@ export default function RootLayout({
       <head>
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#291e16" />
-        <link rel="apple-touch-icon" href="/lawdger-logo.png" />
+        <link rel="apple-touch-icon" href="/lawdger-logo-transparent.png" />
       </head>
       <body className={`${inter.variable} ${playfair.variable} bg-lawdger-base font-sans antialiased`}>
         <ThemeProvider

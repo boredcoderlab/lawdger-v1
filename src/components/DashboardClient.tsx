@@ -312,7 +312,7 @@ export default function DashboardClient({
           {/* Logo overlapping top edge */}
           <div className="absolute -top-[2.5rem] left-6 flex items-center justify-center w-[70px] h-[80px] shadow-xl z-30">
             <div className="relative w-full h-full">
-              <Image src="/lawdger-logo.png" alt="Lawdger Logo" fill className="object-contain drop-shadow-lg" />
+              <Image src="/lawdger-logo-transparent.png" alt="Lawdger Logo" fill className="object-contain drop-shadow-lg" />
             </div>
           </div>
 
