@@ -13,8 +13,6 @@ import {
   Settings,
   Moon,
   LogOut,
-  Wallet,
-  Brain,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -27,14 +25,12 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { id: "dashboard", label: "Dashboard",   href: "/dashboard",  icon: Home },
-  { id: "inbox",     label: "Inbox",       href: "/inbox",      icon: Inbox, alert: true },
-  { id: "cases",     label: "Cases",       href: "/cases",      icon: LayoutGrid },
-  { id: "calendar",  label: "Calendar",    href: "/calendar",   icon: CalIcon },
-  { id: "tasks",     label: "Tasks",       href: "/tasks",      icon: CheckSquare },
-  { id: "finances",  label: "Finances",    href: "/finances",   icon: Wallet },
-  { id: "chat",      label: "Legal Brain", href: "/chat",       icon: Brain },
-  { id: "settings",  label: "Settings",    href: "/settings",   icon: Settings },
+  { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: Home },
+  { id: "inbox",     label: "Inbox",     href: "/inbox",     icon: Inbox, alert: true },
+  { id: "cases",     label: "Cases",     href: "/cases",     icon: LayoutGrid },
+  { id: "calendar",  label: "Calendar",  href: "/calendar",  icon: CalIcon },
+  { id: "tasks",     label: "Tasks",     href: "/tasks",     icon: CheckSquare },
+  { id: "settings",  label: "Settings",  href: "/settings",  icon: Settings },
 ];
 
 export default function Sidebar() {

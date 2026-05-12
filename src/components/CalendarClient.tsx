@@ -345,25 +345,16 @@ export default function CalendarClient({
 
       {/* Header */}
       <div className="flex justify-between items-end mb-10 z-10">
-          <div>
-            <Link 
-              href="/dashboard" 
-              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-4"
-            >
-              <ChevronLeft className="h-3 w-3" />
-              Back to Dashboard
-            </Link>
-            <h1 className="font-serif text-[2.8rem] font-bold tracking-tight text-foreground leading-none">
-              Schedule
-            </h1>
-          </div>
-          <button
-            onClick={() => openNew(format(currentDate, "yyyy-MM-dd"))}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3 rounded-full hover:scale-[1.02] transition-transform font-bold tracking-widest uppercase text-[12px] shadow-[0_0_20px_rgba(200,150,62,0.3)]"
-          >
-            <Plus className="h-4 w-4" />
-            Book Slot
-          </button>
+        <h1 className="font-serif text-[2.8rem] font-bold tracking-tight text-foreground leading-none">
+          Schedule
+        </h1>
+        <button
+          onClick={() => openNew(format(currentDate, "yyyy-MM-dd"))}
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3 rounded-full hover:scale-[1.02] transition-transform font-bold tracking-widest uppercase text-[12px] shadow-[0_0_20px_rgba(200,150,62,0.3)]"
+        >
+          <Plus className="h-4 w-4" />
+          Book Slot
+        </button>
       </div>
 
       {/* ── OVERLAPPING PANES LAYOUT ────────────────────────────────────────── */}

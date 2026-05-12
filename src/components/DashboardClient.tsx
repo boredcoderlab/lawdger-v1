@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import {
-  ChevronRight, Plus, Bell, Send, ChevronLeft, FileText, Download
+  ChevronRight, Bell, Send, ChevronLeft, FileText, Download
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -79,30 +78,10 @@ export default function DashboardClient({
       <div className="absolute top-[12%] left-0 w-[85%] h-[85%] bg-muted rounded-r-[5rem] -z-10 pointer-events-none" />
       <div className="absolute -bottom-20 -right-20 w-[60%] h-[75%] bg-black/5 dark:bg-white/5 rounded-tl-[8rem] rounded-bl-[4rem] -z-20 pointer-events-none" />
 
-      {/* ── TOP HEADER & UTILITY NAV ────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6 z-10 shrink-0">
-        <div className="flex items-center gap-8">
-          <h1 className="font-serif text-[2.5rem] font-bold tracking-tight text-foreground">
-            Web Dashboard
-          </h1>
-          <div className="hidden md:flex items-center gap-6 text-[15px] font-medium text-foreground">
-            <span className="border-b-2 border-foreground pb-1 cursor-pointer">Dashboard</span>
-            <Link href="/finances" className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity pb-1 hover:border-b-2 hover:border-foreground">Finances</Link>
-            <Link href="/chat" className="opacity-60 hover:opacity-100 cursor-pointer transition-opacity pb-1 hover:border-b-2 hover:border-foreground">Legal Brain AI</Link>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          {/* Notification Bell */}
-          <button className="relative flex h-11 w-11 items-center justify-center rounded-full border border-foreground/10 bg-card/60 text-foreground shadow-sm hover:bg-card transition-colors shrink-0">
-            <Bell className="h-[20px] w-[20px] opacity-80" strokeWidth={2} />
-          </button>
-          
-          <button className="flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-[15px] font-medium text-primary-foreground hover:opacity-90 transition-opacity shadow-lg whitespace-nowrap">
-            <Plus className="h-4 w-4" /> Quick Add
-          </button>
-        </div>
-      </div>
+      {/* ── PAGE TITLE ────────────────────────────────────────────────────── */}
+      <h1 className="font-serif text-[2.5rem] font-bold tracking-tight text-foreground mb-6 z-10 shrink-0">
+        Web Dashboard
+      </h1>
 
       {/* ── MAIN BENTO GRID ────────────────────────────────────────────────── */}
       <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-x-8 gap-y-4 z-10 flex-1 min-h-0">
