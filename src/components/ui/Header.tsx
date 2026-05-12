@@ -1,61 +1,49 @@
 "use client";
 
 import React, { useState } from "react";
-import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   Search, Bell, Briefcase, Receipt, Calendar as CalIcon, CheckCircle2,
   ChevronDown, Wallet, MessageSquare, ChevronRight
 } from "lucide-react";
 
-// ── Route metadata ───────────────────────────────────────────────────────────
+// ── Greeting ─────────────────────────────────────────────────────────────────
 
-const PAGE_META: Record<string, { title: string; subtitle: string }> = {
-  "/dashboard": { title: "Web Dashboard",   subtitle: `Today, ${new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}` },
-  "/cases":     { title: "Case Registry",   subtitle: "Your matters" },
-  "/calendar":  { title: "Schedule",        subtitle: "Hearings & deadlines" },
-  "/tasks":     { title: "Tasks",           subtitle: "Your plate" },
-  "/finances":  { title: "Finances",        subtitle: "Fee tracking" },
-  "/chat":      { title: "Legal Brain",     subtitle: "AI assistant" },
-  "/inbox":     { title: "Document Intake", subtitle: "Uploads & sorting" },
-  "/settings":  { title: "Settings",        subtitle: "" },
-};
+function getGreeting(name: string): string {
+  const hour = new Date().getHours();
+  const salutation =
+    hour < 12 ? "Good morning" :
+    hour < 17 ? "Good afternoon" :
+    "Good evening";
+  return `${salutation}, ${name}`;
+}
 
-const DEFAULT_META = { title: "Lawdger", subtitle: "" };
+const briefing = "Your Lawdger is ready.";
 
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function Header() {
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
-  const pathname = usePathname();
   const { data: session } = useSession();
 
-  const meta = PAGE_META[pathname] ?? DEFAULT_META;
-  const subtitle =
-    pathname === "/settings" && session?.user?.email
-      ? session.user.email
-      : meta.subtitle;
+  const firstName = session?.user?.name?.split(" ")[0] ?? "Counsellor";
 
   return (
     <header className="flex items-center justify-between px-10 py-5 border-b border-lawdger-espresso/5 relative z-30 bg-lawdger-base/70 backdrop-blur-3xl">
         <div className="flex items-center gap-8">
-            <div className="flex flex-col">
-                <h1 className="font-serif text-2xl font-bold text-lawdger-espresso dark:text-foreground tracking-tight leading-none">
-                  {meta.title}
+            <div className="flex flex-col justify-center">
+                <h1 className="font-playfair text-2xl font-bold text-lawdger-espresso dark:text-foreground leading-tight">
+                  {getGreeting(firstName)}
                 </h1>
-                {subtitle && (
-                  <p className="text-xs uppercase tracking-widest text-lawdger-muted mt-0.5">
-                    {subtitle}
-                  </p>
-                )}
+                <p className="text-xs uppercase tracking-widest text-lawdger-muted mt-0.5">
+                  {briefing}
+                </p>
             </div>
 
-            {pathname === "/dashboard" && (
-              <nav className="flex items-center gap-1.5 p-1 bg-white/40 border border-white/80 rounded-[14px] shadow-sm">
-                  <ModeLink label="Finance" icon={<Wallet size={14}/>} />
-                  <ModeLink label="Legal Brain AI" icon={<MessageSquare size={14}/>} isNew />
-              </nav>
-            )}
+            <nav className="flex items-center gap-1.5 p-1 bg-white/40 border border-white/80 rounded-[14px] shadow-sm">
+                <ModeLink label="Finance" icon={<Wallet size={14}/>} />
+                <ModeLink label="Legal Brain AI" icon={<MessageSquare size={14}/>} isNew />
+            </nav>
         </div>
 
         <div className="flex items-center gap-4">
