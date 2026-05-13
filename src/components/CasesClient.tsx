@@ -14,12 +14,12 @@ import {
   Hash,
   ArrowRight,
 } from "lucide-react";
+import { createCase } from "@/app/(lawdger)/cases/actions";
 import {
-  createCase,
   CASE_TYPES,
   type CaseRecord,
   type CaseType,
-} from "@/app/(lawdger)/cases/actions";
+} from "@/app/(lawdger)/cases/types";
 import {
   PageLayout,
   DarkPaneHeaderTitle,

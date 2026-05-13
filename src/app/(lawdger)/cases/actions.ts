@@ -4,27 +4,12 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-export const CASE_TYPES = [
-  "CIVIL",
-  "CRIMINAL",
-  "WRIT",
-  "APPEAL",
-  "COMMERCIAL",
-  "FAMILY",
-  "ARBITRATION",
-  "OTHER",
-] as const;
-export type CaseType = (typeof CASE_TYPES)[number];
-
-export const CASE_STATUSES = [
-  "active",
-  "pending",
-  "closed",
-  "urgent",
-  "dormant",
-] as const;
-export type CaseStatus = (typeof CASE_STATUSES)[number];
+import {
+  CASE_TYPES,
+  type CaseRecord,
+  type CaseStatus,
+  type CreateCaseInput,
+} from "./types";
 
 const createCaseSchema = z.object({
   title: z.string().min(2, "Case title required"),
@@ -36,25 +21,6 @@ const createCaseSchema = z.object({
   nextHearingDate: z.string().optional(),
   description: z.string().optional(),
 });
-
-export type CreateCaseInput = z.infer<typeof createCaseSchema>;
-
-export type CaseRecord = {
-  id: string;
-  userId: string;
-  title: string;
-  clientName: string | null;
-  courtName: string | null;
-  matterId: string | null;
-  forum: string | null;
-  court: string | null;
-  caseType: string | null;
-  status: string;
-  nextHearingDate: Date | null;
-  description: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
 
 export async function createCase(
   input: CreateCaseInput
