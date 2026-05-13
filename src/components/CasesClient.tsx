@@ -419,7 +419,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
 
   return (
     <Link href={`/cases/${c.id}`} className="group block">
-      <article className="h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/15 bg-lawdger-cream p-6 shadow-sm transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] hover:-translate-y-1 relative overflow-hidden">
+      <article className="h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/20 bg-white p-6 shadow-sm transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] hover:-translate-y-1 relative overflow-hidden">
         {/* Top accent line on hover */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-lawdger-gold/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -600,7 +600,7 @@ export default function CasesClient({
           </>
         }
         mainPaneContent={
-          <div className="p-8 h-full">
+          <div className="bg-lawdger-cream min-h-full p-8">
             {filtered.length === 0 ? (
               <EmptyState
                 searchActive={search.length > 0 || statusFilter !== "all"}
@@ -682,7 +682,7 @@ function EmptyState({
   onNewMatter: () => void;
 }) {
   return (
-    <div className="flex-1 h-full rounded-[2rem] border border-dashed border-lawdger-gold/20 bg-lawdger-cream/60 flex flex-col items-center justify-center text-center p-10">
+    <div className="flex-1 h-full rounded-[2rem] border border-dashed border-lawdger-gold/20 bg-lawdger-base flex flex-col items-center justify-center text-center p-10">
       <div className="w-14 h-14 rounded-2xl bg-lawdger-gold/10 flex items-center justify-center text-lawdger-gold mb-5">
         <Briefcase className="w-7 h-7" />
       </div>
