@@ -108,7 +108,7 @@ export function PageLayout(props: PageLayoutProps) {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="relative flex flex-col flex-1 p-8 lg:p-12 min-h-screen bg-transparent text-foreground font-sans z-0">
+    <div className="relative flex flex-col flex-1 p-8 lg:p-12 min-h-screen bg-lawdger-base text-foreground font-sans z-0">
 
       {/* Ambient background orb — warm espresso glow */}
       <div className="absolute top-[10%] left-[-5%] w-[60%] h-[70%] bg-primary/10 rounded-full blur-[140px] -z-10 pointer-events-none" />
@@ -144,11 +144,11 @@ export function PageLayout(props: PageLayoutProps) {
         */}
         <div
           className={[
-            "w-[42%] lg:w-[38%]",
-            "rounded-[2.5rem]",
-            "bg-gradient-to-b from-[#3a2c23] to-[#291e16]",
+            "w-[35%]",
+            "rounded-3xl",
+            "bg-lawdger-espresso",
             "p-10 pr-16",
-            "shadow-[0_30px_60px_rgba(0,0,0,0.4)]",
+            "shadow-xl",
             "h-full flex flex-col",
             "z-10 shrink-0",
             "border border-white/5",
@@ -171,12 +171,12 @@ export function PageLayout(props: PageLayoutProps) {
         <div
           className={[
             "flex-1",
-            "-ml-[8%] lg:-ml-[6%]",
+            "-ml-[60px]",
             "mt-8",
-            "rounded-[2.5rem]",
-            "bg-lawdger-cream",
-            "border border-lawdger-gold/15",
-            "shadow-[0_30px_60px_rgba(0,0,0,0.12)]",
+            "rounded-3xl",
+            "bg-white/40 dark:bg-lawdger-cream/5 backdrop-blur-2xl",
+            "border border-white/30 dark:border-white/10",
+            "shadow-2xl shadow-lawdger-espresso/10",
             "flex flex-col",
             "z-30",
             "pl-[10%] lg:pl-[8%]",
