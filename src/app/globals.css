@@ -82,7 +82,7 @@ body {
    Source: ContentHeading component (Tasks page column headings).
    All headings across the app use Playfair Display, bold, tight.
    ================================================================ */
-h1, h2, h3, h4, h5, h6 {
+:where(h1, h2, h3, h4, h5, h6) {
   font-family: var(--font-serif);
   font-weight: 700;
   letter-spacing: -0.025em; /* tracking-tight */
