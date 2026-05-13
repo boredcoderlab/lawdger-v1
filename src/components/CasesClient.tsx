@@ -1,95 +1,524 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Search,
   Plus,
   Briefcase,
   X,
-  Trash2,
-  FileText,
-  CheckSquare,
-  CalendarDays,
-  Activity,
-  Layers
+  LayoutGrid,
+  Calendar,
+  Scale,
+  Hash,
+  ArrowRight,
 } from "lucide-react";
-import { createCase, deleteCase } from "@/actions/caseActions";
-import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
+import {
+  createCase,
+  CASE_TYPES,
+  type CaseRecord,
+  type CaseType,
+} from "@/app/(lawdger)/cases/actions";
+import {
+  PageLayout,
+  DarkPaneHeaderTitle,
+  ContentHeading,
+} from "@/components/ui/LayoutShell";
 
-type CaseWithCounts = {
-  id: string;
-  title: string;
-  clientName: string | null;
-  courtName: string | null;
-  status: string;
-  createdAt: Date;
-  _count: { tasks: number; notes: number; calendarEvents: number };
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const FORUM_OPTIONS = [
+  "Supreme Court of India",
+  "High Court",
+  "District Court",
+  "Sessions Court",
+  "Magistrate Court",
+  "Tribunal",
+  "Other",
+] as const;
+
+const CASE_TYPE_LABEL: Record<CaseType, string> = {
+  CIVIL: "Civil",
+  CRIMINAL: "Criminal",
+  WRIT: "Writ Petition",
+  APPEAL: "Appeal",
+  COMMERCIAL: "Commercial",
+  FAMILY: "Family",
+  ARBITRATION: "Arbitration",
+  OTHER: "Other",
 };
+
+type StatusTab = "all" | "active" | "pending" | "closed";
+
+const STATUS_TABS: { id: StatusTab; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "active", label: "Active" },
+  { id: "pending", label: "Pending" },
+  { id: "closed", label: "Closed" },
+];
+
+function statusBadgeClass(status: string): string {
+  switch (status.toLowerCase()) {
+    case "urgent":
+      return "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20";
+    case "active":
+      return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
+    case "pending":
+      return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+    case "closed":
+      return "bg-lawdger-muted/15 text-lawdger-muted border-lawdger-muted/25";
+    case "dormant":
+      return "bg-lawdger-muted/10 text-lawdger-muted/80 border-lawdger-muted/20";
+    default:
+      return "bg-lawdger-muted/15 text-lawdger-muted border-lawdger-muted/25";
+  }
+}
+
+function formatHearing(d: Date | null): string {
+  if (!d) return "Not scheduled";
+  return new Date(d).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+// ── New Matter Dialog ─────────────────────────────────────────────────────────
+
+function NewMatterDialog({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [matterId, setMatterId] = useState("");
+  const [forum, setForum] = useState<string>(FORUM_OPTIONS[1]);
+  const [court, setCourt] = useState("");
+  const [caseType, setCaseType] = useState<CaseType>("CIVIL");
+  const [nextHearingDate, setNextHearingDate] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+
+  // Reset on open
+  useEffect(() => {
+    if (open) {
+      setTitle("");
+      setClientName("");
+      setMatterId("");
+      setForum(FORUM_OPTIONS[1]);
+      setCourt("");
+      setCaseType("CIVIL");
+      setNextHearingDate("");
+      setDescription("");
+      setError(null);
+      // Focus first field
+      const t = setTimeout(() => firstFieldRef.current?.focus(), 50);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
+  // Escape close + focus trap
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+      if (e.key === "Tab" && dialogRef.current) {
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+          'input, select, textarea, button, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  // Lock body scroll
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  if (!open) return null;
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const result = await createCase({
+        title,
+        clientName,
+        matterId: matterId || undefined,
+        forum,
+        court,
+        caseType,
+        nextHearingDate: nextHearingDate || undefined,
+        description: description || undefined,
+      });
+      if ("error" in result) {
+        setError(result.error);
+      } else {
+        onCreated();
+        onClose();
+      }
+    });
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-lawdger-espresso/70 backdrop-blur-md animate-in fade-in duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-matter-title"
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-background rounded-[1.5rem] shadow-[0_30px_80px_rgba(0,0,0,0.4)] w-full max-w-lg overflow-hidden border border-lawdger-gold/20 animate-in zoom-in-95 duration-200"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-7 py-6 border-b border-lawdger-gold/15 bg-lawdger-base">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-xl bg-lawdger-gold/15 flex items-center justify-center text-lawdger-gold">
+              <Briefcase className="w-5 h-5" />
+            </div>
+            <div>
+              <h2
+                id="new-matter-title"
+                className="font-serif text-[1.4rem] font-bold text-lawdger-espresso leading-none"
+              >
+                New Matter
+              </h2>
+              <p className="text-[10px] uppercase tracking-widest font-bold text-lawdger-gold mt-1.5">
+                Initialize Case Record
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close dialog"
+            className="text-lawdger-muted hover:text-lawdger-espresso transition-colors p-2 hover:bg-lawdger-espresso/5 rounded-full"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form
+          onSubmit={submit}
+          className="px-7 py-6 space-y-5 max-h-[70vh] overflow-y-auto scrollbar-hide"
+        >
+          {error && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 px-4 py-3 text-[13px] font-medium">
+              {error}
+            </div>
+          )}
+
+          <FormField
+            label="Case Title"
+            required
+            value={title}
+            onChange={setTitle}
+            placeholder="e.g. Sharma v. State of M.P."
+            inputRef={firstFieldRef}
+          />
+
+          <FormField
+            label="Client Name"
+            required
+            value={clientName}
+            onChange={setClientName}
+            placeholder="e.g. Amit Sharma"
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              label="Matter ID (optional)"
+              value={matterId}
+              onChange={setMatterId}
+              placeholder="e.g. MP/2026/0142"
+            />
+            <FormSelect
+              label="Forum"
+              required
+              value={forum}
+              onChange={setForum}
+              options={FORUM_OPTIONS.map((o) => ({ value: o, label: o }))}
+            />
+          </div>
+
+          <FormField
+            label="Court"
+            required
+            value={court}
+            onChange={setCourt}
+            placeholder="e.g. M.P. High Court, Indore Bench"
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormSelect
+              label="Case Type"
+              required
+              value={caseType}
+              onChange={(v) => setCaseType(v as CaseType)}
+              options={CASE_TYPES.map((t) => ({
+                value: t,
+                label: CASE_TYPE_LABEL[t],
+              }))}
+            />
+            <FormField
+              label="Next Hearing Date"
+              type="date"
+              value={nextHearingDate}
+              onChange={setNextHearingDate}
+            />
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-lawdger-muted mb-2">
+              Description (optional)
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              placeholder="Brief note on the matter, parties, or stage…"
+              className="w-full bg-lawdger-base border border-lawdger-gold/15 rounded-xl px-4 py-3 text-[14px] text-lawdger-espresso focus:outline-none focus:border-lawdger-gold focus:ring-1 focus:ring-lawdger-gold transition-all resize-none placeholder:text-lawdger-muted/60"
+            />
+          </div>
+
+          <div className="pt-2 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-3 rounded-xl border border-lawdger-gold/20 text-lawdger-espresso text-[12px] uppercase tracking-widest font-bold hover:bg-lawdger-base/60 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="flex-1 bg-lawdger-espresso text-lawdger-base px-7 py-3 rounded-xl text-[12px] uppercase tracking-widest font-bold hover:bg-lawdger-espresso/90 hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] transition-all disabled:opacity-60"
+            >
+              {isPending ? "Committing…" : "Commit to Registry"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function FormField({
+  label,
+  required,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  inputRef,
+}: {
+  label: string;
+  required?: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] font-bold uppercase tracking-widest text-lawdger-muted mb-2">
+        {label}
+        {required && <span className="text-lawdger-gold ml-1">*</span>}
+      </label>
+      <input
+        ref={inputRef}
+        type={type}
+        required={required}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full bg-lawdger-base border border-lawdger-gold/15 rounded-xl px-4 py-3 text-[14px] text-lawdger-espresso focus:outline-none focus:border-lawdger-gold focus:ring-1 focus:ring-lawdger-gold transition-all placeholder:text-lawdger-muted/60"
+      />
+    </div>
+  );
+}
+
+function FormSelect({
+  label,
+  required,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  required?: boolean;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <div>
+      <label className="block text-[10px] font-bold uppercase tracking-widest text-lawdger-muted mb-2">
+        {label}
+        {required && <span className="text-lawdger-gold ml-1">*</span>}
+      </label>
+      <select
+        required={required}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full bg-lawdger-base border border-lawdger-gold/15 rounded-xl px-4 py-3 text-[14px] text-lawdger-espresso focus:outline-none focus:border-lawdger-gold focus:ring-1 focus:ring-lawdger-gold transition-all appearance-none"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// ── Case Tile ─────────────────────────────────────────────────────────────────
+
+function CaseTile({ c }: { c: CaseRecord }) {
+  const forumDisplay = c.forum ?? "—";
+  const courtDisplay = c.court ?? c.courtName ?? "—";
+  const typeLabel = c.caseType
+    ? CASE_TYPE_LABEL[c.caseType as CaseType] ?? c.caseType
+    : null;
+
+  return (
+    <Link href={`/cases/${c.id}`} className="group block">
+      <article className="h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/15 bg-lawdger-cream p-6 shadow-sm transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] hover:-translate-y-1 relative overflow-hidden">
+        {/* Top accent line on hover */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-lawdger-gold/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+
+        {/* Title + status */}
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <h3 className="font-serif text-[1.2rem] font-bold text-lawdger-espresso leading-tight group-hover:text-lawdger-espresso transition-colors line-clamp-2">
+            {c.title}
+          </h3>
+          <span
+            className={`shrink-0 inline-flex items-center rounded-md px-2.5 py-1 text-[9px] font-bold uppercase tracking-widest border ${statusBadgeClass(
+              c.status
+            )}`}
+          >
+            {c.status}
+          </span>
+        </div>
+
+        {/* Client */}
+        {c.clientName && (
+          <p className="text-[13px] text-lawdger-espresso/80 font-medium mb-5 truncate">
+            {c.clientName}
+          </p>
+        )}
+
+        {/* Matter ID + Next hearing */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="rounded-lg bg-lawdger-base/60 border border-lawdger-gold/10 px-3 py-2.5">
+            <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-lawdger-muted mb-1">
+              <Hash className="w-2.5 h-2.5" /> Matter ID
+            </p>
+            <p className="text-[12px] font-semibold text-lawdger-espresso truncate">
+              {c.matterId ?? <span className="text-lawdger-muted/70">—</span>}
+            </p>
+          </div>
+          <div className="rounded-lg bg-lawdger-base/60 border border-lawdger-gold/10 px-3 py-2.5">
+            <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-lawdger-muted mb-1">
+              <Calendar className="w-2.5 h-2.5" /> Next Hearing
+            </p>
+            <p className="text-[12px] font-semibold text-lawdger-espresso truncate">
+              {formatHearing(c.nextHearingDate)}
+            </p>
+          </div>
+        </div>
+
+        {/* Forum / Court */}
+        <div className="mt-auto pt-4 border-t border-lawdger-gold/10">
+          <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-lawdger-muted mb-1.5">
+            <Scale className="w-2.5 h-2.5" /> Forum / Court
+          </p>
+          <p className="text-[12px] font-semibold text-lawdger-espresso leading-snug">
+            {forumDisplay}
+            <span className="text-lawdger-muted"> · </span>
+            <span className="font-medium">{courtDisplay}</span>
+          </p>
+          {typeLabel && (
+            <p className="mt-1 text-[10px] uppercase tracking-widest text-lawdger-muted font-bold">
+              {typeLabel}
+            </p>
+          )}
+        </div>
+
+        {/* Open case file link */}
+        <div className="mt-4 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-lawdger-gold opacity-70 group-hover:opacity-100 transition-opacity">
+          Open Case File
+          <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
+        </div>
+      </article>
+    </Link>
+  );
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 
 export default function CasesClient({
   initialCases,
+  counts,
 }: {
-  initialCases: CaseWithCounts[];
+  initialCases: CaseRecord[];
+  counts: { total: number; active: number; pending: number; closed: number };
 }) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "closed" | "inactive">("all");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newCase, setNewCase] = useState({
-    title: "",
-    clientName: "",
-    courtName: "",
-    agreedFee: "",
-  });
+  const [statusFilter, setStatusFilter] = useState<StatusTab>("all");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const filtered = initialCases.filter((c) => {
+    const q = search.trim().toLowerCase();
     const matchesSearch =
-      c.title.toLowerCase().includes(search.toLowerCase()) ||
-      (c.clientName ?? "").toLowerCase().includes(search.toLowerCase()) ||
-      (c.courtName ?? "").toLowerCase().includes(search.toLowerCase());
+      !q ||
+      c.title.toLowerCase().includes(q) ||
+      (c.clientName ?? "").toLowerCase().includes(q);
     const matchesStatus =
-      statusFilter === "all" || c.status === statusFilter;
+      statusFilter === "all" || c.status.toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const handleAddCase = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    await createCase({
-      title: newCase.title,
-      clientName: newCase.clientName || undefined,
-      courtName: newCase.courtName || undefined,
-      agreedFee: newCase.agreedFee ? parseFloat(newCase.agreedFee) : undefined,
-    });
-    setNewCase({ title: "", clientName: "", courtName: "", agreedFee: "" });
-    setIsModalOpen(false);
-    setIsSubmitting(false);
+  const handleCreated = () => {
+    router.refresh();
   };
-
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (confirm("Delete this case and all its data? This cannot be undone.")) {
-      await deleteCase(id);
-    }
-  };
-
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
-      case "inactive":
-        return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
-      case "closed":
-        return "bg-black/5 dark:bg-white/5 text-muted-foreground border-black/10 dark:border-white/10";
-      default:
-        return "bg-black/5 dark:bg-white/5 text-muted-foreground border-black/10 dark:border-white/10";
-    }
-  };
-
-  const activeCount = initialCases.filter(c => c.status === 'active').length;
-  const closedCount = initialCases.filter(c => c.status === 'closed').length;
 
   return (
     <>
@@ -97,150 +526,90 @@ export default function CasesClient({
         pageTitle="Case Registry"
         headerAction={
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3 rounded-full hover:scale-[1.02] transition-transform font-bold tracking-widest uppercase text-[12px] shadow-[0_0_20px_rgba(200,150,62,0.3)]"
+            onClick={() => setDialogOpen(true)}
+            className="flex items-center gap-2 bg-lawdger-espresso text-lawdger-base px-6 py-3 rounded-full hover:bg-lawdger-espresso/90 hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] transition-all font-bold tracking-widest uppercase text-[11px]"
           >
             <Plus className="h-4 w-4" />
             New Matter
           </button>
         }
-        darkPaneHeader={<DarkPaneHeaderTitle icon={Layers} title="Master Index" subtitle="Metrics & Filters" />}
+        darkPaneHeader={
+          <DarkPaneHeaderTitle
+            icon={LayoutGrid}
+            title="Case Registry"
+            subtitle="Matters"
+          />
+        }
         darkPaneContent={
           <>
-            <div className="space-y-4 mb-10">
-               <div className="bg-black/20 dark:bg-card/80 rounded-2xl p-5 border border-white/5 flex justify-between items-center">
-                   <span className="text-[14px] text-[#f4efe8]/80 dark:text-white/80 font-medium">Total Matters</span>
-                   <span className="text-[20px] text-white font-bold">{initialCases.length}</span>
-               </div>
-               <div className="bg-primary/20 dark:bg-primary/10 rounded-2xl p-5 border border-primary/20 flex justify-between items-center">
-                   <span className="text-[14px] text-primary/90 dark:text-primary font-medium flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Active
-                   </span>
-                   <span className="text-[20px] text-white font-bold">{activeCount}</span>
-               </div>
-               <div className="bg-black/20 dark:bg-card/80 rounded-2xl p-5 border border-white/5 flex justify-between items-center">
-                   <span className="text-[14px] text-[#f4efe8]/60 dark:text-white/50 font-medium">Closed</span>
-                   <span className="text-[20px] text-white/50 font-bold">{closedCount}</span>
-               </div>
+            {/* Metrics */}
+            <div className="space-y-3 mb-10">
+              <MetricRow label="Total Matters" value={counts.total} prominent />
+              <MetricRow
+                label="Active"
+                value={counts.active}
+                accentDot
+              />
+              <MetricRow label="Pending" value={counts.pending} />
+              <MetricRow label="Closed" value={counts.closed} dim />
             </div>
 
+            {/* Quick Search */}
             <div className="mt-auto">
-               <label className="block text-[10px] font-bold uppercase tracking-widest text-[#f4efe8]/50 dark:text-white/40 mb-3">Quick Search</label>
-               <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Find by name, client..."
-                    className="w-full bg-black/20 dark:bg-card/80 border border-white/10 rounded-full pl-12 pr-4 py-4 text-[14px] text-white placeholder:text-white/30 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-inner"
-                  />
-               </div>
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 mb-3">
+                Quick Search
+              </label>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-lawdger-cream/40" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Find by name, client…"
+                  className="w-full bg-lawdger-base/10 border border-lawdger-cream/10 rounded-full pl-11 pr-4 py-3.5 text-[13px] text-lawdger-cream placeholder:text-lawdger-cream/30 focus:outline-none focus:border-lawdger-gold focus:ring-1 focus:ring-lawdger-gold/40 transition-all"
+                />
+              </div>
             </div>
           </>
         }
         mainPaneHeader={
           <>
-            <ContentHeading className="text-[1.3rem]">Registry Entries</ContentHeading>
-            
-            {/* Status filter pills */}
-            <div className="flex bg-white/95 dark:bg-card/80 border border-primary/10 rounded-full p-1 shadow-sm shrink-0">
-              {(["all", "active", "inactive", "closed"] as const).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStatusFilter(s)}
-                  className={`px-4 py-1.5 rounded-full text-[12px] tracking-wide transition-all capitalize font-bold ${
-                    statusFilter === s
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
+            <div className="flex items-center gap-5">
+              <ContentHeading className="text-[1.3rem]">
+                Registry Entries
+              </ContentHeading>
+              <div className="flex bg-lawdger-base/60 border border-lawdger-gold/10 rounded-full p-1">
+                {STATUS_TABS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => setStatusFilter(id)}
+                    className={`px-4 py-1.5 rounded-full text-[11px] tracking-wide transition-all font-bold uppercase ${
+                      statusFilter === id
+                        ? "bg-lawdger-espresso text-lawdger-base shadow-sm"
+                        : "text-lawdger-muted hover:text-lawdger-espresso"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
+            <p className="text-[11px] uppercase tracking-widest font-bold text-lawdger-muted">
+              {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
+            </p>
           </>
         }
         mainPaneContent={
           <div className="p-8 h-full">
             {filtered.length === 0 ? (
-              <div className="flex-1 rounded-[2rem] border border-dashed border-primary/20 bg-white/90 dark:bg-card/80 flex flex-col items-center justify-center text-center p-10 shadow-inner h-full">
-                  <Briefcase className="w-12 h-12 text-primary/40 mb-4" />
-                  <h4 className="text-[1.2rem] font-bold text-foreground mb-1">No matches found</h4>
-                  <p className="text-muted-foreground text-[14px]">Try adjusting your search or filters.</p>
-              </div>
+              <EmptyState
+                searchActive={search.length > 0 || statusFilter !== "all"}
+                onNewMatter={() => setDialogOpen(true)}
+              />
             ) : (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 pb-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 pb-10">
                 {filtered.map((c) => (
-                  <Link key={c.id} href={`/cases/${c.id}`} className="block group">
-                    <div className="rounded-[1.5rem] border border-white/50 dark:border-white/5 bg-white/70 dark:bg-white/5 backdrop-blur-sm p-6 shadow-sm transition-all duration-300 hover:border-primary/40 hover:shadow-[0_15px_30px_rgba(200,150,62,0.1)] hover:-translate-y-1 h-full flex flex-col relative overflow-hidden">
-
-                      {/* Subtle top accent line on card */}
-                      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                      {/* Delete button */}
-                      <button
-                        onClick={(e) => handleDelete(e, c.id)}
-                        className="absolute top-5 right-5 p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100 z-10"
-                        title="Delete case"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-
-                      <div className="flex justify-between items-start mb-5 pr-8">
-                        <div>
-                          <h2 className="font-serif text-[1.4rem] font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors leading-tight">
-                            {c.title}
-                          </h2>
-                        </div>
-                      </div>
-
-                      <div className="mb-6">
-                          <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest border ${statusBadge(c.status)}`}>
-                            {c.status}
-                          </span>
-                      </div>
-
-                      {/* Client & Court */}
-                      <div className="mt-auto pt-4 border-t border-primary/10 grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold mb-1">
-                            Client
-                          </p>
-                          <p className="text-[13px] font-medium text-foreground truncate">
-                            {c.clientName ?? <span className="text-muted-foreground/50 italic">—</span>}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-bold mb-1">
-                            Court
-                          </p>
-                          <p className="text-[13px] font-medium text-foreground flex items-center gap-1.5 truncate">
-                            <Briefcase className="h-3 w-3 text-primary/70 shrink-0" />
-                            {c.courtName ?? <span className="text-muted-foreground/50 italic">—</span>}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Counts */}
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground font-bold bg-black/5 dark:bg-white/5 rounded-lg px-3 py-2">
-                        <span className="flex items-center gap-1.5">
-                          <CheckSquare className="h-3 w-3 text-primary/60" />
-                          {c._count.tasks}
-                        </span>
-                        <div className="w-px h-3 bg-primary/10"></div>
-                        <span className="flex items-center gap-1.5">
-                          <FileText className="h-3 w-3 text-primary/60" />
-                          {c._count.notes}
-                        </span>
-                        <div className="w-px h-3 bg-primary/10"></div>
-                        <span className="flex items-center gap-1.5">
-                          <CalendarDays className="h-3 w-3 text-primary/60" />
-                          {c._count.calendarEvents}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
+                  <CaseTile key={c.id} c={c} />
                 ))}
               </div>
             )}
@@ -248,80 +617,92 @@ export default function CasesClient({
         }
       />
 
-      {/* New Case Modal - Premium Redesign */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <div className="bg-background  rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-hidden relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
-            
-            <div className="flex justify-between items-center p-6 bg-white dark:bg-[#1A1918] border-b border-primary/10">
-              <div className="flex items-center gap-4">
-                 <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                    <Briefcase className="w-5 h-5" />
-                 </div>
-                 <div>
-                    <ContentHeading className="text-[1.5rem]">Initialize Matter</ContentHeading>
-                    <p className="text-[10px] uppercase tracking-widest font-bold text-primary/60 mt-1.5">New Case Record</p>
-                 </div>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-foreground/40 hover:text-foreground transition-colors p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddCase} className="p-8 space-y-6">
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                  Matter Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newCase.title}
-                  onChange={(e) => setNewCase({ ...newCase, title: e.target.value })}
-                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
-                  placeholder="e.g. Sharma v. State"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                  Client Identifier
-                </label>
-                <input
-                  type="text"
-                  value={newCase.clientName}
-                  onChange={(e) => setNewCase({ ...newCase, clientName: e.target.value })}
-                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
-                  placeholder="e.g. Amit Gupta"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                  Court / Forum
-                </label>
-                <input
-                  type="text"
-                  value={newCase.courtName}
-                  onChange={(e) => setNewCase({ ...newCase, courtName: e.target.value })}
-                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
-                  placeholder="e.g. High Court of Delhi"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-primary text-primary-foreground font-bold py-4 rounded-xl hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-[1.01] transition-all uppercase tracking-widest text-[12px] disabled:opacity-60"
-                >
-                  {isSubmitting ? "Generating Record…" : "Commit to Registry"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <NewMatterDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onCreated={handleCreated}
+      />
     </>
+  );
+}
+
+// ── Metric Row ────────────────────────────────────────────────────────────────
+
+function MetricRow({
+  label,
+  value,
+  prominent = false,
+  accentDot = false,
+  dim = false,
+}: {
+  label: string;
+  value: number;
+  prominent?: boolean;
+  accentDot?: boolean;
+  dim?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between rounded-2xl px-5 py-4 border ${
+        prominent
+          ? "bg-lawdger-base/15 border-lawdger-cream/15"
+          : accentDot
+          ? "bg-lawdger-gold/15 border-lawdger-gold/25"
+          : "bg-lawdger-base/8 border-lawdger-cream/5"
+      }`}
+    >
+      <span
+        className={`text-[13px] font-medium flex items-center gap-2 ${
+          dim ? "text-lawdger-cream/45" : "text-lawdger-cream/85"
+        }`}
+      >
+        {accentDot && (
+          <span className="w-1.5 h-1.5 rounded-full bg-lawdger-gold animate-pulse" />
+        )}
+        {label}
+      </span>
+      <span
+        className={`font-serif text-[20px] font-bold ${
+          dim ? "text-lawdger-cream/45" : "text-lawdger-cream"
+        }`}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// ── Empty State ───────────────────────────────────────────────────────────────
+
+function EmptyState({
+  searchActive,
+  onNewMatter,
+}: {
+  searchActive: boolean;
+  onNewMatter: () => void;
+}) {
+  return (
+    <div className="flex-1 h-full rounded-[2rem] border border-dashed border-lawdger-gold/20 bg-lawdger-cream/60 flex flex-col items-center justify-center text-center p-10">
+      <div className="w-14 h-14 rounded-2xl bg-lawdger-gold/10 flex items-center justify-center text-lawdger-gold mb-5">
+        <Briefcase className="w-7 h-7" />
+      </div>
+      <h4 className="font-serif text-[1.4rem] font-bold text-lawdger-espresso mb-2">
+        {searchActive ? "No matches found" : "No matters yet"}
+      </h4>
+      <p className="text-[13px] text-lawdger-muted max-w-sm mb-6">
+        {searchActive
+          ? "Try clearing the search or switching filters to see other entries."
+          : "Create your first matter to begin building your Lawdger."}
+      </p>
+      {!searchActive && (
+        <button
+          onClick={onNewMatter}
+          className="flex items-center gap-2 bg-lawdger-espresso text-lawdger-base px-6 py-3 rounded-full hover:bg-lawdger-espresso/90 hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] transition-all font-bold tracking-widest uppercase text-[11px]"
+        >
+          <Plus className="h-4 w-4" />
+          New Matter
+        </button>
+      )}
+    </div>
   );
 }

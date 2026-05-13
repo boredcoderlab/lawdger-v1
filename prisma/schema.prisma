@@ -24,13 +24,22 @@ model User {
 }
 
 model Case {
-  id             String          @id @default(uuid())
-  userId         String
-  title          String
-  clientName     String?
-  courtName      String?
-  agreedFee      Float?
-  status         String          @default("active") // active, closed, inactive
+  id              String          @id @default(uuid())
+  userId          String
+  title           String
+  clientName      String?
+  courtName       String?
+  agreedFee       Float?
+  status          String          @default("active") // active, pending, closed, urgent, dormant
+
+  // Path B additive fields — Case Registry expansion
+  matterId        String?
+  forum           String?
+  court           String?
+  caseType        CaseType?
+  nextHearingDate DateTime?
+  description     String?
+
   user           User            @relation(fields: [userId], references: [id])
   notes          Note[]
   tasks          Task[]
@@ -38,6 +47,20 @@ model Case {
   payments       Payment[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+enum CaseType {
+  CIVIL
+  CRIMINAL
+  WRIT
+  APPEAL
+  COMMERCIAL
+  FAMILY
+  ARBITRATION
+  OTHER
 }
 
 model Note {
