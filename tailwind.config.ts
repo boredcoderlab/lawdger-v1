@@ -1,3 +1,6 @@
+// NOTE: Tailwind v4 reads theme tokens from globals.css @theme block only.
+// This file is kept for reference but does NOT affect generated CSS.
+// Source of truth: src/app/globals.css
 import type { Config } from "tailwindcss";
 
 const config: Config = {

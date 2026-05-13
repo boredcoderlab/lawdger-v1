@@ -58,6 +58,14 @@
   --color-surface-strong: var(--surface-strong);
   --color-surface-contrast: var(--surface-contrast);
   --color-overlay-strong: var(--overlay-strong);
+  --color-lawdger-base: #F5F2EC;
+  --color-lawdger-espresso: #2A2320;
+  --color-lawdger-border: #4A3C33;
+  --color-lawdger-gold: #D4AF37;
+  --color-lawdger-cream: #FCFAF8;
+  --color-lawdger-muted: #A3968A;
+  --color-lawdger-teal: #2DD4BF;
+  --color-lawdger-sidebar: #1E1917;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
 }
