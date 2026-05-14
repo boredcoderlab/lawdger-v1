@@ -8,6 +8,7 @@ import {
   updateProfile, changePassword, updateWorkspacePreferences,
   updateNotificationPreferences, type SettingsState, type Preferences,
 } from "@/actions/settingsActions";
+import { PageLayout, DarkPaneHeaderTitle } from "@/components/ui/LayoutShell";
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 
@@ -158,207 +159,184 @@ export default function SettingsClient({
   const [notifState, notifAction, notifPending] = useActionState<SettingsState, FormData>(updateNotificationPreferences, {});
 
   return (
-    <div className="flex flex-col min-h-screen bg-background  text-foreground relative selection:bg-primary/30 p-8 lg:p-12 overflow-x-hidden">
-      
-      {/* Background Ambience */}
-      <div className="fixed top-0 right-0 w-[60%] h-[60%] bg-primary/10 rounded-full blur-[150px] pointer-events-none z-0"></div>
-      
-      {/* ── OVERLAPPING PANES LAYOUT ────────────────────────────────────────── */}
-      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto">
-        
-        {/* Left: Dark Navigator (Settings Menu) */}
-        <div className="w-[42%] rounded-[2.5rem] bg-gradient-to-b from-[#3a2c23] to-[#291e16] p-10 pr-20 shadow-[0_30px_60px_rgba(0,0,0,0.4)] min-h-[700px] flex flex-col z-10 border border-white/5 shrink-0">
-          
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-10">
-             <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center text-white shadow-inner">
-                <Settings className="w-6 h-6" />
-             </div>
-             <div>
-                <h1 className="font-serif text-[1.5rem] font-serif font-bold text-[#f4efe8] dark:text-white leading-none">Settings</h1>
-                <p className="text-[10px] uppercase tracking-widest font-bold text-primary/80 mt-1.5">Workspace Preferences</p>
-             </div>
-          </div>
-
-          {/* Profile Overview Card (Dark Theme Variant) */}
-          <div className="bg-[#291e16]/80 rounded-[1.5rem] p-5 mb-10 border border-white/10 shadow-inner">
-              <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-serif text-xl font-bold">
-                      {name ? name.charAt(0) : "U"}
-                  </div>
-                  <div>
-                      <h3 className="font-bold text-[15px] text-[#f4efe8] dark:text-white">{name || "User Name"}</h3>
-                      <p className="text-[12px] font-medium text-white/50">{email}</p>
-                  </div>
+    <PageLayout
+      pageTitle="Settings"
+      darkPaneHeader={
+        <DarkPaneHeaderTitle icon={Settings} title="Settings" subtitle="Workspace Preferences" />
+      }
+      darkPaneContent={
+        <>
+          {/* Profile Overview Card */}
+          <div className="bg-lawdger-sidebar/80 rounded-[1.5rem] p-5 mb-10 border border-lawdger-cream/10 shadow-inner shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-serif text-xl font-bold">
+                {name ? name.charAt(0) : "U"}
               </div>
+              <div>
+                <h3 className="font-bold text-[15px] text-lawdger-cream">{name || "User Name"}</h3>
+                <p className="text-[12px] font-medium text-lawdger-cream/50">{email}</p>
+              </div>
+            </div>
           </div>
 
           {/* Vertical Navigation Menu */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 shrink-0">
             {TABS.map(({ id, label, icon: Icon }) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setActiveTab(id)}
                 className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold uppercase tracking-widest text-[11px] ${
-                    activeTab === id 
-                        ? 'bg-primary text-primary-foreground shadow-[0_0_20px_rgba(200,150,62,0.2)]' 
-                        : 'text-white/50 hover:bg-white/5 hover:text-white'
+                  activeTab === id
+                    ? "bg-primary text-primary-foreground shadow-[0_0_20px_rgba(200,150,62,0.2)]"
+                    : "text-lawdger-cream/50 hover:bg-lawdger-cream/5 hover:text-lawdger-cream"
                 }`}
               >
-                <Icon className={`w-4 h-4 ${activeTab === id ? 'text-primary-foreground' : 'text-white/40'}`} />
+                <Icon className={`w-4 h-4 ${activeTab === id ? "text-primary-foreground" : "text-lawdger-cream/40"}`} />
                 {label}
               </button>
             ))}
           </div>
 
-          <div className="mt-auto pt-10">
-             <div className="flex items-center gap-2 text-white/30">
-                 <Shield className="w-3 h-3" />
-                 <span className="text-[9px] font-bold uppercase tracking-widest">End-to-End Encrypted Workspace</span>
-             </div>
+          {/* Footer */}
+          <div className="mt-auto pt-10 shrink-0">
+            <div className="flex items-center gap-2 text-lawdger-cream/30">
+              <Shield className="w-3 h-3" />
+              <span className="text-[9px] font-bold uppercase tracking-widest">End-to-End Encrypted Workspace</span>
+            </div>
+          </div>
+        </>
+      }
+      mainPaneHeader={
+        <div>
+          <h2 className="font-serif text-[1.6rem] font-bold text-foreground leading-none">
+            {TABS.find((t) => t.id === activeTab)?.label}
+          </h2>
+          <p className="text-[12px] font-medium text-muted-foreground mt-2">
+            {activeTab === "account" && "Manage your professional identity and contact details."}
+            {activeTab === "ai-workspace" && "Configure how your Legal Second Brain behaves."}
+            {activeTab === "notifications" && "Tailor your digest and reminder preferences."}
+            {activeTab === "security" && "Update your password and security credentials."}
+          </p>
+        </div>
+      }
+      mainPaneContent={
+        <div className="p-10 pb-20">
+          {/* Account Tab */}
+          <div className={activeTab === "account" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
+            <Card title="Professional Profile" icon={User}>
+              <form action={profileAction} className="space-y-6">
+                <StatusBanner state={profileState} />
+                <div className="grid grid-cols-2 gap-6">
+                  <Field label="Full Name" name="name" defaultValue={name ?? ""} placeholder="Adv. Your Name" />
+                  <Field label="Bar Registration No." name="barNumber" defaultValue={preferences.barNumber} placeholder="e.g. D/1425/2012" />
+                </div>
+                <Field label="Firm / Practice Name" name="firmName" defaultValue={preferences.firmName} placeholder="e.g. Sharma & Associates" />
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                    Office Address
+                  </label>
+                  <textarea
+                    name="officeAddress"
+                    defaultValue={preferences.officeAddress}
+                    rows={3}
+                    placeholder="Chamber no., Court complex, City"
+                    className="w-full bg-white/95 dark:bg-black/30 border border-white/50 dark:border-white/10 rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground/50 resize-none shadow-sm"
+                  />
+                </div>
+                <div className="opacity-70">
+                  <Field label="Email Address (Locked)" name="email" defaultValue={email} disabled />
+                </div>
+                <SaveButton pending={profilePending} />
+              </form>
+            </Card>
           </div>
 
+          {/* Security Tab */}
+          <div className={activeTab === "security" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
+            <Card title="Access Credentials" icon={Lock}>
+              <form action={pwAction} className="space-y-6">
+                <StatusBanner state={pwState} />
+                <Field label="Current Password" name="currentPassword" type="password" placeholder="Enter current password" />
+                <Field label="New Password" name="newPassword" type="password" placeholder="At least 8 characters" />
+                <Field label="Confirm New Password" name="confirmPassword" type="password" placeholder="Repeat new password" />
+                <SaveButton pending={pwPending} label="Update Credentials" />
+              </form>
+            </Card>
+          </div>
+
+          {/* AI Workspace Tab */}
+          <div className={activeTab === "ai-workspace" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
+            <Card title="Brain Configuration" icon={Zap}>
+              <form action={wsAction} className="space-y-6">
+                <StatusBanner state={wsState} />
+                <SelectField
+                  label="Primary Jurisdiction"
+                  name="jurisdiction"
+                  value={jurisdiction}
+                  onChange={setJurisdiction}
+                  sub="Sets the context for citations and legal precedents."
+                  options={[
+                    "India (Federal & State)",
+                    "Delhi High Court",
+                    "Bombay High Court",
+                    "Madras High Court",
+                    "Calcutta High Court",
+                    "Supreme Court of India",
+                  ]}
+                />
+                <SelectField
+                  label="Voice Dictation Engine"
+                  name="voiceLanguage"
+                  value={voiceLanguage}
+                  onChange={setVoiceLanguage}
+                  sub="Primary language model for transcriptions."
+                  options={["English (India)", "Hindi", "Hinglish (Hindi + English)", "Marathi", "Tamil", "Telugu"]}
+                />
+                <Toggle
+                  name="autoSummarise"
+                  checked={autoSummarise}
+                  onChange={setAutoSummarise}
+                  label="Auto-summarise Case Logs"
+                  sub="Generate brief summaries automatically when new logs are added."
+                />
+                <SaveButton pending={wsPending} />
+              </form>
+            </Card>
+          </div>
+
+          {/* Notifications Tab */}
+          <div className={activeTab === "notifications" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
+            <Card title="Notification Matrix" icon={Bell}>
+              <form action={notifAction} className="space-y-6">
+                <StatusBanner state={notifState} />
+                <Toggle
+                  name="hearingReminders"
+                  checked={hearingReminders}
+                  onChange={setHearingReminders}
+                  label="Hearing Reminders"
+                  sub="Get notified the day before a court hearing is scheduled."
+                />
+                <Toggle
+                  name="taskDueReminders"
+                  checked={taskDueReminders}
+                  onChange={setTaskDueReminders}
+                  label="Task Deadlines"
+                  sub="Receive alerts when delegation tasks are due today or overdue."
+                />
+                <Toggle
+                  name="weeklySummary"
+                  checked={weeklySummary}
+                  onChange={setWeeklySummary}
+                  label="Weekly Master Digest"
+                  sub="A Monday morning summary of upcoming hearings and open tasks."
+                />
+                <SaveButton pending={notifPending} />
+              </form>
+            </Card>
+          </div>
         </div>
-
-        {/* Right: Frosted Glass Form Area overlapping ON TOP of the navigator */}
-        <div className="w-[64%] -ml-[6%] mt-8 rounded-[2.5rem] bg-white/95 dark:bg-card/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.1)] p-0 min-h-[750px] flex flex-col z-30 pl-[12%] overflow-hidden">
-           
-           {/* Dynamic Header */}
-           <div className="flex items-center justify-between border-b border-white/20 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-md px-10 py-8 shrink-0 rounded-tr-[2.5rem]">
-              <div>
-                  <h2 className="font-serif text-[1.6rem] font-bold text-foreground dark:text-white leading-none">
-                      {TABS.find(t => t.id === activeTab)?.label}
-                  </h2>
-                  <p className="text-[12px] font-medium text-muted-foreground mt-2">
-                      {activeTab === 'account' && "Manage your professional identity and contact details."}
-                      {activeTab === 'ai-workspace' && "Configure how your Legal Second Brain behaves."}
-                      {activeTab === 'notifications' && "Tailor your digest and reminder preferences."}
-                      {activeTab === 'security' && "Update your password and security credentials."}
-                  </p>
-              </div>
-           </div>
-
-           {/* Scrollable Form Content */}
-           <div className="flex-1 overflow-y-auto p-10 pb-20 scrollbar-hide">
-
-             {/* Account Tab */}
-             <div className={activeTab === "account" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
-               <Card title="Professional Profile" icon={User}>
-                 <form action={profileAction} className="space-y-6">
-                   <StatusBanner state={profileState} />
-                   <div className="grid grid-cols-2 gap-6">
-                     <Field label="Full Name" name="name" defaultValue={name ?? ""} placeholder="Adv. Your Name" />
-                     <Field label="Bar Registration No." name="barNumber" defaultValue={preferences.barNumber} placeholder="e.g. D/1425/2012" />
-                   </div>
-                   <Field label="Firm / Practice Name" name="firmName" defaultValue={preferences.firmName} placeholder="e.g. Sharma & Associates" />
-                   <div>
-                     <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
-                       Office Address
-                     </label>
-                     <textarea
-                       name="officeAddress"
-                       defaultValue={preferences.officeAddress}
-                       rows={3}
-                       placeholder="Chamber no., Court complex, City"
-                       className="w-full bg-white/95 dark:bg-black/30 border border-white/50 dark:border-white/10 rounded-xl px-4 py-3 text-[14px] text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground/50 resize-none shadow-sm"
-                     />
-                   </div>
-                   <div className="opacity-70">
-                       <Field label="Email Address (Locked)" name="email" defaultValue={email} disabled />
-                   </div>
-                   <SaveButton pending={profilePending} />
-                 </form>
-               </Card>
-             </div>
-
-             {/* Security Tab */}
-             <div className={activeTab === "security" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
-               <Card title="Access Credentials" icon={Lock}>
-                 <form action={pwAction} className="space-y-6">
-                   <StatusBanner state={pwState} />
-                   <Field label="Current Password" name="currentPassword" type="password" placeholder="Enter current password" />
-                   <Field label="New Password" name="newPassword" type="password" placeholder="At least 8 characters" />
-                   <Field label="Confirm New Password" name="confirmPassword" type="password" placeholder="Repeat new password" />
-                   <SaveButton pending={pwPending} label="Update Credentials" />
-                 </form>
-               </Card>
-             </div>
-
-             {/* AI Workspace Tab */}
-             <div className={activeTab === "ai-workspace" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
-               <Card title="Brain Configuration" icon={Zap}>
-                 <form action={wsAction} className="space-y-6">
-                   <StatusBanner state={wsState} />
-                   <SelectField
-                     label="Primary Jurisdiction"
-                     name="jurisdiction"
-                     value={jurisdiction}
-                     onChange={setJurisdiction}
-                     sub="Sets the context for citations and legal precedents."
-                     options={[
-                       "India (Federal & State)",
-                       "Delhi High Court",
-                       "Bombay High Court",
-                       "Madras High Court",
-                       "Calcutta High Court",
-                       "Supreme Court of India",
-                     ]}
-                   />
-                   <SelectField
-                     label="Voice Dictation Engine"
-                     name="voiceLanguage"
-                     value={voiceLanguage}
-                     onChange={setVoiceLanguage}
-                     sub="Primary language model for transcriptions."
-                     options={["English (India)", "Hindi", "Hinglish (Hindi + English)", "Marathi", "Tamil", "Telugu"]}
-                   />
-                   <Toggle
-                     name="autoSummarise"
-                     checked={autoSummarise}
-                     onChange={setAutoSummarise}
-                     label="Auto-summarise Case Logs"
-                     sub="Generate brief summaries automatically when new logs are added."
-                   />
-                   <SaveButton pending={wsPending} />
-                 </form>
-               </Card>
-             </div>
-
-             {/* Notifications Tab */}
-             <div className={activeTab === "notifications" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
-               <Card title="Notification Matrix" icon={Bell}>
-                 <form action={notifAction} className="space-y-6">
-                   <StatusBanner state={notifState} />
-                   <Toggle
-                     name="hearingReminders"
-                     checked={hearingReminders}
-                     onChange={setHearingReminders}
-                     label="Hearing Reminders"
-                     sub="Get notified the day before a court hearing is scheduled."
-                   />
-                   <Toggle
-                     name="taskDueReminders"
-                     checked={taskDueReminders}
-                     onChange={setTaskDueReminders}
-                     label="Task Deadlines"
-                     sub="Receive alerts when delegation tasks are due today or overdue."
-                   />
-                   <Toggle
-                     name="weeklySummary"
-                     checked={weeklySummary}
-                     onChange={setWeeklySummary}
-                     label="Weekly Master Digest"
-                     sub="A Monday morning summary of upcoming hearings and open tasks."
-                   />
-                   <SaveButton pending={notifPending} />
-                 </form>
-               </Card>
-             </div>
-
-           </div>
-        </div>
-      </div>
-    </div>
+      }
+    />
   );
 }
