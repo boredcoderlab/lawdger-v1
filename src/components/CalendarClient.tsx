@@ -16,6 +16,7 @@ import {
   createCalendarEvent, updateCalendarEvent, deleteCalendarEvent,
 } from "@/actions/calendarActions";
 import { createTask, updateTask, deleteTask } from "@/actions/taskActions";
+import { PageLayout, DarkPaneHeaderTitle } from "@/components/ui/LayoutShell";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -156,8 +157,8 @@ export default function CalendarClient({
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);       // CalendarEvent being edited
-  const [editTaskId, setEditTaskId] = useState<string | null>(null); // Task being edited
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     type: "hearing" as "hearing" | "task",
@@ -175,14 +176,14 @@ export default function CalendarClient({
 
   /* ── Navigation ── */
   const prev = () => {
-    if (view === "day")   setCurrentDate(subDays(currentDate, 1));
+    if (view === "day")        setCurrentDate(subDays(currentDate, 1));
     else if (view === "week")  setCurrentDate(subWeeks(currentDate, 1));
-    else setCurrentDate(subMonths(currentDate, 1));
+    else                       setCurrentDate(subMonths(currentDate, 1));
   };
   const next = () => {
-    if (view === "day")   setCurrentDate(addDays(currentDate, 1));
+    if (view === "day")        setCurrentDate(addDays(currentDate, 1));
     else if (view === "week")  setCurrentDate(addWeeks(currentDate, 1));
-    else setCurrentDate(addMonths(currentDate, 1));
+    else                       setCurrentDate(addMonths(currentDate, 1));
   };
 
   /* ── Modal helpers ── */
@@ -294,12 +295,6 @@ export default function CalendarClient({
     initialEvents.filter((ev) => isSameDay(ev.hearingDate, day) && toDisplayTime(ev.hearingDate) === time);
   const tasksOnDay      = (day: Date) => tasks.filter((t) => isSameDay(t.dueDate, day));
 
-  const hasOverdueTasks = tasks.some((t) => isTaskOverdue(t.dueDate));
-
-  /**
-   * Greedily assigns each task on `day` to the first free time slot (no event).
-   * Tasks that don't fit go into the overflow list.
-   */
   const autoAllocateTasks = (day: Date): { slotMap: Record<string, TaskItem>; overflow: TaskItem[] } => {
     const dayTasks = tasksOnDay(day);
     if (dayTasks.length === 0) return { slotMap: {}, overflow: [] };
@@ -338,63 +333,62 @@ export default function CalendarClient({
   );
 
   return (
-    <div className="relative flex flex-col flex-1 p-8 lg:p-12 min-h-screen bg-transparent text-foreground font-sans z-0">
-      
-      {/* Background Shapes Specific to Calendar */}
-      <div className="absolute top-[20%] left-[-10%] w-[50%] h-[60%] bg-accent/5 rounded-full blur-[140px] -z-10 pointer-events-none" />
-
-      {/* Header */}
-      <div className="flex justify-end mb-10 z-10">
-        <button
-          onClick={() => openNew(format(currentDate, "yyyy-MM-dd"))}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3 rounded-full hover:scale-[1.02] transition-transform font-bold tracking-widest uppercase text-[12px] shadow-[0_0_20px_rgba(200,150,62,0.3)]"
-        >
-          <Plus className="h-4 w-4" />
-          Book Slot
-        </button>
-      </div>
-
-      {/* ── OVERLAPPING PANES LAYOUT ────────────────────────────────────────── */}
-      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto">
-        
-        {/* Left: Dark Control Panel */}
-        <div className="w-[42%] rounded-[2.5rem] bg-gradient-to-b from-[#3a2c23] to-[#291e16] p-10 pr-20 shadow-[0_30px_60px_rgba(0,0,0,0.4)] min-h-[500px] flex flex-col z-10 border border-white/5 shrink-0">
-          
-          <div className="flex items-center gap-4 mb-8">
-             <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center text-white shadow-inner">
-                 <LayoutGrid className="w-6 h-6" />
-             </div>
-             <div>
-                <h2 className="text-[1.5rem] font-serif font-bold text-[#f4efe8] dark:text-white leading-tight">Navigator</h2>
-                <p className="text-[12px] text-[#f4efe8]/60 dark:text-white/50 uppercase tracking-widest font-bold">Month & Legend</p>
-             </div>
-          </div>
-
-          {/* Mini Calendar inside Dark Pane */}
-          <div className="bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5 mb-8">
+    <>
+      <PageLayout
+        pageTitle="Calendar"
+        headerAction={
+          <button
+            onClick={() => openNew(format(currentDate, "yyyy-MM-dd"))}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3 rounded-full hover:scale-[1.02] transition-transform font-bold tracking-widest uppercase text-[12px] shadow-[0_0_20px_rgba(200,150,62,0.3)]"
+          >
+            <Plus className="h-4 w-4" />
+            Book Slot
+          </button>
+        }
+        darkPaneHeader={
+          <DarkPaneHeaderTitle
+            icon={LayoutGrid}
+            title="Navigator"
+            subtitle="Month & Legend"
+          />
+        }
+        darkPaneContent={
+          <>
+            {/* Mini Calendar */}
+            <div className="bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5 mb-8">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-serif text-[18px] font-bold text-[#f4efe8] dark:text-white">{format(pickerMonth, "MMMM yyyy")}</h3>
+                <h3 className="font-serif text-[18px] font-bold text-lawdger-cream">{format(pickerMonth, "MMMM yyyy")}</h3>
                 <div className="flex gap-1">
-                  <button onClick={() => setPickerMonth(subMonths(pickerMonth, 1))} className="p-2 rounded-full hover:bg-white/40 transition-colors"><ChevronLeft className="h-4 w-4 text-[#f4efe8]/70 dark:text-white/70" /></button>
-                  <button onClick={() => setPickerMonth(addMonths(pickerMonth, 1))} className="p-2 rounded-full hover:bg-white/40 transition-colors"><ChevronRight className="h-4 w-4 text-[#f4efe8]/70 dark:text-white/70" /></button>
+                  <button onClick={() => setPickerMonth(subMonths(pickerMonth, 1))} className="p-2 rounded-full hover:bg-white/40 transition-colors">
+                    <ChevronLeft className="h-4 w-4 text-lawdger-cream/70" />
+                  </button>
+                  <button onClick={() => setPickerMonth(addMonths(pickerMonth, 1))} className="p-2 rounded-full hover:bg-white/40 transition-colors">
+                    <ChevronRight className="h-4 w-4 text-lawdger-cream/70" />
+                  </button>
                 </div>
               </div>
               <div className="grid grid-cols-7 gap-1 text-center mb-3">
                 {["S","M","T","W","T","F","S"].map((d, i) => (
-                  <div key={i} className="text-[10px] font-bold text-[#f4efe8]/40 dark:text-white/40 uppercase tracking-widest">{d}</div>
+                  <div key={i} className="text-[10px] font-bold text-lawdger-cream/40 uppercase tracking-widest">{d}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-1 text-[13px] font-medium text-[#f4efe8] dark:text-white">
+              <div className="grid grid-cols-7 gap-1 text-[13px] font-medium text-lawdger-cream">
                 {miniCalDays.map((day, i) => {
-                  const isSelected       = isSameDay(day, currentDate);
-                  const inMonth          = isSameMonth(day, pickerMonth);
-                  const hasEvent         = eventsOnDay(day).length > 0;
-                  const dayTasks         = tasksOnDay(day);
-                  const hasNormalTask    = dayTasks.some((t) => !isTaskOverdue(t.dueDate));
-                  const hasOverdueTask   = dayTasks.some((t) => isTaskOverdue(t.dueDate));
+                  const isSelected     = isSameDay(day, currentDate);
+                  const inMonth        = isSameMonth(day, pickerMonth);
+                  const hasEvent       = eventsOnDay(day).length > 0;
+                  const dayTasks       = tasksOnDay(day);
+                  const hasNormalTask  = dayTasks.some((t) => !isTaskOverdue(t.dueDate));
+                  const hasOverdueTask = dayTasks.some((t) => isTaskOverdue(t.dueDate));
                   return (
-                    <div key={i} onClick={() => { setCurrentDate(day); setPickerMonth(day); setView("day"); }}
-                      className={`p-2 rounded-full flex items-center justify-center cursor-pointer transition-colors relative h-10 ${isSelected ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(200,150,62,0.5)]" : inMonth ? "hover:bg-white/40" : "text-white/20 hover:bg-white/5"}`}>
+                    <div key={i}
+                      onClick={() => { setCurrentDate(day); setPickerMonth(day); setView("day"); }}
+                      className={`p-2 rounded-full flex items-center justify-center cursor-pointer transition-colors relative h-10 ${
+                        isSelected ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(200,150,62,0.5)]"
+                          : inMonth ? "hover:bg-white/40"
+                          : "text-white/20 hover:bg-white/5"
+                      }`}
+                    >
                       {format(day, "d")}
                       {(hasEvent || hasNormalTask || hasOverdueTask) && !isSelected && (
                         <span className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
@@ -407,9 +401,10 @@ export default function CalendarClient({
                   );
                 })}
               </div>
-          </div>
+            </div>
 
-          <div className="space-y-4 text-[12px] font-medium text-[#f4efe8]/70 dark:text-white/70">
+            {/* Legend */}
+            <div className="space-y-4 text-[12px] font-medium text-lawdger-cream/70">
               <div className="flex items-center gap-3">
                 <div className="h-3 w-3 rounded-full bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]" />
                 <span>Hearings & Appointments</span>
@@ -422,202 +417,203 @@ export default function CalendarClient({
                 <div className="h-3 w-3 rounded-full bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.5)]" />
                 <span>Overdue Items</span>
               </div>
-          </div>
-        </div>
-
-        {/* Right: Frosted Glass Main Calendar Area overlapping ON TOP of the control panel */}
-        <div className="w-[64%] -ml-[6%] mt-8 rounded-[2.5rem] bg-white/95 dark:bg-card/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.1)] p-0 min-h-[750px] flex flex-col z-30 pl-[12%] overflow-hidden">
-           
-           {/* Header Controls for Calendar View */}
-           <div className="flex items-center justify-between border-b border-white/20 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-md px-10 py-6 shrink-0 rounded-tr-[2.5rem]">
-              <h2 className="font-serif text-[1.6rem] font-bold flex items-center gap-4 text-foreground">
-                <CalendarIcon className="h-6 w-6 text-primary" />
-                {view === "day"  ? format(currentDate, "EEEE, MMMM d, yyyy") :
-                 view === "week" ? `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d, yyyy")}` :
-                 format(currentDate, "MMMM yyyy")}
-              </h2>
-              <div className="flex gap-4 items-center">
-                  <div className="flex bg-black/5 dark:bg-white/5 rounded-full p-1 border border-white/10">
-                    {(["day","week","month"] as ViewMode[]).map((v) => (
-                      <button key={v} onClick={() => setView(v)}
-                        className={`px-4 py-1.5 rounded-full text-[12px] capitalize font-bold transition-all ${view === v ? "bg-primary text-primary-foreground shadow-sm scale-105" : "text-muted-foreground hover:text-foreground"}`}>
-                        {v}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-1">
-                    <button onClick={prev} className="p-2 rounded-full border border-white/20 dark:border-white/10 bg-white/70 dark:bg-card/80 hover:bg-white/95 transition-colors shadow-sm"><ChevronLeft className="h-4 w-4" /></button>
-                    <button onClick={next} className="p-2 rounded-full border border-white/20 dark:border-white/10 bg-white/70 dark:bg-card/80 hover:bg-white/95 transition-colors shadow-sm"><ChevronRight className="h-4 w-4" /></button>
-                  </div>
+            </div>
+          </>
+        }
+        mainPaneHeader={
+          <>
+            <h2 className="font-serif text-[1.6rem] font-bold flex items-center gap-4 text-foreground">
+              <CalendarIcon className="h-6 w-6 text-primary" />
+              {view === "day"  ? format(currentDate, "EEEE, MMMM d, yyyy") :
+               view === "week" ? `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d, yyyy")}` :
+               format(currentDate, "MMMM yyyy")}
+            </h2>
+            <div className="flex gap-4 items-center">
+              <div className="flex bg-black/5 dark:bg-white/5 rounded-full p-1 border border-white/10">
+                {(["day","week","month"] as ViewMode[]).map((v) => (
+                  <button key={v} onClick={() => setView(v)}
+                    className={`px-4 py-1.5 rounded-full text-[12px] capitalize font-bold transition-all ${view === v ? "bg-primary text-primary-foreground shadow-sm scale-105" : "text-muted-foreground hover:text-foreground"}`}>
+                    {v}
+                  </button>
+                ))}
               </div>
-           </div>
+              <div className="flex gap-1">
+                <button onClick={prev} className="p-2 rounded-full border border-white/20 dark:border-white/10 bg-white/70 dark:bg-card/80 hover:bg-white/95 transition-colors shadow-sm">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button onClick={next} className="p-2 rounded-full border border-white/20 dark:border-white/10 bg-white/70 dark:bg-card/80 hover:bg-white/95 transition-colors shadow-sm">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </>
+        }
+        mainPaneContent={
+          <div className="flex-1 overflow-y-auto relative">
 
-           <div className="flex-1 overflow-y-auto relative custom-scrollbar">
+            {/* ── Day View ── */}
+            {view === "day" && (() => {
+              const { slotMap } = autoAllocateTasks(currentDate);
+              return (
+                <div className="flex flex-col bg-transparent">
+                  <div className="p-6 space-y-0">
+                    {TIME_SLOTS.map((time, i) => {
+                      const slotEvents    = eventsOnDayTime(currentDate, time);
+                      const allocatedTask = slotEvents.length === 0 ? slotMap[time] : undefined;
+                      return (
+                        <div key={i} className="flex min-h-[110px] border-b border-primary/10 group relative"
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => handleDrop(e, currentDate, time)}>
+                          <div className="w-24 shrink-0 pr-6 text-right">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 group-hover:text-primary transition-colors relative top-3">{time}</span>
+                          </div>
+                          <div className="flex-1 border-l border-primary/10 pl-6 pb-2 pt-2 relative">
+                            {slotEvents.map((ev, idx) => (
+                              <div key={ev.id} style={{ left: `${idx * 20 + 24}px`, zIndex: 10 + idx, right: "8px", bottom: "8px", position: "absolute", top: "8px" }}>
+                                <EventCard ev={ev} style={{ height: "100%" }} />
+                              </div>
+                            ))}
+                            {allocatedTask && (
+                              <TaskSlotCard
+                                task={allocatedTask}
+                                overdue={isTaskOverdue(allocatedTask.dueDate)}
+                                onClick={() => openEditTask(allocatedTask)}
+                              />
+                            )}
+                            {slotEvents.length === 0 && !allocatedTask && (
+                              <button onClick={() => openNew(format(currentDate, "yyyy-MM-dd"))}
+                                className="absolute inset-0 w-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[12px] font-bold uppercase tracking-widest text-primary hover:bg-primary/5 rounded-xl">
+                                + Book Slot
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
 
-              {/* ── Day View ── */}
-              {view === "day" && (() => {
-                const { slotMap, overflow } = autoAllocateTasks(currentDate);
-                return (
-                  <div className="flex flex-col h-full bg-transparent">
-                    <div className="flex-1 p-6 space-y-0">
-                      {TIME_SLOTS.map((time, i) => {
-                        const slotEvents    = eventsOnDayTime(currentDate, time);
-                        const allocatedTask = slotEvents.length === 0 ? slotMap[time] : undefined;
+            {/* ── Week View ── */}
+            {view === "week" && (
+              <div className="flex flex-col min-w-[800px] bg-transparent">
+                <div className="flex border-b border-primary/10 sticky top-0 bg-white/95 dark:bg-white/5 backdrop-blur-md z-30">
+                  <div className="w-20 shrink-0 border-r border-primary/10" />
+                  {weekDays.map((day, i) => {
+                    const dayTasks = tasksOnDay(day);
+                    return (
+                      <div key={i} className={`flex-1 border-r border-primary/10 last:border-0 ${isSameDay(day, new Date()) ? "bg-primary/5" : ""}`}>
+                        <div className="p-3 text-center border-b border-primary/10">
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${isSameDay(day, new Date()) ? "text-primary" : "text-muted-foreground"}`}>
+                            {format(day, "E d")}
+                          </span>
+                        </div>
+                        {dayTasks.length > 0 && (
+                          <div className="px-1 pb-1 space-y-0.5 bg-blue-500/5">
+                            {dayTasks.map((t) => (
+                              <TaskChip key={t.id} task={t} overdue={isTaskOverdue(t.dueDate)} onClick={() => openEditTask(t)} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex-1">
+                  {TIME_SLOTS.map((time, i) => (
+                    <div key={i} className="flex border-b border-primary/10 h-28">
+                      <div className="w-20 shrink-0 border-r border-primary/10 pr-3 text-right">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 relative top-3">{time}</span>
+                      </div>
+                      {weekDays.map((day, j) => {
+                        const slotEvs = eventsOnDayTime(day, time);
                         return (
-                          <div key={i} className="flex min-h-[110px] border-b border-primary/10 group relative"
+                          <div key={j} className="flex-1 border-r border-primary/10 last:border-0 relative hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                             onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => handleDrop(e, currentDate, time)}>
-                            <div className="w-24 shrink-0 pr-6 text-right">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 group-hover:text-primary transition-colors relative top-3">{time}</span>
-                            </div>
-                            <div className="flex-1 border-l border-primary/10 pl-6 pb-2 pt-2 relative">
-                              {slotEvents.map((ev, idx) => (
-                                <div key={ev.id} style={{ left: `${idx * 20 + 24}px`, zIndex: 10 + idx, right: "8px", bottom: "8px", position: "absolute", top: "8px" }}>
-                                  <EventCard ev={ev} style={{ height: "100%" }} />
-                                </div>
-                              ))}
-                              {allocatedTask && (
-                                <TaskSlotCard
-                                  task={allocatedTask}
-                                  overdue={isTaskOverdue(allocatedTask.dueDate)}
-                                  onClick={() => openEditTask(allocatedTask)}
-                                />
-                              )}
-                              {slotEvents.length === 0 && !allocatedTask && (
-                                <button onClick={() => openNew(format(currentDate, "yyyy-MM-dd"))}
-                                  className="absolute inset-0 w-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[12px] font-bold uppercase tracking-widest text-primary hover:bg-primary/5 rounded-xl">
-                                  + Book Slot
-                                </button>
-                              )}
-                            </div>
+                            onDrop={(e) => handleDrop(e, day, time)}>
+                            {slotEvs.map((ev) => (
+                              <div key={ev.id} draggable
+                                onDragStart={(e) => { e.stopPropagation(); setDraggedId(ev.id); }}
+                                onClick={() => openEditHearing(ev)}
+                                className={`absolute inset-1 rounded-xl border ${EVENT_COLOR} bg-orange-500/10 p-2 z-10 overflow-hidden shadow-sm cursor-pointer backdrop-blur-md`}
+                                style={{ height: "calc(100% - 8px)" }}>
+                                <p className="text-[9px] font-bold text-orange-400 mb-0.5">{time}</p>
+                                <p className="text-[11px] font-medium leading-tight text-orange-600 dark:text-orange-300 line-clamp-3">{ev.title}</p>
+                              </div>
+                            ))}
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                );
-              })()}
-
-              {/* ── Week View ── */}
-              {view === "week" && (
-                <div className="flex flex-col h-full min-w-[800px] bg-transparent">
-                  <div className="flex border-b border-primary/10 sticky top-0 bg-white/95 dark:bg-white/5 backdrop-blur-md z-30">
-                    <div className="w-20 shrink-0 border-r border-primary/10" />
-                    {weekDays.map((day, i) => {
-                      const dayTasks = tasksOnDay(day);
-                      return (
-                        <div key={i} className={`flex-1 border-r border-primary/10 last:border-0 ${isSameDay(day, new Date()) ? "bg-primary/5" : ""}`}>
-                          <div className="p-3 text-center border-b border-primary/10">
-                            <span className={`text-[10px] font-bold uppercase tracking-widest ${isSameDay(day, new Date()) ? "text-primary" : "text-muted-foreground"}`}>
-                              {format(day, "E d")}
-                            </span>
-                          </div>
-                          {dayTasks.length > 0 && (
-                            <div className="px-1 pb-1 space-y-0.5 bg-blue-500/5">
-                              {dayTasks.map((t) => (
-                                <TaskChip key={t.id} task={t} overdue={isTaskOverdue(t.dueDate)} onClick={() => openEditTask(t)} />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="flex-1">
-                    {TIME_SLOTS.map((time, i) => (
-                      <div key={i} className="flex border-b border-primary/10 h-28">
-                        <div className="w-20 shrink-0 border-r border-primary/10 pr-3 text-right">
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 relative top-3">{time}</span>
-                        </div>
-                        {weekDays.map((day, j) => {
-                          const slotEvs = eventsOnDayTime(day, time);
-                          return (
-                            <div key={j} className="flex-1 border-r border-primary/10 last:border-0 relative hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                              onDragOver={(e) => e.preventDefault()}
-                              onDrop={(e) => handleDrop(e, day, time)}>
-                              {slotEvs.map((ev) => (
-                                <div key={ev.id} draggable
-                                  onDragStart={(e) => { e.stopPropagation(); setDraggedId(ev.id); }}
-                                  onClick={() => openEditHearing(ev)}
-                                  className={`absolute inset-1 rounded-xl border ${EVENT_COLOR} bg-orange-500/10 p-2 z-10 overflow-hidden shadow-sm cursor-pointer backdrop-blur-md`}
-                                  style={{ height: "calc(100% - 8px)" }}>
-                                  <p className="text-[9px] font-bold text-orange-400 mb-0.5">{time}</p>
-                                  <p className="text-[11px] font-medium leading-tight text-orange-600 dark:text-orange-300 line-clamp-3">{ev.title}</p>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
+                  ))}
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* ── Month View ── */}
-              {view === "month" && (
-                <div className="flex flex-col h-full min-w-[700px] bg-transparent">
-                  <div className="grid grid-cols-7 border-b border-primary/10 bg-white/95 dark:bg-white/5 backdrop-blur-md sticky top-0 z-30">
-                    {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d, i) => (
-                      <div key={i} className="p-3 text-center border-r border-primary/10 last:border-0">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{d}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-7 grid-rows-5 flex-1">
-                    {monthDays.map((day, i) => {
-                      const dayEvs    = eventsOnDay(day);
-                      const dayTasks  = tasksOnDay(day);
-                      const todayFlag = isSameDay(day, new Date());
-                      const inMonth   = isSameMonth(day, currentDate);
-                      return (
-                        <div key={i} className={`border-r border-b border-primary/10 p-2 hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex flex-col min-h-[140px] ${!inMonth ? "bg-black/5 dark:bg-card/80" : ""}`}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => handleDrop(e, day)}>
-                          <div className="text-right mb-1">
-                            <span onClick={() => { setCurrentDate(day); setView("day"); }}
-                              className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-[13px] font-medium cursor-pointer ${todayFlag ? "bg-primary text-primary-foreground shadow-md" : !inMonth ? "text-muted-foreground/40" : "text-foreground hover:bg-primary/10"}`}>
-                              {format(day, "d")}
-                            </span>
-                          </div>
-                          <div className="space-y-1 flex-1 overflow-hidden px-1">
-                            {dayEvs.map((ev) => (
-                              <div key={ev.id} draggable
-                                onDragStart={(e) => { e.stopPropagation(); setDraggedId(ev.id); }}
-                                onClick={() => openEditHearing(ev)}
-                                className={`text-[10px] font-bold px-2 py-1.5 rounded-lg truncate border cursor-pointer ${EVENT_COLOR} bg-orange-500/10`}>
-                                {format(ev.hearingDate, "h:mm")} {ev.title}
-                              </div>
-                            ))}
-                            {dayTasks.map((t) => {
-                              const overdue = isTaskOverdue(t.dueDate);
-                              return (
-                                <Link key={t.id} href={t.case ? `/cases/${t.case.id}` : "/tasks"}
-                                  className={`text-[10px] font-bold px-2 py-1.5 rounded-lg truncate border flex items-center gap-1.5 ${overdue ? OVERDUE_COLOR : TASK_COLOR} ${overdue ? 'bg-red-500/10' : 'bg-blue-500/10'}`}>
-                                  {overdue
-                                    ? <AlertCircle className="h-3 w-3 shrink-0" />
-                                    : <CheckSquare className="h-3 w-3 shrink-0" />}
-                                  {t.description}
-                                </Link>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+            {/* ── Month View ── */}
+            {view === "month" && (
+              <div className="flex flex-col min-w-[700px] bg-transparent">
+                <div className="grid grid-cols-7 border-b border-primary/10 bg-white/95 dark:bg-white/5 backdrop-blur-md sticky top-0 z-30">
+                  {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d, i) => (
+                    <div key={i} className="p-3 text-center border-r border-primary/10 last:border-0">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{d}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
-           </div>
-        </div>
-
-      </div>
+                <div className="grid grid-cols-7 grid-rows-5 flex-1">
+                  {monthDays.map((day, i) => {
+                    const dayEvs    = eventsOnDay(day);
+                    const dayTasks  = tasksOnDay(day);
+                    const todayFlag = isSameDay(day, new Date());
+                    const inMonth   = isSameMonth(day, currentDate);
+                    return (
+                      <div key={i} className={`border-r border-b border-primary/10 p-2 hover:bg-black/5 dark:hover:bg-white/5 transition-colors flex flex-col min-h-[140px] ${!inMonth ? "bg-black/5 dark:bg-card/80" : ""}`}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => handleDrop(e, day)}>
+                        <div className="text-right mb-1">
+                          <span onClick={() => { setCurrentDate(day); setView("day"); }}
+                            className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-[13px] font-medium cursor-pointer ${todayFlag ? "bg-primary text-primary-foreground shadow-md" : !inMonth ? "text-muted-foreground/40" : "text-foreground hover:bg-primary/10"}`}>
+                            {format(day, "d")}
+                          </span>
+                        </div>
+                        <div className="space-y-1 flex-1 overflow-hidden px-1">
+                          {dayEvs.map((ev) => (
+                            <div key={ev.id} draggable
+                              onDragStart={(e) => { e.stopPropagation(); setDraggedId(ev.id); }}
+                              onClick={() => openEditHearing(ev)}
+                              className={`text-[10px] font-bold px-2 py-1.5 rounded-lg truncate border cursor-pointer ${EVENT_COLOR} bg-orange-500/10`}>
+                              {format(ev.hearingDate, "h:mm")} {ev.title}
+                            </div>
+                          ))}
+                          {dayTasks.map((t) => {
+                            const overdue = isTaskOverdue(t.dueDate);
+                            return (
+                              <Link key={t.id} href={t.case ? `/cases/${t.case.id}` : "/tasks"}
+                                className={`text-[10px] font-bold px-2 py-1.5 rounded-lg truncate border flex items-center gap-1.5 ${overdue ? OVERDUE_COLOR : TASK_COLOR} ${overdue ? 'bg-red-500/10' : 'bg-blue-500/10'}`}>
+                                {overdue
+                                  ? <AlertCircle className="h-3 w-3 shrink-0" />
+                                  : <CheckSquare className="h-3 w-3 shrink-0" />}
+                                {t.description}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        }
+      />
 
       {/* ── Modal ── */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <div className="bg-background  rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-hidden relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center p-6 bg-white dark:bg-[#1A1918] border-b border-primary/10">
+          <div className="bg-background rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-hidden relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center p-6 bg-white dark:bg-lawdger-sidebar border-b border-primary/10">
               <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-white leading-none">
                 {editId ? "Edit Hearing" : editTaskId ? "Edit Task" : "Add New Slot"}
               </h2>
@@ -627,7 +623,6 @@ export default function CalendarClient({
             </div>
 
             <form onSubmit={handleSave} className="p-8 space-y-6">
-              {/* Type toggle */}
               {!isEditing && (
                 <div className="flex bg-black/5 dark:bg-white/5 border border-primary/10 rounded-xl p-1">
                   {(["hearing", "task"] as const).map((t) => (
@@ -731,6 +726,6 @@ export default function CalendarClient({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
