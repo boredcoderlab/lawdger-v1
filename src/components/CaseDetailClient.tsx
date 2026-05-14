@@ -16,6 +16,7 @@ import {
   createCaseTask, toggleCaseTaskStatus, deleteCaseTask,
   createNote, updateCaseDetails,
 } from "@/actions/caseActions";
+import { PageLayout, DarkPaneHeaderTitle } from "@/components/ui/LayoutShell";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -155,50 +156,23 @@ export default function CaseDetailClient({
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="relative flex flex-col flex-1 p-8 lg:p-12 min-h-[900px] bg-transparent text-foreground font-sans z-0">
-      
-      {/* Background Shapes Specific to Case Detail */}
-      <div className="absolute top-[5%] right-[-10%] w-[50%] h-[70%] bg-primary/5 rounded-full blur-[140px] -z-10 pointer-events-none" />
-
-      {/* Header */}
-      <div className="flex justify-between items-end mb-10 z-10">
-          <div>
-            <h1 className="font-serif text-[2.8rem] font-bold tracking-tight text-foreground leading-none mb-2 max-w-[800px] truncate pr-4">
-              {info.title}
-            </h1>
-            <p className="text-[12px] font-bold uppercase tracking-widest text-primary/60">
-              Active Matter File
-            </p>
-          </div>
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-6 py-2.5 rounded-full hover:bg-primary hover:text-primary-foreground transition-all font-bold tracking-widest uppercase text-[10px] shadow-sm"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            {isEditing ? "Cancel Edit" : "Edit Profile"}
-          </button>
-      </div>
-
-      {/* ── OVERLAPPING PANES LAYOUT ────────────────────────────────────────── */}
-      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto">
-        
-        {/* Left: Dark Anchor (Case Profile) */}
-        <div className="w-[42%] rounded-[2.5rem] bg-gradient-to-b from-[#3a2c23] to-[#291e16] p-10 pr-20 shadow-[0_30px_60px_rgba(0,0,0,0.4)] min-h-[500px] flex flex-col z-10 border border-white/5 shrink-0">
-          
-          <div className="flex items-center gap-4 mb-8">
-             <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center text-white shadow-inner">
-                 <BriefcaseBusiness className="w-6 h-6" />
-             </div>
-             <div>
-                <h2 className="text-[1.5rem] font-serif font-bold text-[#f4efe8] dark:text-white leading-tight">Case Profile</h2>
-                <p className="text-[10px] text-[#f4efe8]/60 dark:text-white/50 uppercase tracking-widest font-bold">Details & Meta</p>
-             </div>
-          </div>
-
-          <div className="bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5 mb-8">
+    <>
+      <PageLayout
+        pageTitle={info.title}
+        backToDashboard
+        darkPaneHeader={
+          <DarkPaneHeaderTitle
+            icon={BriefcaseBusiness}
+            title="Case Profile"
+            subtitle="Details & Meta"
+          />
+        }
+        darkPaneContent={
+          <>
+            {/* Case Profile Card */}
+            <div className="bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5 mb-8">
               {isEditing ? (
                 <div className="space-y-4">
-                  {/* Edit fields */}
                   <EditField label="Case Title">
                     <input
                       value={info.title}
@@ -290,167 +264,185 @@ export default function CaseDetailClient({
                   />
                 </div>
               )}
-          </div>
+            </div>
 
-          {/* Quick Notes inside dark panel */}
-          <div>
-            <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#f4efe8]/50 dark:text-white/50 mb-3 ml-2">Quick Case Notes</h3>
-            {noteOpen ? (
-              <form onSubmit={handleAddNote} className="space-y-3">
-                <textarea
-                  autoFocus
-                  value={noteContent}
-                  onChange={(e) => setNoteContent(e.target.value)}
-                  rows={3}
-                  placeholder="Drop a quick thought..."
-                  className="w-full bg-black/20 dark:bg-card/80 border border-white/5 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none shadow-inner"
-                />
-                <div className="flex gap-2">
-                  <button type="button" onClick={() => { setNoteOpen(false); setNoteContent(""); }}
-                    className="flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white rounded-xl hover:bg-white/5 transition-colors border border-transparent">
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={noteSubmitting || !noteContent.trim()}
-                    className="flex-1 bg-primary/20 text-primary border border-primary/30 text-[10px] font-bold uppercase tracking-widest py-2.5 rounded-xl hover:bg-primary hover:text-primary-foreground transition-all disabled:opacity-60 shadow-sm">
-                    {noteSubmitting ? "Saving…" : "Attach Note"}
+            {/* Quick Case Notes */}
+            <div>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 mb-3 ml-2">Quick Case Notes</h3>
+              {noteOpen ? (
+                <form onSubmit={handleAddNote} className="space-y-3">
+                  <textarea
+                    autoFocus
+                    value={noteContent}
+                    onChange={(e) => setNoteContent(e.target.value)}
+                    rows={3}
+                    placeholder="Drop a quick thought..."
+                    className="w-full bg-black/20 dark:bg-card/80 border border-white/5 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none shadow-inner"
+                  />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => { setNoteOpen(false); setNoteContent(""); }}
+                      className="flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white rounded-xl hover:bg-white/5 transition-colors border border-transparent">
+                      Cancel
+                    </button>
+                    <button type="submit" disabled={noteSubmitting || !noteContent.trim()}
+                      className="flex-1 bg-primary/20 text-primary border border-primary/30 text-[10px] font-bold uppercase tracking-widest py-2.5 rounded-xl hover:bg-primary hover:text-primary-foreground transition-all disabled:opacity-60 shadow-sm">
+                      {noteSubmitting ? "Saving…" : "Attach Note"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setNoteOpen(true)}
+                  className="w-full flex items-center justify-center gap-2.5 px-5 py-4 rounded-xl bg-black/20 dark:bg-card/80 border border-white/5 text-[12px] font-bold uppercase tracking-widest text-white/50 hover:text-white hover:border-primary/30 transition-all group"
+                >
+                  <StickyNote className="h-4 w-4 text-white/30 group-hover:text-primary transition-colors" />
+                  Jot down note
+                </button>
+              )}
+            </div>
+          </>
+        }
+        mainPaneHeader={
+          <>
+            <div>
+              <h2 className="font-serif text-[1.6rem] font-bold text-foreground leading-none max-w-[500px] truncate pr-4">
+                {info.title}
+              </h2>
+              <p className="text-[12px] font-bold uppercase tracking-widest text-primary/60 mt-1">
+                Active Matter File
+              </p>
+            </div>
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-6 py-2.5 rounded-full hover:bg-primary hover:text-primary-foreground transition-all font-bold tracking-widest uppercase text-[10px] shadow-sm shrink-0"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              {isEditing ? "Cancel Edit" : "Edit Profile"}
+            </button>
+          </>
+        }
+        mainPaneContent={
+          <div className="p-10 pb-20">
+            <div className="grid grid-cols-1 gap-12">
+
+              {/* ── Next Hearing ─────────────────────────────────── */}
+              {nextHearing && (
+                <div>
+                  <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3 mb-6 pb-2 border-b border-primary/10">
+                    <span className="inline-block h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
+                    Next Hearing Schedule
+                  </h3>
+                  <div className="flex items-start gap-6 rounded-[2rem] border border-orange-500/20 bg-orange-500/5 p-6 shadow-sm">
+                    <div className="flex flex-col items-center justify-center rounded-[1.5rem] bg-orange-500 text-white shadow-lg h-24 w-24 shrink-0 hover:scale-105 transition-transform">
+                      <span className="text-[12px] font-bold uppercase tracking-widest opacity-90 mb-1">
+                        {format(new Date(nextHearing.hearingDate), "MMM")}
+                      </span>
+                      <span className="text-[2.2rem] font-serif font-bold leading-none">
+                        {format(new Date(nextHearing.hearingDate), "d")}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0 pt-2">
+                      <p className="font-serif text-[1.8rem] font-bold text-foreground leading-none truncate mb-2 text-orange-600 dark:text-orange-400">
+                        {nextHearing.title}
+                      </p>
+                      <p className="text-[13px] text-foreground font-bold uppercase tracking-widest mb-3">
+                        {format(new Date(nextHearing.hearingDate), "EEEE, d MMMM yyyy")}
+                      </p>
+                      {nextHearing.description && (
+                        <p className="text-[14px] text-muted-foreground font-medium truncate bg-white/95 dark:bg-card/80 px-4 py-2 rounded-xl inline-block border border-primary/10">
+                          {nextHearing.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Case Docket (Tasks) ─────────────────────────────────── */}
+              <div>
+                <div className="flex items-center justify-between mb-6 pb-2 border-b border-primary/10">
+                  <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3">
+                    <span className="inline-block h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                    Case Docket
+                  </h3>
+                  <button
+                    onClick={() => setTaskModalOpen(true)}
+                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all shadow-sm"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Append Task
                   </button>
                 </div>
-              </form>
-            ) : (
-              <button
-                onClick={() => setNoteOpen(true)}
-                className="w-full flex items-center justify-center gap-2.5 px-5 py-4 rounded-xl bg-black/20 dark:bg-card/80 border border-white/5 text-[12px] font-bold uppercase tracking-widest text-white/50 hover:text-white hover:border-primary/30 transition-all group"
-              >
-                <StickyNote className="h-4 w-4 text-white/30 group-hover:text-primary transition-colors" />
-                Jot down note
-              </button>
-            )}
+
+                <div className="rounded-[2rem] border border-white/50 dark:border-white/5 bg-white/70 dark:bg-card/80 shadow-inner overflow-hidden">
+                  {pendingTasks.length === 0 && completedTasks.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center p-12 text-center">
+                      <CheckCircle2 className="w-12 h-12 text-primary/30 mb-4" />
+                      <p className="text-[14px] font-bold text-foreground">Docket is clear.</p>
+                      <p className="text-[12px] text-muted-foreground mt-1">No pending actions for this matter.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-primary/5">
+                      {pendingTasks.map((task) => {
+                        const due = getDueLabel(task.dueDate);
+                        return (
+                          <div key={task.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-white dark:hover:bg-white/5 transition-colors cursor-pointer">
+                            <button
+                              onClick={() => toggleCaseTaskStatus(task.id, task.status, caseId)}
+                              className="h-5 w-5 rounded-full border-2 border-primary/30 shrink-0 hover:border-primary transition-colors flex items-center justify-center"
+                            />
+                            <div className="flex-1 min-w-0 pr-4 border-r border-primary/10">
+                              <p className="text-[14px] font-bold text-foreground leading-snug group-hover:text-primary transition-colors">{task.description}</p>
+                            </div>
+                            <div className="w-24 shrink-0 flex items-center justify-end">
+                              {due && (
+                                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md bg-black/5 dark:bg-white/5 ${due.cls}`}>
+                                  {due.label}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => deleteCaseTask(task.id, caseId)}
+                              className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                      {completedTasks.length > 0 && (
+                        <div className="bg-black/5 dark:bg-card/80 px-6 py-4">
+                          <h4 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Completed History</h4>
+                          <div className="space-y-2">
+                            {completedTasks.slice(0, 3).map((task) => (
+                              <div key={task.id} className="flex items-center gap-3 opacity-50 hover:opacity-100 transition-opacity">
+                                <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                                <p className="text-[13px] font-medium text-muted-foreground line-through truncate">{task.description}</p>
+                              </div>
+                            ))}
+                            {completedTasks.length > 3 && (
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-primary pt-2 pl-7 cursor-pointer hover:underline">
+                                View all {completedTasks.length} completed
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
           </div>
-        </div>
-
-        {/* Right: Frosted Glass Timeline/Docket Area overlapping ON TOP of the control panel */}
-        <div className="w-[64%] -ml-[6%] mt-8 rounded-[2.5rem] bg-white/95 dark:bg-card/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.1)] p-10 min-h-[600px] flex flex-col z-30 pl-[16%]">
-           
-           <div className="grid grid-cols-1 gap-12">
-               
-               {/* ── Next Hearing ─────────────────────────────────── */}
-               {nextHearing && (
-                 <div>
-                   <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3 mb-6 pb-2 border-b border-primary/10">
-                     <span className="inline-block h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]" />
-                     Next Hearing Schedule
-                   </h3>
-                   <div className="flex items-start gap-6 rounded-[2rem] border border-orange-500/20 bg-orange-500/5 p-6 shadow-sm">
-                     <div className="flex flex-col items-center justify-center rounded-[1.5rem] bg-orange-500 text-white shadow-lg h-24 w-24 shrink-0 hover:scale-105 transition-transform">
-                       <span className="text-[12px] font-bold uppercase tracking-widest opacity-90 mb-1">
-                         {format(new Date(nextHearing.hearingDate), "MMM")}
-                       </span>
-                       <span className="text-[2.2rem] font-serif font-bold leading-none">
-                         {format(new Date(nextHearing.hearingDate), "d")}
-                       </span>
-                     </div>
-                     <div className="flex-1 min-w-0 pt-2">
-                       <p className="font-serif text-[1.8rem] font-bold text-foreground leading-none truncate mb-2 text-orange-600 dark:text-orange-400">
-                         {nextHearing.title}
-                       </p>
-                       <p className="text-[13px] text-foreground font-bold uppercase tracking-widest mb-3">
-                         {format(new Date(nextHearing.hearingDate), "EEEE, d MMMM yyyy")}
-                       </p>
-                       {nextHearing.description && (
-                         <p className="text-[14px] text-muted-foreground font-medium truncate bg-white/95 dark:bg-card/80 px-4 py-2 rounded-xl inline-block border border-primary/10">
-                           {nextHearing.description}
-                         </p>
-                       )}
-                     </div>
-                   </div>
-                 </div>
-               )}
-
-               {/* ── Case Docket (Tasks) ─────────────────────────────────── */}
-               <div>
-                 <div className="flex items-center justify-between mb-6 pb-2 border-b border-primary/10">
-                   <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3">
-                     <span className="inline-block h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                     Case Docket
-                   </h3>
-                   <button
-                     onClick={() => setTaskModalOpen(true)}
-                     className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all shadow-sm"
-                   >
-                     <Plus className="h-3 w-3" />
-                     Append Task
-                   </button>
-                 </div>
-
-                 <div className="rounded-[2rem] border border-white/50 dark:border-white/5 bg-white/70 dark:bg-card/80 shadow-inner overflow-hidden">
-                   {pendingTasks.length === 0 && completedTasks.length === 0 ? (
-                     <div className="flex flex-col items-center justify-center p-12 text-center">
-                         <CheckCircle2 className="w-12 h-12 text-primary/30 mb-4" />
-                         <p className="text-[14px] font-bold text-foreground">Docket is clear.</p>
-                         <p className="text-[12px] text-muted-foreground mt-1">No pending actions for this matter.</p>
-                     </div>
-                   ) : (
-                     <div className="divide-y divide-primary/5">
-                       {pendingTasks.map((task) => {
-                         const due = getDueLabel(task.dueDate);
-                         return (
-                           <div key={task.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-white dark:hover:bg-white/5 transition-colors cursor-pointer">
-                             <button
-                               onClick={() => toggleCaseTaskStatus(task.id, task.status, caseId)}
-                               className="h-5 w-5 rounded-full border-2 border-primary/30 shrink-0 hover:border-primary transition-colors flex items-center justify-center"
-                             />
-                             <div className="flex-1 min-w-0 pr-4 border-r border-primary/10">
-                               <p className="text-[14px] font-bold text-foreground leading-snug group-hover:text-primary transition-colors">{task.description}</p>
-                             </div>
-                             <div className="w-24 shrink-0 flex items-center justify-end">
-                                 {due && (
-                                   <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md bg-black/5 dark:bg-white/5 ${due.cls}`}>
-                                     {due.label}
-                                   </span>
-                                 )}
-                             </div>
-                             <button
-                               onClick={() => deleteCaseTask(task.id, caseId)}
-                               className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                             >
-                               <Trash2 className="h-4 w-4" />
-                             </button>
-                           </div>
-                         );
-                       })}
-                       {completedTasks.length > 0 && (
-                         <div className="bg-black/5 dark:bg-card/80 px-6 py-4">
-                           <h4 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Completed History</h4>
-                           <div className="space-y-2">
-                               {completedTasks.slice(0, 3).map((task) => (
-                                 <div key={task.id} className="flex items-center gap-3 opacity-50 hover:opacity-100 transition-opacity">
-                                   <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                                   <p className="text-[13px] font-medium text-muted-foreground line-through truncate">{task.description}</p>
-                                 </div>
-                               ))}
-                               {completedTasks.length > 3 && (
-                                 <p className="text-[10px] font-bold uppercase tracking-widest text-primary pt-2 pl-7 cursor-pointer hover:underline">
-                                   View all {completedTasks.length} completed
-                                 </p>
-                               )}
-                           </div>
-                         </div>
-                       )}
-                     </div>
-                   )}
-                 </div>
-               </div>
-
-           </div>
-        </div>
-
-      </div>
+        }
+      />
 
       {/* ── Add Task Modal ────────────────────────────────── */}
       {taskModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-          <div className="bg-background  rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-visible relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center p-6 bg-white dark:bg-[#1A1918] border-b border-primary/10">
+          <div className="bg-background rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-visible relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center p-6 bg-white dark:bg-lawdger-sidebar border-b border-primary/10">
               <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-white leading-none">Append Task</h2>
               <button
                 onClick={() => { setTaskModalOpen(false); setDatePickerOpen(false); }}
@@ -547,7 +539,7 @@ export default function CaseDetailClient({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -556,7 +548,7 @@ export default function CaseDetailClient({
 function EditField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[9px] font-bold uppercase tracking-widest text-[#f4efe8]/50 dark:text-white/50 mb-1.5 ml-1">
+      <label className="block text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 mb-1.5 ml-1">
         {label}
       </label>
       {children}
@@ -576,13 +568,13 @@ function InfoRow({
   return (
     <div className="flex items-center gap-4 bg-white/5 rounded-2xl px-5 py-4 border border-white/5">
       <div className="w-10 h-10 rounded-full bg-white/40 flex items-center justify-center text-white/70 shadow-inner shrink-0">
-          {icon}
+        {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-[#f4efe8]/50 dark:text-white/50 mb-0.5">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 mb-0.5">
           {label}
         </p>
-        <p className="text-[14px] font-bold text-[#f4efe8] dark:text-white truncate">
+        <p className="text-[14px] font-bold text-lawdger-cream truncate">
           {value ?? <span className="text-white/30 italic text-[12px]">—</span>}
         </p>
       </div>
