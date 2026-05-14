@@ -85,11 +85,13 @@ export function PageLayout(props: PageLayoutProps) {
       </>
     );
 
-    // Compose legacy right pane: optional sticky header + scrollable body
+    // Compose legacy right pane: optional seamless header row + scrollable body.
+    // No background panel beneath the header — content rides directly on the cream
+    // surface. A faint underline (border-b) provides separation only when needed.
     rightPanelNode = (
       <>
         {props.mainPaneHeader && (
-          <div className="flex justify-between items-center border-b border-white/20 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-md px-10 py-6 shrink-0 rounded-tr-[2.5rem]">
+          <div className="flex justify-between items-center gap-6 px-10 pt-10 pb-6 shrink-0 border-b border-lawdger-border/[0.06]">
             {props.mainPaneHeader}
           </div>
         )}
@@ -171,21 +173,20 @@ export function PageLayout(props: PageLayoutProps) {
         <div
           className={[
             "flex-1",
-            "-ml-[60px]",
+            "-ml-[40px]",
             "mt-8",
-            "rounded-3xl",
-            // Gradient: translucent at the overlap (left) → near-opaque cream at the right edge,
-            // so the pane reads as elevated and separated from bg-lawdger-base on the right
-            // while still revealing the espresso pane through the 60px overlap on the left.
-            "bg-gradient-to-r from-lawdger-cream/15 via-lawdger-cream/60 to-lawdger-cream/95",
-            "dark:from-lawdger-cream/5 dark:via-lawdger-cream/10 dark:to-lawdger-cream/15",
+            "rounded-[2rem]",
             "backdrop-blur-2xl",
-            "border border-lawdger-border/15 dark:border-lawdger-cream/10",
-            "shadow-2xl shadow-lawdger-espresso/25",
+            "border border-lawdger-cream/30 dark:border-lawdger-cream/10",
+            "shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)]",
             "flex flex-col",
             "z-30",
             "pl-[10%] lg:pl-[8%]",
             "overflow-hidden h-full",
+            // Layered depth lives in the inline style:
+            //   1) left-edge translucency strip so the espresso pane shows through the overlap
+            //   2) diagonal multi-tone cream → base gradient (top-left highlight → bottom-right deeper)
+            "lawdger-cream-pane",
           ].join(" ")}
         >
           {rightPanelNode}
@@ -208,17 +209,20 @@ export function DarkPaneHeaderTitle({
   title: string;
   subtitle: string;
 }) {
+  // Color is LOCKED to text-lawdger-cream — consumers cannot override.
+  // Dark-pane headings against the espresso gradient have exactly one correct
+  // colour; allowing consumer className overrides historically produced
+  // dark-on-dark washout (Orchestration title regression).
   return (
     <>
-      <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center text-white shadow-inner shrink-0">
+      <div className="w-12 h-12 bg-lawdger-cream/15 rounded-2xl flex items-center justify-center text-lawdger-cream shadow-inner shrink-0">
         <Icon className="w-6 h-6" />
       </div>
       <div>
-        {/* Explicit inline styles override global h2 size for dark pane context */}
-        <h2 className="text-[1.5rem] text-[#f4efe8] dark:text-white leading-tight">
+        <h2 className="text-[1.5rem] text-lawdger-cream leading-tight">
           {title}
         </h2>
-        <p className="text-[12px] text-[#f4efe8]/60 dark:text-white/50 uppercase tracking-widest font-bold mt-0.5">
+        <p className="text-[12px] text-lawdger-cream/60 uppercase tracking-widest font-bold mt-0.5">
           {subtitle}
         </p>
       </div>

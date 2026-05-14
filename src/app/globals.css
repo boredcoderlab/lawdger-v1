@@ -81,22 +81,76 @@ body {
    GLOBAL HEADING TYPOGRAPHY — Espresso Design System
    Source: ContentHeading component (Tasks page column headings).
    All headings across the app use Playfair Display, bold, tight.
+
+   Wrapped in @layer base so Tailwind utilities (text-lawdger-cream,
+   text-lawdger-espresso, etc.) can override the default color.
+   Unlayered CSS would beat utilities regardless of specificity,
+   which caused the dark-pane heading washout regression.
    ================================================================ */
-:where(h1, h2, h3, h4, h5, h6) {
-  font-family: var(--font-serif);
-  font-weight: 700;
-  letter-spacing: -0.025em; /* tracking-tight */
-  color: var(--foreground);
-  line-height: 1.2;
+@layer base {
+  :where(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    letter-spacing: -0.025em; /* tracking-tight */
+    color: var(--foreground);
+    line-height: 1.2;
+  }
+
+  /* Canonical size scale (override per context as needed) */
+  h1 { font-size: 2.8rem; }
+  h2 { font-size: 1.75rem; }
+  h3 { font-size: 1.4rem; }  /* matches ContentHeading baseline */
+  h4 { font-size: 1.2rem; }
+  h5 { font-size: 1rem; }
+  h6 { font-size: 0.875rem; }
 }
 
-/* Canonical size scale (override per context as needed) */
-h1 { font-size: 2.8rem; }
-h2 { font-size: 1.75rem; }
-h3 { font-size: 1.4rem; }  /* matches ContentHeading baseline */
-h4 { font-size: 1.2rem; }
-h5 { font-size: 1rem; }
-h6 { font-size: 0.875rem; }
+/* ================================================================
+   CREAM PANE — Glassmorphic surface (LayoutShell right pane)
+   ----------------------------------------------------------------
+   NO background-color — transparent base lets backdrop-blur reveal
+   the espresso pane through the 110px overlap zone (glassmorphism).
+
+   Two stacked background-image layers (top → bottom):
+     1) Subtle warm diagonal depth — very low opacity overlay that
+        adds top-left highlight / bottom-right depth without
+        competing with the opacity gradient beneath it.
+     2) Dominant horizontal opacity ramp — transparent at left
+        (espresso shows through + backdrop-blur = frosted glass),
+        ramps smoothly to near-opaque cream at the right edge.
+
+   All colors from lawdger CSS vars — no raw hex.
+   ================================================================ */
+.lawdger-cream-pane {
+  background-image:
+    /* Layer 1 (top): warm diagonal depth, very subtle */
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, white 10%, transparent) 0%,
+      transparent 40%,
+      color-mix(in srgb, var(--color-lawdger-base) 12%, transparent) 100%
+    ),
+    /* Layer 2 (bottom): dominant left→right opacity ramp — glassmorphism core.
+       Stops compressed vs 3g.3 (was 46%) — 40px overlap is a narrower glass zone
+       so cream reaches near-opacity sooner, keeping content area clearly solid. */
+    linear-gradient(
+      to right,
+      transparent 0%,
+      color-mix(in srgb, var(--color-lawdger-cream) 30%, transparent) 5%,
+      color-mix(in srgb, var(--color-lawdger-cream) 75%, transparent) 12%,
+      color-mix(in srgb, var(--color-lawdger-cream) 94%, transparent) 22%,
+      var(--color-lawdger-cream) 34%
+    );
+}
+.dark .lawdger-cream-pane {
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      color-mix(in srgb, var(--color-lawdger-cream) 5%, transparent) 10%,
+      color-mix(in srgb, var(--color-lawdger-cream) 14%, transparent) 100%
+    );
+}
 
 html.light .border-white\/5 { border-color: rgba(36, 29, 24, 0.07) !important; }
 html.light .border-white\/10 { border-color: rgba(36, 29, 24, 0.1) !important; }

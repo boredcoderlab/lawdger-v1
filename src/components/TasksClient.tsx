@@ -958,21 +958,20 @@ export default function TasksClient() {
         }
         mainPaneHeader={
           <>
-            <div className="flex items-center gap-3">
-              <ContentHeading className="text-lawdger-espresso">
-                Active Assignments
-              </ContentHeading>
-              <span className="bg-lawdger-gold/15 text-lawdger-espresso text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border border-lawdger-gold/30">
-                Kanban
-              </span>
-            </div>
+            <ContentHeading className="text-lawdger-espresso">
+              Active Assignments
+            </ContentHeading>
             <span className="text-[11px] font-semibold text-lawdger-muted">
               {kanbanTasks.length} tracked
             </span>
           </>
         }
         mainPaneContent={
-          <div className="px-6 py-5 h-full">
+          // Counter pane's effective left padding (93px ≈ 13.3% of inner div width at 1280px)
+          // so the first kanban column starts ~16px inside the cream pane's left edge —
+          // within the 40px translucent glass zone, never over espresso content.
+          // Tasks-only — LayoutShell padding unchanged for all other pages.
+          <div className="-ml-[13.3%] pl-4 pr-5 py-5 h-full">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-full min-h-0">
               {KANBAN_COLUMNS.map((c) => (
                 <KanbanColumn
