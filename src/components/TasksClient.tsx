@@ -603,6 +603,7 @@ export default function TasksClient() {
   // ──────────────────────────────────────────────────────────────────────
   return (
     <DndContext
+      id="tasks-kanban"
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
