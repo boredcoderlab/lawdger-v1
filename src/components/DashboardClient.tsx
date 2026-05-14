@@ -114,7 +114,7 @@ export default function DashboardClient({
               <div className="flex flex-col">
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">Next Up</h3>
                 {displayEvents.length > 0 ? (
-                  <div className="flex flex-col p-6 rounded-[1.5rem] bg-gradient-to-b from-[#3a2c23] to-[#291e16] text-[#f4efe8] border border-white/5 shadow-md relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
+                  <div className="flex flex-col p-6 rounded-[1.5rem] bg-gradient-to-b from-lawdger-border to-lawdger-espresso text-lawdger-cream border border-white/5 shadow-md relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
                       <Bell className="w-16 h-16" />
                     </div>
@@ -123,11 +123,11 @@ export default function DashboardClient({
                         In 45 mins
                       </span>
                       <h4 className="text-[1.3rem] font-bold leading-tight mb-1">{displayEvents[0].title}</h4>
-                      <p className="text-[14px] text-[#f4efe8]/80 dark:text-white/80 mb-6">{displayEvents[0].case.title}</p>
+                      <p className="text-[14px] text-lawdger-cream/80 dark:text-white/80 mb-6">{displayEvents[0].case.title}</p>
                       
                       <div className="flex items-center justify-between mt-auto">
                         <div className="flex flex-col">
-                          <span className="text-[12px] text-[#f4efe8]/60 dark:text-white/60">Time</span>
+                          <span className="text-[12px] text-lawdger-cream/60 dark:text-white/60">Time</span>
                           <span className="text-[16px] font-bold">{format(new Date(displayEvents[0].hearingDate), "h:mm a")}</span>
                         </div>
                         <ChevronRight className="h-6 w-6 opacity-70 group-hover:opacity-100 transition-opacity" />
@@ -199,7 +199,7 @@ export default function DashboardClient({
                 ].map((ev, i) => (
                   <div key={i} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 p-1.5 -mx-2 rounded-xl transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className={`flex flex-col items-center justify-center rounded-[0.8rem] h-[52px] w-[50px] shadow-sm ${i === 0 ? 'bg-[#291e16] text-[#f4efe8] dark:bg-primary dark:text-[#f4efe8] dark:text-white' : 'bg-card border-[1.5px] border-border text-foreground'}`}>
+                      <div className={`flex flex-col items-center justify-center rounded-[0.8rem] h-[52px] w-[50px] shadow-sm ${i === 0 ? 'bg-lawdger-espresso text-lawdger-cream dark:bg-primary dark:text-white' : 'bg-card border-[1.5px] border-border text-foreground'}`}>
                         <span className="text-[11px] font-medium leading-tight">Nov</span>
                         <span className="text-[14px] font-bold leading-tight">{i + 1}{i === 0 ? 'st' : i === 1 ? 'nd' : 'rd'}</span>
                       </div>
@@ -215,7 +215,7 @@ export default function DashboardClient({
                 upcomingEvents.slice(0, 3).map((ev, i) => (
                   <div key={ev.id} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 p-1.5 -mx-2 rounded-xl transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className={`flex flex-col items-center justify-center rounded-[0.8rem] h-[52px] w-[50px] shadow-sm ${i === 0 ? 'bg-[#291e16] text-[#f4efe8] dark:bg-primary dark:text-[#f4efe8] dark:text-white' : 'bg-card border-[1.5px] border-border text-foreground'}`}>
+                      <div className={`flex flex-col items-center justify-center rounded-[0.8rem] h-[52px] w-[50px] shadow-sm ${i === 0 ? 'bg-lawdger-espresso text-lawdger-cream dark:bg-primary dark:text-white' : 'bg-card border-[1.5px] border-border text-foreground'}`}>
                         <span className="text-[11px] font-medium leading-tight">{format(new Date(ev.hearingDate), "MMM")}</span>
                         <span className="text-[14px] font-bold leading-tight">{format(new Date(ev.hearingDate), "do")}</span>
                       </div>
@@ -275,10 +275,10 @@ export default function DashboardClient({
       <div className="relative mt-2 lg:-mt-10 lg:ml-20 lg:w-[calc(100%-25%)] flex z-20 shrink-0">
         
         {/* The massive dark brown background card */}
-        <div className="w-[65%] rounded-[2rem] bg-gradient-to-b from-[#3a2c23] to-[#291e16] border border-white/5 p-6 shadow-2xl min-h-[220px] flex flex-col justify-between">
+        <div className="w-[65%] rounded-[2rem] bg-gradient-to-b from-lawdger-border to-lawdger-espresso border border-white/5 p-6 shadow-2xl min-h-[220px] flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <h2 className="text-[1.3rem] font-bold text-[#f4efe8] dark:text-white">Active Cases</h2>
-            <button className="text-[#f4efe8] dark:text-white opacity-50 hover:opacity-100 transition-opacity">
+            <h2 className="text-[1.3rem] font-bold text-lawdger-cream dark:text-white">Active Cases</h2>
+            <button className="text-lawdger-cream dark:text-white opacity-50 hover:opacity-100 transition-opacity">
               <span className="text-[1.5rem] leading-none tracking-widest pb-3">...</span>
             </button>
           </div>
@@ -292,14 +292,14 @@ export default function DashboardClient({
             ].map((item, i) => (
               <div key={i} className="flex items-center justify-between border-b border-white/10 last:border-0 pb-2 last:pb-0 cursor-pointer group">
                 <div>
-                  <h4 className="text-[14px] font-bold text-[#f4efe8] dark:text-white group-hover:text-white">{item.title}</h4>
-                  <p className="text-[12px] text-[#f4efe8]/50 dark:text-white/50">{item.time}</p>
+                  <h4 className="text-[14px] font-bold text-lawdger-cream dark:text-white group-hover:text-white">{item.title}</h4>
+                  <p className="text-[12px] text-lawdger-cream/50 dark:text-white/50">{item.time}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${item.dim ? 'bg-white/40 text-white/80' : 'bg-[#7c4d32] dark:bg-primary text-white dark:text-primary-foreground'}`}>
+                  <span className={`px-3 py-1 rounded-full text-[11px] font-bold ${item.dim ? 'bg-white/40 text-white/80' : 'bg-lawdger-border dark:bg-primary text-white dark:text-primary-foreground'}`}>
                     {item.status}
                   </span>
-                  <ChevronRight className="h-4 w-4 text-[#f4efe8]/50 dark:text-white/50 group-hover:text-white" />
+                  <ChevronRight className="h-4 w-4 text-lawdger-cream/50 dark:text-white/50 group-hover:text-white" />
                 </div>
               </div>
             ))}

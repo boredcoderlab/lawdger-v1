@@ -188,14 +188,14 @@ export default function TasksClient({
             <div className="grid grid-cols-1 gap-4 mb-10 shrink-0">
               <div className="bg-white/5 rounded-3xl p-6 border border-white/10 shadow-inner backdrop-blur-md">
                 <span className="text-[11px] uppercase tracking-[0.2em] text-white/30 font-bold">Total Pending</span>
-                <p className="text-[2.5rem] font-serif font-bold text-[#f4efe8] mt-1">{tasks.filter(t => t.status !== 'done').length}</p>
+                <p className="text-[2.5rem] font-serif font-bold text-lawdger-cream mt-1">{tasks.filter(t => t.status !== 'done').length}</p>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-[#3A2E26]/50 rounded-3xl p-5 border border-white/5 backdrop-blur-sm">
+                <div className="bg-lawdger-border/50 rounded-3xl p-5 border border-white/5 backdrop-blur-sm">
                   <span className="text-[10px] uppercase tracking-widest text-orange-200/50 font-bold">Due Today</span>
                   <p className="text-[1.6rem] font-bold text-orange-400 mt-1">{tasks.filter(t => t.dueDate && isToday(t.dueDate)).length}</p>
                 </div>
-                <div className="bg-[#3A2E26]/50 rounded-3xl p-5 border border-white/5 backdrop-blur-sm">
+                <div className="bg-lawdger-border/50 rounded-3xl p-5 border border-white/5 backdrop-blur-sm">
                   <span className="text-[10px] uppercase tracking-widest text-red-200/50 font-bold">Overdue</span>
                   <p className="text-[1.6rem] font-bold text-red-400 mt-1">{tasks.filter(t => t.dueDate && isPast(t.dueDate) && !isToday(t.dueDate) && t.status !== 'done').length}</p>
                 </div>
@@ -222,16 +222,16 @@ export default function TasksClient({
                     draggable
                     onDragStart={(e) => handleDragStart(e, task.id)}
                     onDragEnd={(e) => handleDragEnd(e, task.id)}
-                    className="bg-[#291e16] rounded-xl p-4 shadow-sm border border-white/10 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:-translate-y-1 transition-all duration-200 group relative overflow-hidden shrink-0"
+                    className="bg-lawdger-espresso rounded-xl p-4 shadow-sm border border-white/10 cursor-grab active:cursor-grabbing hover:border-primary/40 hover:-translate-y-1 transition-all duration-200 group relative overflow-hidden shrink-0"
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="bg-white/10 px-2 py-0.5 rounded-md">
-                        <span className="font-serif text-[11px] font-semibold italic text-[#f4efe8]/80 block truncate max-w-[150px]">
+                        <span className="font-serif text-[11px] font-semibold italic text-lawdger-cream/80 block truncate max-w-[150px]">
                           {task.case?.title || 'General'}
                         </span>
                       </div>
                     </div>
-                    <p className="font-medium text-[13px] leading-snug mb-3 text-[#f4efe8]/90 line-clamp-2">{task.description}</p>
+                    <p className="font-medium text-[13px] leading-snug mb-3 text-lawdger-cream/90 line-clamp-2">{task.description}</p>
                     <div className="flex items-center justify-between mt-auto">
                       <div className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest px-2 py-1 rounded-md border ${getDueColor(task.dueDate)} shadow-sm`}>
                         <Clock className="w-3 h-3" />
@@ -301,9 +301,9 @@ export default function TasksClient({
                          draggable
                          onDragStart={(e) => handleDragStart(e, task.id)}
                          onDragEnd={(e) => handleDragEnd(e, task.id)}
-                         className="bg-white/90 dark:bg-[#1A1918]/90 backdrop-blur-sm rounded-xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-white/50 dark:border-white/10 cursor-grab active:cursor-grabbing hover:shadow-[0_8px_25px_rgba(200,150,62,0.15)] hover:border-primary/40 transition-all duration-200 group relative shrink-0"
+                         className="bg-white/90 dark:bg-lawdger-sidebar/90 backdrop-blur-sm rounded-xl overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.05)] border border-white/50 dark:border-white/10 cursor-grab active:cursor-grabbing hover:shadow-[0_8px_25px_rgba(200,150,62,0.15)] hover:border-primary/40 transition-all duration-200 group relative shrink-0"
                        >
-                         <div className="bg-[#291e16] dark:bg-black/60 px-4 py-3 flex justify-between items-start border-b border-white/10">
+                         <div className="bg-lawdger-espresso dark:bg-black/60 px-4 py-3 flex justify-between items-start border-b border-white/10">
                            <div className="bg-white/40 border border-white/10 px-2.5 py-1 rounded-md shadow-inner">
                              <span className="font-serif text-[11.5px] font-semibold italic text-white/90 truncate max-w-[150px] block">
                                {task.case?.title || 'General Directive'}
@@ -354,7 +354,7 @@ export default function TasksClient({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
           <div className="bg-background  rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-lg overflow-hidden relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
             {/* Modal Header */}
-            <div className="flex justify-between items-center p-6 bg-white dark:bg-[#1A1918] border-b border-primary/10">
+            <div className="flex justify-between items-center p-6 bg-white dark:bg-lawdger-sidebar border-b border-primary/10">
               <div className="flex items-center gap-4">
                  <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center text-primary shadow-inner">
                     <Plus className="w-5 h-5" />

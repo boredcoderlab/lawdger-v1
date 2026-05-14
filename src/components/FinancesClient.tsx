@@ -81,7 +81,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
             <div className="space-y-4 mb-8">
               <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">Total Agreed Fees</p>
-                <h3 className="font-serif text-[1.5rem] font-bold text-[#f4efe8] dark:text-white">{fmt(totalExpected)}</h3>
+                <h3 className="font-serif text-[1.5rem] font-bold text-lawdger-cream dark:text-white">{fmt(totalExpected)}</h3>
               </div>
               <div className="flex gap-4">
                 <div className="flex-1 bg-green-500/10 rounded-2xl p-5 border border-green-500/20">
@@ -98,8 +98,8 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
             {/* Collection Rate Progress Bar */}
             <div className="mb-8 bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5">
               <div className="flex justify-between items-end mb-3">
-                <span className="text-[12px] font-bold uppercase tracking-widest text-[#f4efe8]/70 dark:text-white/70">Collection Rate</span>
-                <span className="text-[18px] font-bold text-[#f4efe8] dark:text-white">{collectionRate}%</span>
+                <span className="text-[12px] font-bold uppercase tracking-widest text-lawdger-cream/70 dark:text-white/70">Collection Rate</span>
+                <span className="text-[18px] font-bold text-lawdger-cream dark:text-white">{collectionRate}%</span>
               </div>
               <div className="h-2 w-full bg-white/40 rounded-full overflow-hidden">
                 <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${collectionRate}%` }} />
@@ -168,8 +168,8 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                     return (
                       <div key={c.id} className="rounded-[1.5rem] bg-white/70 dark:bg-card/80 border border-white/50 dark:border-white/10 shadow-sm overflow-hidden transition-all hover:shadow-md">
                         {/* Premium Dark Header */}
-                        <div className="bg-gradient-to-b from-[#3a2c23] to-[#291e16] px-6 py-4 flex items-center justify-between">
-                          <Link href={`/cases/${c.id}`} className="font-serif text-[1.1rem] font-medium text-[#f4efe8] hover:text-primary transition-colors">
+                        <div className="bg-gradient-to-b from-lawdger-border to-lawdger-espresso px-6 py-4 flex items-center justify-between">
+                          <Link href={`/cases/${c.id}`} className="font-serif text-[1.1rem] font-medium text-lawdger-cream hover:text-primary transition-colors">
                             {c.title}
                           </Link>
                           <span className={`inline-flex items-center rounded-full px-3 py-1 text-[9px] font-bold tracking-widest uppercase border ${statusCls}`}>
@@ -267,12 +267,12 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
       {modalCaseId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-background  border border-white/60 dark:border-primary/20 rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-sm animate-in fade-in zoom-in duration-200 overflow-hidden">
-            <div className="bg-[#291e16] dark:bg-[#1A1918] px-6 py-5 flex items-center justify-between">
+            <div className="bg-lawdger-espresso dark:bg-lawdger-sidebar px-6 py-5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                  <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
                     <Receipt className="w-4 h-4 text-primary" />
                  </div>
-                 <ContentHeading className="text-[1.2rem] text-[#f4efe8] leading-none">Log Payment</ContentHeading>
+                 <ContentHeading className="text-[1.2rem] text-lawdger-cream leading-none">Log Payment</ContentHeading>
               </div>
               <button onClick={() => setModalCaseId(null)} className="text-white/40 hover:text-white transition-colors p-1.5 rounded-full hover:bg-white/40"><X className="h-5 w-5" /></button>
             </div>
