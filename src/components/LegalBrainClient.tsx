@@ -198,14 +198,14 @@ export default function LegalBrainClient() {
                   <Icon className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-[13px] font-bold text-[#f4efe8]">{label}</p>
+                  <p className="text-[13px] font-bold text-lawdger-cream">{label}</p>
                   <p className="text-[11px] text-white/40 mt-0.5">{sub}</p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Waveform animation (recording state) */}
+          {/* Recording waveform */}
           {isRecording && (
             <div className="shrink-0 flex items-end gap-[3px] h-12 mb-4 px-2">
               {waveHeights.map((h, i) => (
@@ -217,172 +217,166 @@ export default function LegalBrainClient() {
               ))}
             </div>
           )}
+
+          {/* Transcribing status */}
+          {isTranscribing && (
+            <div className="flex items-center gap-2 text-[11px] text-primary shrink-0 mb-4">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span className="font-bold uppercase tracking-widest">Transcribing…</span>
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="mt-auto pt-10 shrink-0">
+            <div className="flex items-center gap-2 text-white/20">
+              <Sparkles className="w-3 h-3" />
+              <span className="text-[9px] font-bold uppercase tracking-widest">Powered by Gemini</span>
+            </div>
+          </div>
         </>
       }
       mainPaneHeader={
-        <ContentHeading className="text-[1.3rem]">Active Session</ContentHeading>
+        <>
+          <div className="flex items-center gap-3">
+            <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${
+              isLoading    ? "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]"
+              : isRecording ? "bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.6)]"
+              : "bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]"
+            }`} />
+            <h2 className="font-bold text-[13px] uppercase tracking-widest text-foreground/70">
+              {isLoading ? "Thinking…" : isRecording ? "Listening…" : "Ready"}
+            </h2>
+          </div>
+          <p className="text-[11px] text-muted-foreground font-medium">{messages.length} messages in session</p>
+        </>
       }
       mainPaneContent={
-        <div className="flex h-full w-full">
-          {/* Left: Session Status & powered by */}
-          <div className="w-[34%] flex flex-col h-full pb-10">
-            {isRecording && (
-              <p className="text-[11px] text-red-400 font-bold animate-pulse uppercase tracking-widest text-center shrink-0 mb-4">
-                🔴 Recording — tap mic to stop
-              </p>
-            )}
+        <div className="flex flex-col h-full">
 
-            {isTranscribing && (
-              <div className="flex items-center gap-2 text-[11px] text-primary shrink-0 mb-4">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span className="font-bold uppercase tracking-widest">Transcribing…</span>
-              </div>
-            )}
+          {/* Messages area */}
+          <div className="flex-1 overflow-y-auto p-8 pb-4 scrollbar-hide">
+            <div className="max-w-2xl mx-auto space-y-6">
 
-            <div className="mt-auto shrink-0">
-              <div className="flex items-center gap-2 text-white/20">
-                <Sparkles className="w-3 h-3" />
-                <span className="text-[9px] font-bold uppercase tracking-widest">Powered by Gemini</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right: Frosted Glass Chat Pane */}
-          <div className="w-[66%] -ml-[4%] rounded-[2.5rem] bg-white/95 dark:bg-card/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.1)] flex flex-col z-30 pl-[8%] overflow-hidden">
-            {/* Pane Header */}
-            <div className="flex items-center justify-between border-b border-white/20 dark:border-white/5 bg-white/40 dark:bg-white/5 backdrop-blur-md px-8 py-5 shrink-0 rounded-tr-[2.5rem]">
-              <div className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
-                <h2 className="font-bold text-[13px] uppercase tracking-widest text-foreground/70 dark:text-gray-300">
-                  {isLoading ? "Thinking…" : isRecording ? "Listening…" : "Ready"}
-                </h2>
-              </div>
-              <p className="text-[11px] text-muted-foreground font-medium">{messages.length} messages in session</p>
-            </div>
-
-            {/* Messages area */}
-            <div className="flex-1 overflow-y-auto p-8 pb-4 scrollbar-hide">
-              <div className="max-w-2xl mx-auto space-y-6">
-                {/* Suggested prompts */}
-                {showSuggestions && (
-                  <div className="pt-4">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-5 text-center">
-                      Start a conversation
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {SUGGESTED_PROMPTS.map(({ icon: Icon, text }) => (
-                        <button
-                          key={text}
-                          onClick={() => sendMessage(text)}
-                          className="text-left px-5 py-4 rounded-2xl border border-white/60 dark:border-white/10 bg-white/70 dark:bg-card/80 hover:border-primary/40 hover:bg-primary/5 transition-all text-[13px] text-foreground/70 font-medium group flex items-start gap-3"
-                        >
-                          <Icon className="w-4 h-4 text-primary shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
-                          {text}
-                        </button>
-                      ))}
-                    </div>
+              {/* Suggested prompts */}
+              {showSuggestions && (
+                <div className="pt-4">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-5 text-center">
+                    Start a conversation
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {SUGGESTED_PROMPTS.map(({ icon: Icon, text }) => (
+                      <button
+                        key={text}
+                        onClick={() => sendMessage(text)}
+                        className="text-left px-5 py-4 rounded-2xl border border-white/60 dark:border-white/10 bg-white/70 dark:bg-card/80 hover:border-primary/40 hover:bg-primary/5 transition-all text-[13px] text-foreground/70 font-medium group flex items-start gap-3"
+                      >
+                        <Icon className="w-4 h-4 text-primary shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                        {text}
+                      </button>
+                    ))}
                   </div>
-                )}
-
-                {/* Messages */}
-                {messages.map((msg, idx) => (
-                  <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-1 shadow-sm ${
-                      msg.role === "user"
-                        ? "bg-[#291e16] dark:bg-white/40 border border-white/20"
-                        : "bg-primary/20 border border-primary/30"
-                    }`}>
-                      {msg.role === "user"
-                        ? <User className="h-4 w-4 text-[#f4efe8] dark:text-white" />
-                        : <Bot className="h-4 w-4 text-primary" />
-                      }
-                    </div>
-
-                    <div className={`max-w-[80%] space-y-2 flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
-                      <div className={`px-5 py-4 rounded-2xl text-[14px] leading-relaxed font-medium whitespace-pre-wrap shadow-sm ${
-                        msg.role === "user"
-                          ? "bg-[#291e16] dark:bg-white/40 border border-white/20 text-[#f4efe8] dark:text-white rounded-tr-sm"
-                          : "bg-white/70 dark:bg-card/80 border border-white/50 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded-tl-sm"
-                      }`}>
-                        {msg.content}
-                      </div>
-
-                      {msg.actions && msg.actions.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {msg.actions.map((action, i) => (
-                            <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 uppercase tracking-wider">
-                              ✓ {action}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {isLoading && (
-                  <div className="flex gap-4">
-                    <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0 mt-1">
-                      <Bot className="h-4 w-4 text-primary" />
-                    </div>
-                    <div className="px-5 py-4 rounded-2xl rounded-tl-sm bg-white/70 dark:bg-card/80 border border-white/50 dark:border-white/10 shadow-sm">
-                      <div className="flex items-center gap-2 text-muted-foreground text-[13px] font-medium">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        Legal Brain is thinking…
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-            </div>
-
-            {/* Input bar */}
-            <div className="shrink-0 border-t border-white/20 dark:border-white/5 bg-white/95 dark:bg-white/5 backdrop-blur-md px-8 py-5">
-              <div className="max-w-2xl mx-auto">
-                <div className="flex items-end gap-3">
-                  <div className="flex-1 relative">
-                    <textarea
-                      ref={textareaRef}
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      placeholder="Ask a question or give a command… (Enter to send, Shift+Enter for newline)"
-                      rows={1}
-                      disabled={isLoading || isRecording || isTranscribing}
-                      className="w-full bg-white/90 dark:bg-black/30 border border-white/50 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[14px] text-gray-800 dark:text-white placeholder:text-muted-foreground/50 font-medium focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all resize-none disabled:opacity-50 shadow-sm"
-                    />
-                  </div>
-
-                  <button
-                    onClick={toggleRecording}
-                    disabled={isLoading || isTranscribing}
-                    title={isRecording ? "Stop recording" : "Start voice input"}
-                    className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-sm ${
-                      isRecording
-                        ? "bg-red-500/20 border border-red-500/40 text-red-500 hover:bg-red-500/30"
-                        : "bg-white/90 dark:bg-black/30 border border-white/50 dark:border-white/10 text-muted-foreground hover:text-foreground hover:border-primary/30"
-                    } disabled:opacity-40`}
-                  >
-                    {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                  </button>
-
-                  <button
-                    onClick={() => sendMessage(input)}
-                    disabled={!input.trim() || isLoading || isRecording || isTranscribing}
-                    title="Send message"
-                    className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-105 transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100"
-                  >
-                    <Send className="h-5 w-5" />
-                  </button>
                 </div>
-                <p className="text-[10px] text-muted-foreground/50 mt-3 text-center font-medium">
-                  Legal Brain can make mistakes — always verify important information with qualified counsel.
-                </p>
-              </div>
+              )}
+
+              {/* Messages */}
+              {messages.map((msg, idx) => (
+                <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-1 shadow-sm ${
+                    msg.role === "user"
+                      ? "bg-lawdger-espresso dark:bg-white/40 border border-white/20"
+                      : "bg-primary/20 border border-primary/30"
+                  }`}>
+                    {msg.role === "user"
+                      ? <User className="h-4 w-4 text-lawdger-cream" />
+                      : <Bot className="h-4 w-4 text-primary" />
+                    }
+                  </div>
+
+                  <div className={`max-w-[80%] space-y-2 flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                    <div className={`px-5 py-4 rounded-2xl text-[14px] leading-relaxed font-medium whitespace-pre-wrap shadow-sm ${
+                      msg.role === "user"
+                        ? "bg-lawdger-espresso dark:bg-white/40 border border-white/20 text-lawdger-cream rounded-tr-sm"
+                        : "bg-white/70 dark:bg-card/80 border border-white/50 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded-tl-sm"
+                    }`}>
+                      {msg.content}
+                    </div>
+
+                    {msg.actions && msg.actions.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {msg.actions.map((action, i) => (
+                          <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 uppercase tracking-wider">
+                            ✓ {action}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex gap-4">
+                  <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0 mt-1">
+                    <Bot className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="px-5 py-4 rounded-2xl rounded-tl-sm bg-white/70 dark:bg-card/80 border border-white/50 dark:border-white/10 shadow-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground text-[13px] font-medium">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                      Legal Brain is thinking…
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
           </div>
+
+          {/* Input bar — pinned to bottom */}
+          <div className="shrink-0 border-t border-white/20 dark:border-white/5 bg-white/95 dark:bg-white/5 backdrop-blur-md px-8 py-5">
+            <div className="max-w-2xl mx-auto">
+              <div className="flex items-end gap-3">
+                <div className="flex-1 relative">
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask a question or give a command… (Enter to send, Shift+Enter for newline)"
+                    rows={1}
+                    disabled={isLoading || isRecording || isTranscribing}
+                    className="w-full bg-white/90 dark:bg-black/30 border border-white/50 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[14px] text-gray-800 dark:text-white placeholder:text-muted-foreground/50 font-medium focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all resize-none disabled:opacity-50 shadow-sm"
+                  />
+                </div>
+
+                <button
+                  onClick={toggleRecording}
+                  disabled={isLoading || isTranscribing}
+                  title={isRecording ? "Stop recording" : "Start voice input"}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-sm ${
+                    isRecording
+                      ? "bg-red-500/20 border border-red-500/40 text-red-500 hover:bg-red-500/30"
+                      : "bg-white/90 dark:bg-black/30 border border-white/50 dark:border-white/10 text-muted-foreground hover:text-foreground hover:border-primary/30"
+                  } disabled:opacity-40`}
+                >
+                  {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                </button>
+
+                <button
+                  onClick={() => sendMessage(input)}
+                  disabled={!input.trim() || isLoading || isRecording || isTranscribing}
+                  title="Send message"
+                  className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-105 transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100"
+                >
+                  <Send className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="text-[10px] text-muted-foreground/50 mt-3 text-center font-medium">
+                Legal Brain can make mistakes — always verify important information with qualified counsel.
+              </p>
+            </div>
+          </div>
+
         </div>
       }
     />
