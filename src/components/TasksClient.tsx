@@ -967,11 +967,10 @@ export default function TasksClient() {
           </>
         }
         mainPaneContent={
-          // Counter pane's effective left padding (93px ≈ 13.3% of inner div width at 1280px)
-          // so the first kanban column starts ~16px inside the cream pane's left edge —
-          // within the 40px translucent glass zone, never over espresso content.
-          // Tasks-only — LayoutShell padding unchanged for all other pages.
-          <div className="-ml-[13.3%] pl-4 pr-5 py-5 h-full">
+          // No negative margin — the overflow-y-auto parent clips left overflow silently,
+          // causing text crop. Content starts at the natural pane content edge; the 40px
+          // glass strip to the left is still visible as the glassmorphism aesthetic.
+          <div className="pl-4 pr-5 py-5 h-full">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-full min-h-0">
               {KANBAN_COLUMNS.map((c) => (
                 <KanbanColumn
