@@ -307,7 +307,7 @@ export default function DashboardClient({
         </div>
 
         {/* The Frosted Glass Chatbot Widget overlapping on the right */}
-        <div className="absolute right-0 bottom-4 w-[45%] lg:w-[40%] rounded-[1.5rem] bg-white/95 backdrop-blur-2xl border border-white/60 shadow-[0_30px_60px_rgba(0,0,0,0.2)] p-5 min-h-[180px] flex flex-col justify-end">
+        <div className="absolute right-0 bottom-4 w-[45%] lg:w-[40%] rounded-[1.5rem] bg-lawdger-cream backdrop-blur-2xl border border-white/60 shadow-[0_30px_60px_rgba(0,0,0,0.2)] p-5 min-h-[180px] flex flex-col justify-end">
           
           {/* Logo overlapping top edge */}
           <div className="absolute -top-[2.5rem] left-6 flex items-center justify-center w-[70px] h-[80px] shadow-xl z-30">
