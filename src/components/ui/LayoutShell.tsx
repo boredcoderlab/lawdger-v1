@@ -174,9 +174,14 @@ export function PageLayout(props: PageLayoutProps) {
             "-ml-[60px]",
             "mt-8",
             "rounded-3xl",
-            "bg-white/40 dark:bg-lawdger-cream/5 backdrop-blur-2xl",
-            "border border-white/30 dark:border-white/10",
-            "shadow-2xl shadow-lawdger-espresso/10",
+            // Gradient: translucent at the overlap (left) → near-opaque cream at the right edge,
+            // so the pane reads as elevated and separated from bg-lawdger-base on the right
+            // while still revealing the espresso pane through the 60px overlap on the left.
+            "bg-gradient-to-r from-lawdger-cream/15 via-lawdger-cream/60 to-lawdger-cream/95",
+            "dark:from-lawdger-cream/5 dark:via-lawdger-cream/10 dark:to-lawdger-cream/15",
+            "backdrop-blur-2xl",
+            "border border-lawdger-border/15 dark:border-lawdger-cream/10",
+            "shadow-2xl shadow-lawdger-espresso/25",
             "flex flex-col",
             "z-30",
             "pl-[10%] lg:pl-[8%]",
