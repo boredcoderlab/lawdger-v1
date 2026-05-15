@@ -85,17 +85,22 @@ export function PageLayout(props: PageLayoutProps) {
       </>
     );
 
-    // Compose legacy right pane: optional seamless header row + scrollable body.
-    // No background panel beneath the header — content rides directly on the cream
-    // surface. A faint underline (border-b) provides separation only when needed.
+    // Compose legacy right pane: optional dissolved header row + flexible body.
+    // ── Phase 3h contract ──
+    //   The cream pane's inner content wrapper (rendered below) provides the
+    //   universal padding (pl-2/3 pt-12/14 pb-6 pr-6/8) so the header rides
+    //   on the cream surface with the kanban's "edge-to-edge" alignment.
+    //   The body slot is `flex-1 min-h-0` with NO overflow — each consumer
+    //   owns its own scroll strategy (per-column for kanban, full-pane for
+    //   lists, internal scroll regions for chat, etc.).
     rightPanelNode = (
       <>
         {props.mainPaneHeader && (
-          <div className="flex justify-between items-center gap-6 px-10 pt-10 pb-6 shrink-0 border-b border-lawdger-border/[0.06]">
+          <div className="flex justify-between items-center gap-6 pb-4 shrink-0 border-b border-lawdger-border/[0.06]">
             {props.mainPaneHeader}
           </div>
         )}
-        <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <div className="flex-1 min-h-0">
           {props.mainPaneContent}
         </div>
       </>
@@ -181,7 +186,10 @@ export function PageLayout(props: PageLayoutProps) {
             "shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)]",
             "flex flex-col",
             "z-30",
-            "pl-[10%] lg:pl-[8%]",
+            // Phase 3h: padding is OFF the glass surface and on the inner
+            // wrapper below. The cream pane itself stays edge-to-edge so
+            // consumers (Tasks kanban et al.) can ride right up against the
+            // 32px rounded corners — the corners clip overflow naturally.
             "overflow-hidden h-full",
             // Layered depth lives in the inline style:
             //   1) left-edge translucency strip so the espresso pane shows through the overlap
@@ -189,7 +197,20 @@ export function PageLayout(props: PageLayoutProps) {
             "lawdger-cream-pane",
           ].join(" ")}
         >
-          {rightPanelNode}
+          {/* ── INNER CONTENT WRAPPER (Phase 3h) ─────────────────────────
+              Universal padding contract for every consumer:
+                pl-2 lg:pl-3   8–12px from the cream pane's left edge — deep
+                               inside the glassmorphism strip
+                pt-12 lg:pt-14 sits BELOW the 32px top rounded corner curve
+                pr-6 lg:pr-8   comfortable right gutter
+                pb-6           bottom gutter
+              h-full flex flex-col min-h-0 lets the consumer's mainPaneContent
+              slot use `flex-1 min-h-0 overflow-y-auto` (or per-column scroll,
+              per the Tasks kanban pattern) for its own scroll strategy.
+          */}
+          <div className="h-full flex flex-col min-h-0 pl-2 lg:pl-3 pt-12 lg:pt-14 pb-6 pr-6 lg:pr-8">
+            {rightPanelNode}
+          </div>
         </div>
       </div>
     </div>
