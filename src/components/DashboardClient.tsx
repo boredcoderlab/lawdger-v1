@@ -222,27 +222,27 @@ export default function DashboardClient({
 
       {/* ── ACTIVE CASES (espresso, rising from below) ────────────────────── */}
       <div
-        className="bg-lawdger-espresso rounded-t-3xl -mx-4 lg:-mx-6 -mb-4 lg:-mb-6 px-4 lg:px-6 pt-5 pb-5 mt-4 shrink-0"
-        style={{ boxShadow: "0 -4px 24px rgba(61,46,38,0.18)" }}
+        className="w-full bg-lawdger-espresso rounded-2xl p-4 lg:p-5 mt-4 shrink-0"
+        style={{ boxShadow: "0 -4px 20px rgba(61,46,38,0.15)" }}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <h2 className="font-serif text-xl text-lawdger-cream font-bold leading-tight">Active Cases</h2>
           <button className="text-lawdger-cream/60 hover:text-lawdger-cream transition-colors">
             <span className="text-xl leading-none tracking-widest">…</span>
           </button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="flex flex-col gap-2 mt-3">
           {activeCases.map((item, i) => (
             <div
               key={i}
-              className="flex items-center justify-between bg-lawdger-cream/[0.08] border border-lawdger-cream/12 rounded-xl px-4 py-3 cursor-pointer group hover:bg-lawdger-cream/[0.12] transition-colors"
+              className="flex items-center justify-between bg-lawdger-cream/[0.08] border border-lawdger-cream/[0.12] rounded-xl px-4 py-3 cursor-pointer group hover:bg-lawdger-cream/[0.12] transition-colors"
             >
               <div className="min-w-0 pr-3">
-                <h4 className="text-[14px] text-lawdger-cream font-medium truncate">{item.title}</h4>
-                <p className="text-[12px] text-lawdger-cream/60 mt-0.5">{item.time}</p>
+                <h4 className="font-medium text-lawdger-cream text-sm">{item.title}</h4>
+                <p className="text-lawdger-cream/60 text-xs mt-0.5">{item.time}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${item.accent ? "bg-lawdger-cream text-lawdger-espresso" : "bg-lawdger-cream/10 text-lawdger-cream"}`}>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${item.accent ? "bg-lawdger-cream text-lawdger-espresso" : "bg-lawdger-cream/10 text-lawdger-cream"}`}>
                   {item.status}
                 </span>
                 <ChevronRight className="h-4 w-4 text-lawdger-cream/60 group-hover:text-lawdger-cream" />

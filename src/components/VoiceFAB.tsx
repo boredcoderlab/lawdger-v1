@@ -19,9 +19,9 @@ export default function VoiceFAB() {
   }, []);
 
   return (
-    <div ref={fabRef} className="fixed bottom-6 right-6 z-50">
+    <div ref={fabRef} className="fixed bottom-6 right-6 z-[100]">
       {isOpen && (
-        <div className="absolute bottom-16 right-0 w-72 bg-white rounded-2xl shadow-2xl border border-lawdger-border/15 p-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="absolute bottom-14 right-0 w-64 bg-white rounded-2xl shadow-2xl border border-lawdger-border/15 p-4 z-[100] animate-in fade-in slide-in-from-bottom-2 duration-200">
           <p className="text-[13px] font-medium text-lawdger-espresso leading-snug">
             Hey, I&apos;m your AI assistant.
             <span className="block opacity-70 font-normal text-[11px] mt-0.5">Mention me for quick tasks.</span>
@@ -44,7 +44,7 @@ export default function VoiceFAB() {
       <button
         onClick={() => setIsOpen((v) => !v)}
         aria-label="Open AI assistant"
-        className="w-14 h-14 bg-lawdger-espresso rounded-full shadow-xl flex items-center justify-center cursor-pointer hover:bg-lawdger-espresso/90 transition-all duration-200 hover:scale-105 active:scale-95"
+        className="w-12 h-12 bg-lawdger-espresso rounded-full shadow-lg flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all duration-150"
       >
         <Mic className="h-5 w-5 text-lawdger-cream" />
       </button>
