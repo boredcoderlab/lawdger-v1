@@ -55,7 +55,7 @@ export default async function DashboardPage() {
   if (totalTasks > 0) summaryParts.push(`${totalTasks} pending task${totalTasks > 1 ? "s" : ""}`);
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="h-full">
       <DashboardClient
         userName={userName}
         pendingTasks={pendingTasks}
