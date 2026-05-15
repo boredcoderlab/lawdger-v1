@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
-import { ChevronRight, Bell, Send, ChevronLeft, FileText, Download } from "lucide-react";
+import { ChevronRight, Bell, ChevronLeft, FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -46,11 +44,9 @@ export default function DashboardClient({
   totalCases: number;
   totalTasks: number;
 }) {
-  const [chatQuery, setChatQuery] = useState("");
-
-  // Dummy events to fill the timeline if empty, so it looks like the mockup
+  // Dummy events to fill the timeline if empty
   const displayEvents = todayEvents.length > 0 ? todayEvents : [
-    { id: "dummy1", title: "Court Appearance", case: { title: "Cosx appearances" }, hearingDate: new Date(new Date().setHours(9, 0)) },
+    { id: "dummy1", title: "Court Appearance", case: { title: "Court appearances" }, hearingDate: new Date(new Date().setHours(9, 0)) },
     { id: "dummy2", title: "Client Consultation", case: { title: "" }, hearingDate: new Date(new Date().setHours(14, 0)) },
     { id: "dummy3", title: "Deadline Reminders", case: { title: "Filings by 5:00 PM" }, hearingDate: new Date(new Date().setHours(16, 0)) }
   ];
@@ -62,17 +58,17 @@ export default function DashboardClient({
   ];
 
   return (
-    <div className="h-full overflow-hidden p-4 lg:p-6 bg-background text-foreground font-sans">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 h-full">
+    <div className="h-full overflow-hidden p-4 lg:p-6 bg-background text-foreground font-sans flex flex-col">
 
-        {/* ── LEFT COLUMN ─────────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-4 min-h-0">
+      {/* ── TOP GRID (cream) ──────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 flex-1 min-h-0">
 
-          {/* TODAY AT A GLANCE */}
+        {/* LEFT — Today at a Glance */}
+        <div className="min-h-0 flex flex-col">
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-white rounded-2xl border border-lawdger-border/15 shadow-sm">
             <div className="flex items-start justify-between px-6 pt-5 pb-4 shrink-0">
               <div>
-                <h2 className="font-serif text-xl text-lawdger-espresso leading-tight">Today at a Glance</h2>
+                <h2 className="font-serif text-2xl font-bold text-lawdger-espresso leading-tight">Today at a Glance</h2>
                 <p className="text-muted-foreground text-[13px] mt-0.5">Organic daily schedule with primary items.</p>
               </div>
               <div className="flex items-center gap-2">
@@ -88,7 +84,7 @@ export default function DashboardClient({
             <div className="overflow-y-auto flex-1 px-6 pb-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                {/* Left: Next Up (Hero Event) */}
+                {/* Next Up (Hero) */}
                 <div className="flex flex-col">
                   <h3 className="text-[13px] font-bold uppercase tracking-wider text-lawdger-espresso/70 mb-3">Next Up</h3>
                   {displayEvents.length > 0 ? (
@@ -118,7 +114,7 @@ export default function DashboardClient({
                   )}
                 </div>
 
-                {/* Right: On the Radar */}
+                {/* On the Radar */}
                 <div className="flex flex-col">
                   <h3 className="text-[13px] font-bold uppercase tracking-wider text-lawdger-espresso/70 mb-3">On the Radar</h3>
                   <div className="flex flex-col gap-2">
@@ -146,38 +142,9 @@ export default function DashboardClient({
               </div>
             </div>
           </div>
-
-          {/* ACTIVE CASES — unified cream plane */}
-          <div className="shrink-0 max-h-[240px] flex flex-col bg-white rounded-2xl border border-lawdger-border/15 shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">
-              <h2 className="font-serif text-xl text-lawdger-espresso leading-tight">Active Cases</h2>
-              <button className="text-lawdger-espresso/50 hover:text-lawdger-espresso transition-colors">
-                <span className="text-xl leading-none tracking-widest">…</span>
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1 px-6 pb-5">
-              <div className="divide-y divide-lawdger-border/10">
-                {activeCases.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between py-2.5 cursor-pointer group">
-                    <div className="min-w-0 pr-3">
-                      <h4 className="text-[14px] font-bold text-lawdger-espresso truncate">{item.title}</h4>
-                      <p className="text-[12px] text-muted-foreground">{item.time}</p>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${item.accent ? "bg-lawdger-espresso text-lawdger-cream" : "bg-lawdger-border/10 text-lawdger-espresso/80"}`}>
-                        {item.status}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-lawdger-espresso/50 group-hover:text-lawdger-espresso" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
         </div>
 
-        {/* ── RIGHT COLUMN ────────────────────────────────────────────────── */}
+        {/* RIGHT — Upcoming Dates + Recent Documents */}
         <div className="flex flex-col gap-4 min-h-0">
 
           {/* UPCOMING DATES */}
@@ -253,30 +220,35 @@ export default function DashboardClient({
 
       </div>
 
-      {/* ── FLOATING CHATBOT FAB ───────────────────────────────────────────── */}
-      <div className="fixed bottom-6 right-6 z-50 w-80 rounded-2xl bg-lawdger-cream border border-lawdger-border/15 shadow-[0_20px_50px_rgba(41,30,22,0.18)] p-4">
-        <div className="absolute -top-7 left-4 flex items-center justify-center w-12 h-14">
-          <div className="relative w-full h-full">
-            <Image src="/lawdger-logo-transparent.png" alt="Lawdger Logo" fill className="object-contain drop-shadow-md" />
-          </div>
+      {/* ── ACTIVE CASES (espresso, rising from below) ────────────────────── */}
+      <div
+        className="bg-lawdger-espresso rounded-t-3xl -mx-4 lg:-mx-6 -mb-4 lg:-mb-6 px-4 lg:px-6 pt-5 pb-5 mt-4 shrink-0"
+        style={{ boxShadow: "0 -4px 24px rgba(61,46,38,0.18)" }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-serif text-xl text-lawdger-cream font-bold leading-tight">Active Cases</h2>
+          <button className="text-lawdger-cream/60 hover:text-lawdger-cream transition-colors">
+            <span className="text-xl leading-none tracking-widest">…</span>
+          </button>
         </div>
-        <div className="mt-6 space-y-3">
-          <p className="text-[13px] font-medium text-lawdger-espresso leading-snug">
-            Hey, I&apos;m your AI assistant.
-            <span className="block opacity-70 font-normal text-[11px] mt-0.5">Mention me for quick tasks.</span>
-          </p>
-          <div className="relative w-full">
-            <input
-              type="text"
-              value={chatQuery}
-              onChange={(e) => setChatQuery(e.target.value)}
-              placeholder="Type a message…"
-              className="w-full bg-white border border-lawdger-border/15 rounded-full pl-4 pr-11 py-2.5 text-[13px] text-lawdger-espresso placeholder:text-lawdger-espresso/40 focus:outline-none focus:ring-2 focus:ring-lawdger-espresso/20 transition-all"
-            />
-            <button className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 text-lawdger-espresso rounded-full flex items-center justify-center hover:bg-lawdger-border/10 transition-colors">
-              <Send className="h-4 w-4" />
-            </button>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {activeCases.map((item, i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between bg-lawdger-cream/[0.08] border border-lawdger-cream/12 rounded-xl px-4 py-3 cursor-pointer group hover:bg-lawdger-cream/[0.12] transition-colors"
+            >
+              <div className="min-w-0 pr-3">
+                <h4 className="text-[14px] text-lawdger-cream font-medium truncate">{item.title}</h4>
+                <p className="text-[12px] text-lawdger-cream/60 mt-0.5">{item.time}</p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${item.accent ? "bg-lawdger-cream text-lawdger-espresso" : "bg-lawdger-cream/10 text-lawdger-cream"}`}>
+                  {item.status}
+                </span>
+                <ChevronRight className="h-4 w-4 text-lawdger-cream/60 group-hover:text-lawdger-cream" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
