@@ -449,7 +449,7 @@ export default function CalendarClient({
           </>
         }
         mainPaneContent={
-          <div className="flex-1 overflow-y-auto relative">
+          <div className="h-full overflow-y-auto scrollbar-hide relative">
 
             {/* ── Day View ── */}
             {view === "day" && (() => {

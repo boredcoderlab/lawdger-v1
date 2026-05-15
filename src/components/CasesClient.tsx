@@ -600,7 +600,7 @@ export default function CasesClient({
           </>
         }
         mainPaneContent={
-          <div className="p-8">
+          <div className="h-full overflow-y-auto scrollbar-hide p-8">
             {filtered.length === 0 ? (
               <EmptyState
                 searchActive={search.length > 0 || statusFilter !== "all"}

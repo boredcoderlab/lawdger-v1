@@ -322,7 +322,7 @@ export default function CaseDetailClient({
           </>
         }
         mainPaneContent={
-          <div className="p-10 pb-20">
+          <div className="h-full overflow-y-auto scrollbar-hide p-10 pb-20">
             <div className="grid grid-cols-1 gap-12">
 
               {/* ── Next Hearing ─────────────────────────────────── */}

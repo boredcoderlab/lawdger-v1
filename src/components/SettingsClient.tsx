@@ -221,7 +221,7 @@ export default function SettingsClient({
         </div>
       }
       mainPaneContent={
-        <div className="p-10 pb-20">
+        <div className="h-full overflow-y-auto scrollbar-hide p-10 pb-20">
           {/* Account Tab */}
           <div className={activeTab === "account" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
             <Card title="Professional Profile" icon={User}>

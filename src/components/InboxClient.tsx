@@ -72,8 +72,8 @@ export default function InboxClient({ initialDocuments, userName }: { initialDoc
         </>
       }
       mainPaneContent={
-        <div className="p-8 h-full">
-          <div className="flex-1 overflow-y-auto space-y-4 scrollbar-hide h-full">
+        <div className="h-full overflow-y-auto scrollbar-hide p-8">
+          <div className="space-y-4">
             {initialDocuments.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center opacity-60 min-h-[300px]">
                    <CheckCircle2 className="w-12 h-12 mb-4 text-primary" />

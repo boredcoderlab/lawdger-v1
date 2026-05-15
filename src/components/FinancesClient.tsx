@@ -145,8 +145,8 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
           </ContentHeading>
         }
         mainPaneContent={
-          <div className="p-10 h-full">
-            <div className="flex-1 overflow-y-auto scrollbar-hide h-full">
+          <div className="h-full overflow-y-auto scrollbar-hide p-10">
+            <div className="h-full">
               {cases.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-60">
                   <Receipt className="h-12 w-12 mb-4" />
