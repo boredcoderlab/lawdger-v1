@@ -307,15 +307,16 @@ function AssignedCard({
         "transition-all duration-150",
       ].join(" ")}
     >
-      <div className="font-sans text-[13px] font-medium text-lawdger-espresso leading-snug line-clamp-2 tracking-normal">
+      {/* Fix 2: espresso ink, text-sm */}
+      <div className="text-sm font-medium text-lawdger-espresso leading-snug line-clamp-2">
         {task.title}
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center bg-lawdger-espresso/8 text-lawdger-espresso/80 text-[10.5px] font-semibold px-2 py-0.5 rounded-full max-w-[65%] truncate">
+        <span className="inline-flex items-center bg-lawdger-espresso/8 text-lawdger-espresso/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
           {task.caseName || "No case"}
         </span>
         <span
-          className={`inline-flex items-center gap-1 text-[10.5px] font-semibold ${dueClasses(
+          className={`inline-flex items-center gap-1 text-xs font-medium ${dueClasses(
             task.dueDate
           )}`}
         >
@@ -337,15 +338,15 @@ function AssignedCardOverlay({ task }: { task: Task }) {
         "p-4 w-full",
       ].join(" ")}
     >
-      <div className="font-sans text-[13px] font-medium text-lawdger-espresso leading-snug line-clamp-2 tracking-normal">
+      <div className="text-sm font-medium text-lawdger-espresso leading-snug line-clamp-2">
         {task.title}
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center bg-lawdger-espresso/8 text-lawdger-espresso/80 text-[10.5px] font-semibold px-2 py-0.5 rounded-full max-w-[65%] truncate">
+        <span className="inline-flex items-center bg-lawdger-espresso/8 text-lawdger-espresso/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
           {task.caseName || "No case"}
         </span>
         <span
-          className={`inline-flex items-center gap-1 text-[10.5px] font-semibold ${dueClasses(
+          className={`inline-flex items-center gap-1 text-xs font-medium ${dueClasses(
             task.dueDate
           )}`}
         >
@@ -387,16 +388,17 @@ function UnassignedCard({
       onClick={() => onClick(task.id)}
       className={[
         hidden ? "hidden" : "block",
-        "bg-lawdger-cream/10 border border-lawdger-cream/20 rounded-xl p-3",
+        "bg-lawdger-cream/8 border border-lawdger-cream/12 rounded-xl p-3",
         "cursor-pointer hover:border-lawdger-gold/40 hover:bg-lawdger-cream/15",
         "transition-colors duration-150",
       ].join(" ")}
     >
-      <div className="font-sans text-[12.5px] font-medium text-lawdger-cream leading-snug line-clamp-2 tracking-normal">
+      {/* Unassigned card: cream-on-espresso, 90% legibility */}
+      <div className="text-sm font-medium text-lawdger-cream/90 leading-snug line-clamp-2">
         {task.title}
       </div>
       <div className="mt-2 flex items-center gap-1.5">
-        <span className="inline-flex items-center bg-lawdger-cream/10 text-lawdger-cream/70 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+        <span className="inline-flex items-center bg-lawdger-cream/10 border border-lawdger-cream/15 text-lawdger-cream/50 text-xs font-medium px-2 py-0.5 rounded-full">
           {task.caseName || "Untriaged"}
         </span>
         {task.priority === "urgent" && (
@@ -433,6 +435,7 @@ function KanbanColumn({
   hiddenIds,
   onAdd,
   onCardClick,
+  isLast = false,
 }: {
   id: Exclude<TaskColumn, "unassigned">;
   label: string;
@@ -441,6 +444,7 @@ function KanbanColumn({
   hiddenIds: Set<string>;
   onAdd: (col: TaskColumn) => void;
   onCardClick: (id: string) => void;
+  isLast?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   const Icon = COLUMN_ICON[id];
@@ -450,20 +454,23 @@ function KanbanColumn({
     <div
       ref={setNodeRef}
       className={[
-        "flex flex-col h-full min-h-0 rounded-2xl transition-colors",
+        "flex flex-col h-full min-h-0 rounded-2xl p-3 transition-colors",
+        // Fix 3: right border as column divider (except last column)
+        !isLast ? "border-r border-lawdger-border/15" : "",
+        // Fix 5: three depth layers — cream pane → column zone → card
         isOver
-          ? "bg-lawdger-base/50 ring-1 ring-lawdger-gold/40"
-          : "bg-transparent",
+          ? "bg-lawdger-base/60 ring-1 ring-lawdger-gold/40"
+          : "bg-lawdger-base/40",
       ].join(" ")}
     >
-      {/* Header: single line, no wrap */}
-      <div className="flex items-center justify-between gap-2 px-1 pb-3 mb-3 border-b border-lawdger-border/10 shrink-0">
+      {/* Fix 1: Header — serif heading, sentence case, stronger separator */}
+      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <Icon className="w-3.5 h-3.5 text-lawdger-espresso/60 shrink-0" />
-          <div className="font-sans text-[12px] font-bold uppercase tracking-widest text-lawdger-espresso/80 whitespace-nowrap truncate">
+          <Icon className="w-3.5 h-3.5 text-lawdger-espresso/50 shrink-0" />
+          <h3 className="font-serif text-lg lg:text-xl text-lawdger-espresso whitespace-nowrap truncate leading-tight">
             {label}
-          </div>
-          <span className="text-[11px] font-bold text-lawdger-muted shrink-0">
+          </h3>
+          <span className="text-xs font-sans font-medium text-lawdger-muted bg-lawdger-espresso/8 px-2 py-0.5 rounded-full shrink-0">
             {visibleCount}
           </span>
         </div>
@@ -958,10 +965,13 @@ export default function TasksClient() {
         }
         mainPaneHeader={
           <>
-            <ContentHeading className="text-lawdger-espresso">
+            {/* Fix 4: direct h3 — ContentHeading's dark:text-white would override className,
+                so we render the heading directly to guarantee text-lawdger-espresso always wins
+                (proven by column h3s: @layer base color < utility class specificity) */}
+            <h3 className="font-serif text-2xl text-lawdger-espresso leading-tight tracking-tight">
               Active Assignments
-            </ContentHeading>
-            <span className="text-[11px] font-semibold text-lawdger-muted">
+            </h3>
+            <span className="text-xs font-sans font-medium text-lawdger-muted bg-lawdger-espresso/8 px-2.5 py-1 rounded-full">
               {kanbanTasks.length} tracked
             </span>
           </>
@@ -974,7 +984,7 @@ export default function TasksClient() {
           // Each KanbanColumn owns its own h-full overflow-y-auto list, so
           // the grid itself does not scroll — columns scroll individually.
           <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-3 px-2 lg:px-3 pb-2 min-h-0">
-            {KANBAN_COLUMNS.map((c) => (
+            {KANBAN_COLUMNS.map((c, idx) => (
               <KanbanColumn
                 key={c.id}
                 id={c.id}
@@ -984,6 +994,7 @@ export default function TasksClient() {
                 hiddenIds={hiddenIds}
                 onAdd={openCreate}
                 onCardClick={openEdit}
+                isLast={idx === KANBAN_COLUMNS.length - 1}
               />
             ))}
           </div>
