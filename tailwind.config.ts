@@ -14,7 +14,7 @@ const config: Config = {
       colors: {
         lawdger: {
           base: '#F5F2EC',      // Premium Sand/Parchment (Background)
-          espresso: '#2A2320',  // Deep dark panel
+          espresso: '#3D2E26',  // Deep dark panel
           border: '#4A3C33',    // Dark panel inner border
           gold: '#D4AF37',      // Accent glow & buttons
           cream: '#FCFAF8',     // High contrast text
