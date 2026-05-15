@@ -967,24 +967,25 @@ export default function TasksClient() {
           </>
         }
         mainPaneContent={
-          // No negative margin — the overflow-y-auto parent clips left overflow silently,
-          // causing text crop. Content starts at the natural pane content edge; the 40px
-          // glass strip to the left is still visible as the glassmorphism aesthetic.
-          <div className="pl-4 pr-5 py-5 h-full">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 h-full min-h-0">
-              {KANBAN_COLUMNS.map((c) => (
-                <KanbanColumn
-                  key={c.id}
-                  id={c.id}
-                  label={c.label}
-                  tasks={items[c.id]}
-                  visibleIds={visibleIds}
-                  hiddenIds={hiddenIds}
-                  onAdd={openCreate}
-                  onCardClick={openEdit}
-                />
-              ))}
-            </div>
+          // Phase 3h: no inner wrapper, no negative margin. The cream pane's
+          // inner padding (pl-2 lg:pl-3 from LayoutShell) places the first
+          // column ~8–12px from the pane's left edge — deep inside the
+          // glassmorphism strip, visible against the espresso bleed-through.
+          // Each KanbanColumn owns its own h-full overflow-y-auto list, so
+          // the grid itself does not scroll — columns scroll individually.
+          <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-3 px-2 lg:px-3 pb-2 min-h-0">
+            {KANBAN_COLUMNS.map((c) => (
+              <KanbanColumn
+                key={c.id}
+                id={c.id}
+                label={c.label}
+                tasks={items[c.id]}
+                visibleIds={visibleIds}
+                hiddenIds={hiddenIds}
+                onAdd={openCreate}
+                onCardClick={openEdit}
+              />
+            ))}
           </div>
         }
       />
