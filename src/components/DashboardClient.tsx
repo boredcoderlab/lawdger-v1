@@ -1,6 +1,8 @@
 "use client";
 
-import { ChevronRight, Bell, ChevronLeft, FileText, Download } from "lucide-react";
+import { useState } from "react";
+import Image from "next/image";
+import { ChevronRight, Bell, ChevronLeft, FileText, Download, Send } from "lucide-react";
 import { format } from "date-fns";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -27,6 +29,45 @@ type CaseItem = {
   courtName: string | null;
   status: string;
 };
+
+// ── Dashboard Chat Widget ──────────────────────────────────────────────────────
+
+function DashboardChatWidget() {
+  const [message, setMessage] = useState("");
+
+  return (
+    <div className="absolute -top-[120px] right-4 flex flex-col items-center gap-2 z-20">
+      <div className="w-12 h-12 bg-lawdger-cream rounded-xl shadow-lg flex items-center justify-center">
+        <Image
+          src="/lawdger-logo-transparent.png"
+          alt="Lawdger"
+          width={28}
+          height={28}
+          className="object-contain"
+        />
+      </div>
+      <div className="w-64 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-lawdger-border/15 p-4">
+        <p className="font-medium text-lawdger-espresso text-sm mb-0.5">
+          Hey, there I&apos;m your floating AI chatbot!
+        </p>
+        <p className="text-lawdger-muted text-xs mb-3">
+          You can mention me for quick tasks.
+        </p>
+        <div className="flex items-center gap-2 bg-lawdger-base rounded-xl px-3 py-2 border border-lawdger-border/20">
+          <input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 bg-transparent text-sm text-lawdger-espresso placeholder:text-lawdger-muted outline-none"
+          />
+          <button className="text-lawdger-muted hover:text-lawdger-espresso transition-colors">
+            <Send size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -222,9 +263,10 @@ export default function DashboardClient({
 
       {/* ── ACTIVE CASES (espresso, rising from below) ────────────────────── */}
       <div
-        className="w-full bg-lawdger-espresso rounded-2xl p-4 lg:p-5 mt-4 shrink-0"
+        className="relative w-full bg-lawdger-espresso rounded-2xl p-4 lg:p-5 mt-4 shrink-0"
         style={{ boxShadow: "0 -4px 20px rgba(61,46,38,0.15)" }}
       >
+        <DashboardChatWidget />
         <div className="flex items-center justify-between">
           <h2 className="font-serif text-xl text-lawdger-cream font-bold leading-tight">Active Cases</h2>
           <button className="text-lawdger-cream/60 hover:text-lawdger-cream transition-colors">
