@@ -58,15 +58,8 @@ export default function InboxClient({ initialDocuments, userName }: { initialDoc
       }
       mainPaneHeader={
         <>
-          <div className="flex items-center gap-3">
-            <ContentHeading className="flex items-center gap-3 text-[1.4rem]">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
-                 <InboxIcon className="w-5 h-5" />
-              </div>
-              Needs Sorting
-            </ContentHeading>
-          </div>
-          <button className="text-[12px] font-bold uppercase tracking-widest text-primary hover:opacity-70 transition-opacity">
+          <ContentHeading>Needs Sorting</ContentHeading>
+          <button className="text-[12px] font-bold uppercase tracking-widest text-primary hover:opacity-70 transition-opacity shrink-0">
             Sort All
           </button>
         </>

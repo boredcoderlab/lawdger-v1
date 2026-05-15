@@ -237,17 +237,17 @@ export default function LegalBrainClient() {
       }
       mainPaneHeader={
         <>
-          <div className="flex items-center gap-3">
+          <ContentHeading>Active Session</ContentHeading>
+          <div className="flex items-center gap-3 shrink-0">
             <div className={`w-2.5 h-2.5 rounded-full animate-pulse ${
               isLoading    ? "bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.6)]"
               : isRecording ? "bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.6)]"
               : "bg-green-400 shadow-[0_0_6px_rgba(74,222,128,0.6)]"
             }`} />
-            <h2 className="font-bold text-[13px] uppercase tracking-widest text-foreground/70">
-              {isLoading ? "Thinking…" : isRecording ? "Listening…" : "Ready"}
-            </h2>
+            <p className="text-[11px] text-muted-foreground font-medium">
+              {isLoading ? "Thinking…" : isRecording ? "Listening…" : "Ready"} · {messages.length} messages
+            </p>
           </div>
-          <p className="text-[11px] text-muted-foreground font-medium">{messages.length} messages in session</p>
         </>
       }
       mainPaneContent={

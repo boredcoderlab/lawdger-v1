@@ -467,7 +467,7 @@ function KanbanColumn({
       <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Icon className="w-3.5 h-3.5 text-lawdger-espresso/50 shrink-0" />
-          <h3 className="font-serif text-lg lg:text-xl text-lawdger-espresso whitespace-nowrap truncate leading-tight">
+          <h3 className="font-serif text-base lg:text-lg text-lawdger-espresso leading-tight">
             {label}
           </h3>
           <span className="text-xs font-sans font-medium text-lawdger-muted bg-lawdger-espresso/8 px-2 py-0.5 rounded-full shrink-0">
@@ -965,13 +965,8 @@ export default function TasksClient() {
         }
         mainPaneHeader={
           <>
-            {/* Fix 4: direct h3 — ContentHeading's dark:text-white would override className,
-                so we render the heading directly to guarantee text-lawdger-espresso always wins
-                (proven by column h3s: @layer base color < utility class specificity) */}
-            <h3 className="font-serif text-2xl text-lawdger-espresso leading-tight tracking-tight">
-              Active Assignments
-            </h3>
-            <span className="text-xs font-sans font-medium text-lawdger-muted bg-lawdger-espresso/8 px-2.5 py-1 rounded-full">
+            <ContentHeading>Active Assignments</ContentHeading>
+            <span className="text-xs font-sans font-medium text-lawdger-muted bg-lawdger-espresso/8 px-2.5 py-1 rounded-full shrink-0">
               {kanbanTasks.length} tracked
             </span>
           </>

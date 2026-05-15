@@ -16,7 +16,7 @@ import {
   createCaseTask, toggleCaseTaskStatus, deleteCaseTask,
   createNote, updateCaseDetails,
 } from "@/actions/caseActions";
-import { PageLayout, DarkPaneHeaderTitle } from "@/components/ui/LayoutShell";
+import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -304,14 +304,7 @@ export default function CaseDetailClient({
         }
         mainPaneHeader={
           <>
-            <div>
-              <h2 className="font-serif text-[1.6rem] font-bold text-foreground leading-none max-w-[500px] truncate pr-4">
-                {info.title}
-              </h2>
-              <p className="text-[12px] font-bold uppercase tracking-widest text-primary/60 mt-1">
-                Active Matter File
-              </p>
-            </div>
+            <ContentHeading>{info.title}</ContentHeading>
             <button
               onClick={() => setIsEditing(!isEditing)}
               className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-6 py-2.5 rounded-full hover:bg-primary hover:text-primary-foreground transition-all font-bold tracking-widest uppercase text-[10px] shadow-sm shrink-0"

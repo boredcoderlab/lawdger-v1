@@ -575,7 +575,7 @@ export default function CasesClient({
         mainPaneHeader={
           <>
             <div className="flex items-center gap-5">
-              <ContentHeading className="text-[1.3rem]">
+              <ContentHeading>
                 Registry Entries
               </ContentHeading>
               <div className="flex bg-lawdger-base/60 border border-lawdger-gold/10 rounded-full p-1">

@@ -139,10 +139,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
           </>
         }
         mainPaneHeader={
-          <ContentHeading className="flex items-center gap-4 text-[1.6rem]">
-            <Receipt className="h-6 w-6 text-primary" />
-            Case Fee Tracker
-          </ContentHeading>
+          <ContentHeading>Case Fee Tracker</ContentHeading>
         }
         mainPaneContent={
           <div className="h-full overflow-y-auto scrollbar-hide p-10">

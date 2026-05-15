@@ -8,7 +8,7 @@ import {
   updateProfile, changePassword, updateWorkspacePreferences,
   updateNotificationPreferences, type SettingsState, type Preferences,
 } from "@/actions/settingsActions";
-import { PageLayout, DarkPaneHeaderTitle } from "@/components/ui/LayoutShell";
+import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 
@@ -209,9 +209,7 @@ export default function SettingsClient({
       }
       mainPaneHeader={
         <div>
-          <h2 className="font-serif text-[1.6rem] font-bold text-foreground leading-none">
-            {TABS.find((t) => t.id === activeTab)?.label}
-          </h2>
+          <ContentHeading>{TABS.find((t) => t.id === activeTab)?.label}</ContentHeading>
           <p className="text-[12px] font-medium text-muted-foreground mt-2">
             {activeTab === "account" && "Manage your professional identity and contact details."}
             {activeTab === "ai-workspace" && "Configure how your Legal Second Brain behaves."}

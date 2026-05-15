@@ -16,7 +16,7 @@ import {
   createCalendarEvent, updateCalendarEvent, deleteCalendarEvent,
 } from "@/actions/calendarActions";
 import { createTask, updateTask, deleteTask } from "@/actions/taskActions";
-import { PageLayout, DarkPaneHeaderTitle } from "@/components/ui/LayoutShell";
+import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
 type ViewMode = "day" | "week" | "month";
 
@@ -422,12 +422,11 @@ export default function CalendarClient({
         }
         mainPaneHeader={
           <>
-            <h2 className="font-serif text-[1.6rem] font-bold flex items-center gap-4 text-foreground">
-              <CalendarIcon className="h-6 w-6 text-primary" />
+            <ContentHeading>
               {view === "day"  ? format(currentDate, "EEEE, MMMM d, yyyy") :
                view === "week" ? `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d, yyyy")}` :
                format(currentDate, "MMMM yyyy")}
-            </h2>
+            </ContentHeading>
             <div className="flex gap-4 items-center">
               <div className="flex bg-black/5 dark:bg-white/5 rounded-full p-1 border border-white/10">
                 {(["day","week","month"] as ViewMode[]).map((v) => (

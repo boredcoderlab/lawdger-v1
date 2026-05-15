@@ -253,9 +253,10 @@ export function DarkPaneHeaderTitle({
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CONTENT HEADING
-// The canonical heading for content areas (right pane columns, modal titles).
-// Typography: Playfair Display Bold 1.4rem tracking-tight — the global standard
-// extracted from the Tasks "My Plate / Associates / Clerks & Filings" headings.
+// Canonical cream-pane heading — used in every mainPaneHeader slot.
+// Playfair Display serif, espresso ink, left-anchored gradient separator.
+// className is optional for legacy modal overrides only; canonical usage
+// passes no className.
 // ─────────────────────────────────────────────────────────────────────────────
 export function ContentHeading({
   children,
@@ -265,11 +266,14 @@ export function ContentHeading({
   className?: string;
 }) {
   return (
-    <h3
-      className={`font-bold tracking-tight text-[1.4rem] text-foreground dark:text-white ${className}`}
-    >
-      {children}
-    </h3>
+    <div className="mb-0">
+      <h2
+        className={`font-serif text-3xl lg:text-4xl font-bold text-lawdger-espresso tracking-tight leading-tight ${className}`}
+      >
+        {children}
+      </h2>
+      <div className="mt-3 h-px bg-gradient-to-r from-lawdger-border/40 via-lawdger-border/15 to-transparent" />
+    </div>
   );
 }
 
