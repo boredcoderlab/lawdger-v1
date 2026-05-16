@@ -36,7 +36,7 @@ function DashboardChatWidget() {
   const [message, setMessage] = useState("");
 
   return (
-    <div className="absolute bottom-0 right-0 w-64 z-20 flex flex-col items-center gap-2">
+    <div className="absolute bottom-0 right-0 w-full z-[50] flex flex-col items-center gap-2">
       {/* Logo card */}
       <div className="w-11 h-11 bg-lawdger-cream rounded-xl shadow-lg flex items-center justify-center self-center">
         <Image
@@ -222,7 +222,7 @@ export default function DashboardClient({
         </div>
 
         {/* RIGHT — Upcoming Dates + Recent Documents */}
-        <div className="flex flex-col gap-4 min-h-0">
+        <div className="flex flex-col gap-4 min-h-0 relative">
 
           {/* UPCOMING DATES */}
           <div className="shrink-0 bg-white rounded-2xl border border-lawdger-border/15 shadow-sm">
@@ -293,10 +293,10 @@ export default function DashboardClient({
             </div>
           </div>
 
-        </div>
+          {/* ── CHAT WIDGET — absolute overlay at right-column bottom-right ───────── */}
+          <DashboardChatWidget />
 
-        {/* ── CHAT WIDGET — absolute overlay at grid bottom-right ───────── */}
-        <DashboardChatWidget />
+        </div>
 
       </div>
 
