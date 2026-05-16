@@ -36,39 +36,35 @@ function DashboardChatWidget() {
   const [message, setMessage] = useState("");
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Logo card — centered at top, slightly overlapping top edge */}
-      <div className="flex justify-center -mt-5 mb-3">
-        <div className="w-11 h-11 bg-lawdger-cream rounded-xl shadow-lg flex items-center justify-center">
-          <Image
-            src="/lawdger-logo-transparent.png"
-            alt="Lawdger"
-            width={26}
-            height={26}
-            className="object-contain"
-          />
-        </div>
+    <div className="absolute bottom-0 right-0 w-64 z-20 flex flex-col items-center gap-2">
+      {/* Logo card */}
+      <div className="w-11 h-11 bg-lawdger-cream rounded-xl shadow-lg flex items-center justify-center self-center">
+        <Image
+          src="/lawdger-logo-transparent.png"
+          alt="Lawdger"
+          width={26}
+          height={26}
+          className="object-contain"
+        />
       </div>
 
-      {/* Chat card — fills the column */}
-      <div className="mx-3 mb-3 flex-1 bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-lawdger-border/15 p-3 flex flex-col justify-between">
-        <div>
-          <p className="font-medium text-lawdger-espresso text-sm mb-0.5">
-            Hey, there I&apos;m your floating AI chatbot!
-          </p>
-          <p className="text-lawdger-muted text-xs">
-            You can mention me for quick tasks.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 bg-lawdger-base rounded-xl px-3 py-2 border border-lawdger-border/20 mt-3">
+      {/* Chat popup */}
+      <div className="w-full bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-lawdger-border/15 p-4">
+        <p className="font-medium text-lawdger-espresso text-sm mb-0.5">
+          Hey, there I&apos;m your floating AI chatbot!
+        </p>
+        <p className="text-lawdger-muted text-xs mb-3">
+          You can mention me for quick tasks.
+        </p>
+        <div className="flex items-center gap-2 bg-lawdger-base rounded-xl px-3 py-2 border border-lawdger-border/20">
           <input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 bg-transparent text-xs text-lawdger-espresso placeholder:text-lawdger-muted outline-none"
+            className="flex-1 bg-transparent text-sm text-lawdger-espresso placeholder:text-lawdger-muted outline-none"
           />
           <button className="text-lawdger-muted hover:text-lawdger-espresso transition-colors">
-            <Send size={13} />
+            <Send size={14} />
           </button>
         </div>
       </div>
@@ -106,13 +102,13 @@ export default function DashboardClient({
   ];
 
   return (
-    <div className="h-full overflow-hidden p-4 lg:p-6 bg-background text-foreground font-sans flex flex-col">
+    <div className="h-full overflow-hidden p-4 lg:p-6 bg-background text-foreground font-sans">
 
-      {/* ── TOP GRID (cream) ──────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 flex-1 min-h-0">
+      {/* ── GRID ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 h-full relative">
 
-        {/* LEFT — Today at a Glance */}
-        <div className="min-h-0 flex flex-col">
+        {/* LEFT — Today at a Glance + Active Cases */}
+        <div className="min-h-0 flex flex-col gap-4">
           <div className="flex-1 min-h-0 overflow-hidden flex flex-col bg-white rounded-2xl border border-lawdger-border/15 shadow-sm">
             <div className="flex items-start justify-between px-6 pt-5 pb-4 shrink-0">
               <div>
@@ -190,6 +186,39 @@ export default function DashboardClient({
               </div>
             </div>
           </div>
+
+        {/* ── ACTIVE CASES ─────────────────────────────────────────────── */}
+        <div
+          className="w-full bg-lawdger-espresso rounded-2xl p-4 lg:p-5 shrink-0"
+          style={{ boxShadow: "0 -4px 20px rgba(61,46,38,0.15)" }}
+        >
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-serif text-xl text-lawdger-cream font-bold leading-tight">Active Cases</h2>
+            <button className="text-lawdger-cream/60 hover:text-lawdger-cream transition-colors">
+              <MoreHorizontal size={16} />
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {activeCases.map((item, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between bg-lawdger-cream/[0.08] border border-lawdger-cream/[0.12] rounded-xl px-4 py-3 cursor-pointer group hover:bg-lawdger-cream/[0.12] transition-colors"
+              >
+                <div className="min-w-0 pr-3">
+                  <h4 className="font-medium text-lawdger-cream text-sm">{item.title}</h4>
+                  <p className="text-lawdger-cream/60 text-xs mt-0.5">{item.time}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${item.accent ? "bg-lawdger-cream text-lawdger-espresso" : "bg-lawdger-cream/10 text-lawdger-cream"}`}>
+                    {item.status}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-lawdger-cream/60 group-hover:text-lawdger-cream" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         </div>
 
         {/* RIGHT — Upcoming Dates + Recent Documents */}
@@ -266,50 +295,9 @@ export default function DashboardClient({
 
         </div>
 
-      </div>
+        {/* ── CHAT WIDGET — absolute overlay at grid bottom-right ───────── */}
+        <DashboardChatWidget />
 
-      {/* ── ACTIVE CASES (espresso, rising from below) ────────────────────── */}
-      <div
-        className="w-full bg-lawdger-espresso rounded-2xl mt-4 shrink-0 overflow-hidden"
-        style={{ boxShadow: "0 -4px 20px rgba(61,46,38,0.15)" }}
-      >
-        <div className="flex items-stretch">
-
-          {/* LEFT — cases list */}
-          <div className="flex-1 p-4 lg:p-5">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-serif text-xl text-lawdger-cream font-bold leading-tight">Active Cases</h2>
-              <button className="text-lawdger-cream/60 hover:text-lawdger-cream transition-colors">
-                <MoreHorizontal size={16} />
-              </button>
-            </div>
-            <div className="flex flex-col gap-2">
-              {activeCases.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between bg-lawdger-cream/[0.08] border border-lawdger-cream/[0.12] rounded-xl px-4 py-3 cursor-pointer group hover:bg-lawdger-cream/[0.12] transition-colors"
-                >
-                  <div className="min-w-0 pr-3">
-                    <h4 className="font-medium text-lawdger-cream text-sm">{item.title}</h4>
-                    <p className="text-lawdger-cream/60 text-xs mt-0.5">{item.time}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${item.accent ? "bg-lawdger-cream text-lawdger-espresso" : "bg-lawdger-cream/10 text-lawdger-cream"}`}>
-                      {item.status}
-                    </span>
-                    <ChevronRight className="h-4 w-4 text-lawdger-cream/60 group-hover:text-lawdger-cream" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* RIGHT — chat widget */}
-          <div className="w-64 lg:w-72 border-l border-lawdger-cream/10 flex flex-col pt-5">
-            <DashboardChatWidget />
-          </div>
-
-        </div>
       </div>
 
     </div>
