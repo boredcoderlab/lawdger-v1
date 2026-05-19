@@ -72,8 +72,17 @@ export default function DashboardClient({
   ];
 
   return (
-    <div className="relative flex flex-col flex-1 p-4 lg:px-8 lg:py-6 h-screen max-h-screen bg-background text-foreground font-sans overflow-hidden z-0">
-      
+    <div
+      className="relative flex flex-col flex-1 p-4 lg:px-8 lg:py-6 h-screen max-h-screen bg-background text-foreground font-sans overflow-hidden z-0"
+      style={{
+        backgroundImage: `
+          radial-gradient(ellipse at top right, rgba(212,175,55,0.06), transparent 50%),
+          radial-gradient(ellipse at bottom left, rgba(69,50,40,0.08), transparent 55%),
+          radial-gradient(circle at 30% 40%, rgba(255,255,255,0.4), transparent 40%)
+        `,
+      }}
+    >
+
       {/* ── GLOBAL BACKGROUND SHAPES ────────────────────────────────────────── */}
       <div className="absolute top-[12%] left-0 w-[85%] h-[85%] bg-muted rounded-r-[5rem] -z-10 pointer-events-none" />
       <div className="absolute -bottom-20 -right-20 w-[60%] h-[75%] bg-black/5 dark:bg-white/5 rounded-tl-[8rem] rounded-bl-[4rem] -z-20 pointer-events-none" />
@@ -85,7 +94,19 @@ export default function DashboardClient({
         <div className="lg:col-span-8 flex flex-col gap-4 min-h-0">
           
           {/* TODAY AT A GLANCE (Hero Tile) */}
-          <div className="relative rounded-[2.5rem] bg-white/65 backdrop-blur-2xl p-6 lg:p-8 shadow-[0_8px_32px_rgba(69,50,40,0.08),inset_0_1px_0_rgba(255,255,255,0.6)] border border-lawdger-cream/70 shrink-0">
+          <div
+            className="relative rounded-[2.5rem] border border-white/60 p-6 lg:p-8 shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.45) 100%)',
+              backdropFilter: 'blur(24px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+              boxShadow: `
+                0 8px 32px rgba(69,50,40,0.10),
+                inset 0 1px 0 rgba(255,255,255,0.9),
+                inset 0 -1px 0 rgba(69,50,40,0.04)
+              `,
+            }}
+          >
             
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
@@ -114,7 +135,17 @@ export default function DashboardClient({
               <div className="flex flex-col">
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">Next Up</h3>
                 {displayEvents.length > 0 ? (
-                  <div className="flex flex-col p-6 rounded-[1.5rem] bg-gradient-to-br from-lawdger-espresso to-lawdger-espresso/92 text-lawdger-cream border border-white/5 shadow-[0_4px_20px_rgba(69,50,40,0.3)] relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
+                  <div
+                    className="flex flex-col p-6 rounded-[1.5rem] text-lawdger-cream border border-white/5 relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--lawdger-espresso), color-mix(in srgb, var(--lawdger-espresso) 90%, black))',
+                      boxShadow: `
+                        0 8px 28px rgba(69,50,40,0.35),
+                        inset 0 1px 0 rgba(255,255,255,0.08),
+                        inset 0 0 0 1px rgba(255,255,255,0.04)
+                      `,
+                    }}
+                  >
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
                       <Bell className="w-16 h-16" />
                     </div>
@@ -146,7 +177,16 @@ export default function DashboardClient({
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">On the Radar</h3>
                 <div className="flex flex-col gap-3">
                   {displayEvents.slice(1, 4).map((ev, idx) => (
-                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-2xl bg-lawdger-cream/40 backdrop-blur-sm border border-lawdger-border/12 hover:bg-lawdger-cream/60 transition-colors duration-200 cursor-pointer group">
+                    <div
+                      key={ev.id}
+                      className="flex items-center gap-4 p-3 rounded-xl border border-white/50 transition-all duration-200 hover:border-white/80 cursor-pointer group"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.6), rgba(255,255,255,0.35))',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
+                      }}
+                    >
                       <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-accent text-accent-foreground font-bold shrink-0 shadow-sm border border-white/60 dark:border-transparent">
                         <span className="text-[14px] leading-none">{format(new Date(ev.hearingDate), "h")}</span>
                         <span className="text-[10px] leading-none uppercase mt-0.5">{format(new Date(ev.hearingDate), "a")}</span>
@@ -179,7 +219,19 @@ export default function DashboardClient({
         <div className="lg:col-span-4 flex flex-col gap-4 z-10 min-h-0">
           
           {/* UPCOMING DATES */}
-          <div className="rounded-[2rem] bg-white/65 backdrop-blur-2xl p-6 shadow-[0_8px_32px_rgba(69,50,40,0.08),inset_0_1px_0_rgba(255,255,255,0.6)] border border-lawdger-cream/70 shrink-0">
+          <div
+            className="rounded-2xl border border-white/60 p-6 shrink-0"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.45) 100%)',
+              backdropFilter: 'blur(24px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+              boxShadow: `
+                0 8px 32px rgba(69,50,40,0.10),
+                inset 0 1px 0 rgba(255,255,255,0.9),
+                inset 0 -1px 0 rgba(69,50,40,0.04)
+              `,
+            }}
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[1.2rem] font-bold text-foreground">
                 Upcoming Dates
@@ -232,7 +284,19 @@ export default function DashboardClient({
           </div>
 
           {/* RECENT DOCUMENTS */}
-          <div className="rounded-[2rem] bg-white/65 backdrop-blur-2xl p-6 shadow-[0_8px_32px_rgba(69,50,40,0.08),inset_0_1px_0_rgba(255,255,255,0.6)] border border-lawdger-cream/70 flex-1 overflow-hidden flex flex-col">
+          <div
+            className="rounded-2xl border border-white/60 p-6 flex-1 overflow-hidden flex flex-col"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0.45) 100%)',
+              backdropFilter: 'blur(24px) saturate(140%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+              boxShadow: `
+                0 8px 32px rgba(69,50,40,0.10),
+                inset 0 1px 0 rgba(255,255,255,0.9),
+                inset 0 -1px 0 rgba(69,50,40,0.04)
+              `,
+            }}
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[1.2rem] font-bold text-foreground">
                 Recent Documents
@@ -275,7 +339,17 @@ export default function DashboardClient({
       <div className="relative mt-2 lg:-mt-10 lg:ml-20 lg:w-[calc(100%-25%)] flex z-20 shrink-0">
         
         {/* The massive dark brown background card */}
-        <div className="w-[65%] rounded-[2rem] bg-gradient-to-b from-lawdger-border to-lawdger-espresso border border-white/5 p-6 shadow-[0_-6px_28px_rgba(69,50,40,0.18),0_4px_18px_rgba(69,50,40,0.12)] min-h-[220px] flex flex-col justify-between">
+        <div
+          className="w-[65%] rounded-[2rem] border border-white/5 p-6 min-h-[220px] flex flex-col justify-between"
+          style={{
+            background: 'linear-gradient(180deg, var(--lawdger-espresso) 0%, color-mix(in srgb, var(--lawdger-espresso) 95%, black) 100%)',
+            boxShadow: `
+              0 -8px 32px rgba(69,50,40,0.22),
+              0 6px 20px rgba(69,50,40,0.14),
+              inset 0 1px 0 rgba(255,255,255,0.06)
+            `,
+          }}
+        >
           <div className="flex items-center justify-between">
             <h2 className="text-[1.3rem] font-bold text-lawdger-cream dark:text-white">Active Cases</h2>
             <button className="text-lawdger-cream dark:text-white opacity-50 hover:opacity-100 transition-opacity">
@@ -290,7 +364,15 @@ export default function DashboardClient({
               { title: "Client Consultation #2", time: "2:00 PM - 2:00 PM", status: "Discovery Phase", dim: true },
               { title: "Client Appearance #3", time: "3:00 PM - 5:00 PM", status: "Awaiting Verdict", dim: false }
             ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between bg-lawdger-cream/10 backdrop-blur-sm border border-lawdger-cream/12 rounded-xl p-2 cursor-pointer group hover:bg-lawdger-cream/15 transition-colors duration-200">
+              <div
+                key={i}
+                className="flex items-center justify-between rounded-xl border border-lawdger-cream/15 transition-all duration-200 hover:border-lawdger-cream/30 p-2 cursor-pointer group"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(252,250,248,0.12), rgba(252,250,248,0.06))',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                }}
+              >
                 <div>
                   <h4 className="text-[14px] font-bold text-lawdger-cream dark:text-white group-hover:text-white">{item.title}</h4>
                   <p className="text-[12px] text-lawdger-cream/50 dark:text-white/50">{item.time}</p>
@@ -307,7 +389,19 @@ export default function DashboardClient({
         </div>
 
         {/* The Frosted Glass Chatbot Widget overlapping on the right */}
-        <div className="absolute right-0 bottom-4 w-[45%] lg:w-[40%] rounded-[1.5rem] bg-white/75 backdrop-blur-2xl border border-lawdger-cream/60 shadow-[0_12px_40px_rgba(69,50,40,0.22),inset_0_1px_0_rgba(255,255,255,0.55)] p-5 min-h-[180px] flex flex-col justify-end">
+        <div
+          className="absolute right-0 bottom-4 w-[45%] lg:w-[40%] rounded-2xl border border-white/60 p-5 min-h-[180px] flex flex-col justify-end"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.85), rgba(255,255,255,0.55))',
+            backdropFilter: 'blur(28px) saturate(150%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(150%)',
+            boxShadow: `
+              0 16px 48px rgba(69,50,40,0.22),
+              inset 0 1px 0 rgba(255,255,255,0.95),
+              inset 0 -1px 0 rgba(69,50,40,0.06)
+            `,
+          }}
+        >
           
           {/* Logo overlapping top edge */}
           <div className="absolute -top-[2.5rem] left-6 flex items-center justify-center w-[70px] h-[80px] shadow-[0_4px_18px_rgba(69,50,40,0.25)] z-30">
@@ -327,7 +421,13 @@ export default function DashboardClient({
                 value={chatQuery}
                 onChange={(e) => setChatQuery(e.target.value)}
                 placeholder="Type a message..."
-                className="w-full bg-lawdger-base/70 backdrop-blur-sm border border-lawdger-border/15 rounded-full pl-6 pr-14 py-3.5 text-[14px] text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
+                className="w-full rounded-full pl-6 pr-14 py-3.5 text-[14px] text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
+                style={{
+                  background: 'rgba(245,242,236,0.6)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(74,60,51,0.15)',
+                }}
               />
               <button className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 text-foreground rounded-full flex items-center justify-center hover:opacity-70 transition-opacity">
                 <Send className="h-5 w-5" />
