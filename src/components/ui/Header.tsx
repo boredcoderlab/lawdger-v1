@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
   Search, Bell, Briefcase, Receipt, Calendar as CalIcon, CheckCircle2,
@@ -43,8 +44,8 @@ export default function Header() {
             </div>
 
             <nav className="flex items-center gap-1.5 p-1 bg-white/40 border border-white/80 rounded-[14px] shadow-sm">
-                <ModeLink label="Finance" icon={<Wallet size={14}/>} />
-                <ModeLink label="Legal Brain AI" icon={<MessageSquare size={14}/>} isNew />
+                <ModeLink label="Finance" icon={<Wallet size={14}/>} href="/finances" />
+                <ModeLink label="Legal Brain AI" icon={<MessageSquare size={14}/>} isNew href="/chat" />
             </nav>
         </div>
 
@@ -79,14 +80,14 @@ export default function Header() {
   );
 }
 
-function ModeLink({ label, icon, isNew = false }: { label: string, icon: React.ReactNode, isNew?: boolean }) {
+function ModeLink({ label, icon, isNew = false, href }: { label: string, icon: React.ReactNode, isNew?: boolean, href: string }) {
     return (
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] cursor-pointer transition-all duration-300 group relative overflow-hidden">
+        <Link href={href} className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] cursor-pointer transition-all duration-200 hover:shadow-md group relative overflow-hidden">
             <div className="absolute inset-0 bg-white/40 opacity-0 group-hover:opacity-100 transition-opacity" />
             <span className="relative z-10 text-lawdger-espresso/40 group-hover:text-lawdger-espresso transition-colors duration-300">{icon}</span>
             <span className="relative z-10 text-xs font-bold tracking-tight text-lawdger-espresso/60 group-hover:text-lawdger-espresso transition-colors duration-300">{label}</span>
             {isNew && <span className="relative z-10 ml-1 bg-gradient-to-tr from-lawdger-gold to-[#B38D1D] text-[7px] font-black text-white px-1.5 py-0.5 rounded-sm shadow-sm border border-white/40">AI</span>}
-        </div>
+        </Link>
     );
 }
 
