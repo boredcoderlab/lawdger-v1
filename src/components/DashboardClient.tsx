@@ -72,20 +72,20 @@ export default function DashboardClient({
   ];
 
   return (
-    <div className="relative flex flex-col flex-1 p-4 lg:px-8 lg:py-6 h-screen max-h-screen bg-background text-foreground font-sans overflow-hidden z-0">
+    <div className="relative flex flex-col flex-1 p-4 lg:px-8 lg:py-6 h-full overflow-hidden bg-background text-foreground font-sans z-0">
 
       {/* ── GLOBAL BACKGROUND SHAPES ────────────────────────────────────────── */}
       <div className="absolute top-[12%] left-0 w-[85%] h-[85%] bg-muted rounded-r-[5rem] -z-10 pointer-events-none" />
       <div className="absolute -bottom-20 -right-20 w-[60%] h-[75%] bg-black/5 dark:bg-white/5 rounded-tl-[8rem] rounded-bl-[4rem] -z-20 pointer-events-none" />
 
       {/* ── MAIN BENTO GRID ────────────────────────────────────────────────── */}
-      <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-x-8 gap-y-4 z-10 flex-1 min-h-0">
+      <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-x-8 gap-y-4 z-10 flex-1 min-h-0 h-full">
         
         {/* LEFT COLUMN: Hero Tile & Chatbot */}
         <div className="lg:col-span-8 flex flex-col gap-4 min-h-0">
           
           {/* TODAY AT A GLANCE (Hero Tile) */}
-          <div className="relative rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-cream/10 shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane p-6 lg:p-8 shrink-0">
+          <div className="relative rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-cream/10 shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane p-6 lg:p-8 flex-1 min-h-0 overflow-hidden">
             
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
@@ -232,7 +232,7 @@ export default function DashboardClient({
           </div>
 
           {/* RECENT DOCUMENTS */}
-          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-cream/10 shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane p-6 flex-1 overflow-hidden flex flex-col">
+          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-cream/10 shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[1.2rem] font-bold text-foreground">
                 Recent Documents

@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/ui/Sidebar";
 import Header from "@/components/ui/Header";
 import VoiceFAB from "@/components/VoiceFAB";
@@ -9,6 +10,9 @@ export default function LawdgerLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const showFAB = pathname !== '/dashboard' && pathname !== '/chat';
+
   return (
     <div className="h-screen flex bg-background text-foreground font-sans relative overflow-hidden">
       {/* Global Background Ambience */}
@@ -20,7 +24,7 @@ export default function LawdgerLayout({
           {children}
         </main>
       </div>
-      <VoiceFAB />
+      {showFAB && <VoiceFAB />}
     </div>
   );
 }
