@@ -13,12 +13,21 @@
   --border: rgba(41, 30, 22, 0.15);
   --card: #f4efe8;
   --card-foreground: #291e16;
-  
+
   --surface-soft: rgba(244, 239, 232, 0.5);
   --surface-strong: rgba(41, 30, 22, 0.12);
   --surface-contrast: rgba(41, 30, 22, 0.04);
   --overlay-strong: rgba(41, 30, 22, 0.45);
   --shadow-elevated: rgba(41, 30, 22, 0.06);
+
+  /* Lawdger palette — light mode (Phase 4a tokenization).
+     Values verified against tailwind.config.ts hardcoded set. */
+  --lawdger-espresso: #453228;
+  --lawdger-cream:    #FCFAF8;
+  --lawdger-base:     #F5F2EC;
+  --lawdger-border:   #4A3C33;
+  --lawdger-gold:     #D4AF37;
+  --lawdger-muted:    #A3968A;
 }
 
 .dark {
@@ -40,6 +49,14 @@
   --surface-contrast: rgba(0, 0, 0, 0.2);
   --overlay-strong: rgba(0, 0, 0, 0.45);
   --shadow-elevated: rgba(0, 0, 0, 0.28);
+
+  /* Lawdger palette — dark mode overrides (Phase 4a). */
+  --lawdger-espresso: #0F0D0C;
+  --lawdger-cream:    #1C1917;
+  --lawdger-base:     #141210;
+  --lawdger-border:   rgba(252, 250, 248, 0.10);
+  --lawdger-gold:     #E8C547;
+  --lawdger-muted:    #6B6057;
 }
 
 @theme inline {
@@ -58,12 +75,12 @@
   --color-surface-strong: var(--surface-strong);
   --color-surface-contrast: var(--surface-contrast);
   --color-overlay-strong: var(--overlay-strong);
-  --color-lawdger-base: #F5F2EC;
-  --color-lawdger-espresso: #453228;
-  --color-lawdger-border: #4A3C33;
-  --color-lawdger-gold: #D4AF37;
-  --color-lawdger-cream: #FCFAF8;
-  --color-lawdger-muted: #A3968A;
+  --color-lawdger-base: var(--lawdger-base);
+  --color-lawdger-espresso: var(--lawdger-espresso);
+  --color-lawdger-border: var(--lawdger-border);
+  --color-lawdger-gold: var(--lawdger-gold);
+  --color-lawdger-cream: var(--lawdger-cream);
+  --color-lawdger-muted: var(--lawdger-muted);
   --color-lawdger-teal: #2DD4BF;
   --color-lawdger-sidebar: #1E1917;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
