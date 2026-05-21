@@ -175,7 +175,6 @@ export default function LegalBrainClient() {
   return (
     <PageLayout
       pageTitle="Legal Brain"
-      backToDashboard
       darkPaneHeader={
         <DarkPaneHeaderTitle icon={Sparkles} title="AI Assistant" subtitle="Capabilities & Status" />
       }

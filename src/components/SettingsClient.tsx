@@ -39,7 +39,7 @@ function Card({ title, icon: Icon, children }: {
         <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
           <Icon className="h-4 w-4 text-primary" />
         </div>
-        <h2 className="font-serif text-[1.2rem] font-bold text-gray-900 dark:text-white">{title}</h2>
+        <h2 className="font-serif text-[1.2rem] font-semibold text-lawdger-espresso">{title}</h2>
       </div>
       <div className="px-8 py-6 space-y-6">{children}</div>
     </div>

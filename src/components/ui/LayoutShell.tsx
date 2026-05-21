@@ -115,7 +115,7 @@ export function PageLayout(props: PageLayoutProps) {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="relative flex flex-col flex-1 p-8 lg:p-12 min-h-screen bg-lawdger-base text-foreground font-sans z-0">
+    <div className="relative flex flex-col flex-1 px-8 pt-3 pb-8 lg:px-12 lg:pt-4 lg:pb-12 min-h-screen bg-lawdger-base text-foreground font-sans z-0">
 
       {/* Ambient background orb — warm espresso glow */}
       <div className="absolute top-[10%] left-[-5%] w-[60%] h-[70%] bg-primary/10 rounded-full blur-[140px] -z-10 pointer-events-none" />
@@ -127,7 +127,7 @@ export function PageLayout(props: PageLayoutProps) {
                only takes the button's natural height plus minimal vertical
                padding. h1 stays suppressed (Header.tsx owns route title).
       */}
-      <div className="flex justify-between items-center mb-4 py-2 lg:py-3 z-10 shrink-0">
+      <div className="flex justify-between items-center mb-2 py-1 lg:py-2 z-10 shrink-0">
         <div>
           {backToDashboard && (
             <Link
@@ -154,7 +154,7 @@ export function PageLayout(props: PageLayoutProps) {
         the cream pane's inner overflow-y-auto on long pages (e.g. /calendar).
         min-h-[600px] guards small viewports.
       */}
-      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto h-[calc(100vh-14rem)] min-h-[600px]">
+      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto h-[calc(100vh-12.5rem)] min-h-[600px]">
 
         {/* ── LEFT DARK PANE (Espresso Gradient) ─────────────────────────
             w-[42%] / lg:w-[38%]
