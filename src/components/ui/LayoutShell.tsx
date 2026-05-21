@@ -120,13 +120,19 @@ export function PageLayout(props: PageLayoutProps) {
       {/* Ambient background orb — warm espresso glow */}
       <div className="absolute top-[10%] left-[-5%] w-[60%] h-[70%] bg-primary/10 rounded-full blur-[140px] -z-10 pointer-events-none" />
 
-      {/* ── Page Header ─────────────────────────────────────────────────── */}
-      <div className="flex justify-between items-end mb-10 z-10">
+      {/* ── Page Header (Phase 3r: slim row, not a tall band) ────────────
+          Was: items-end + mb-10 → baseline-anchored band ~80px tall reserving
+               dead space for a lone action button.
+          Now: items-center + mb-4 + py-2 lg:py-3 + shrink-0 → slim CTA row that
+               only takes the button's natural height plus minimal vertical
+               padding. h1 stays suppressed (Header.tsx owns route title).
+      */}
+      <div className="flex justify-between items-center mb-4 py-2 lg:py-3 z-10 shrink-0">
         <div>
           {backToDashboard && (
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors mb-4"
+              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
             >
               <ChevronLeft className="h-3 w-3" />
               Back to Dashboard
@@ -140,9 +146,15 @@ export function PageLayout(props: PageLayoutProps) {
       {/* ── OVERLAPPING PANES ───────────────────────────────────────────── */}
       {/*
         Width container: 98% mobile → 95% xl gives full-bleed feel.
-        Height: calc(100vh - 12rem) so panes fill the viewport below header.
+        Height (Phase 3r): calc(100vh-14rem) — tightened from prior 12rem to
+        reclaim the dead band saved by the slim header row (was ~88px tall,
+        now 65px). Fixed height (rather than flex-1) is required because all
+        page wrappers above this use `min-h-screen` — flex-1 inside a min-h-
+        screen ancestor expands with content rather than capping, which breaks
+        the cream pane's inner overflow-y-auto on long pages (e.g. /calendar).
+        min-h-[600px] guards small viewports.
       */}
-      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto h-[calc(100vh-12rem)] min-h-[600px]">
+      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto h-[calc(100vh-14rem)] min-h-[600px]">
 
         {/* ── LEFT DARK PANE (Espresso Gradient) ─────────────────────────
             w-[42%] / lg:w-[38%]
@@ -197,18 +209,20 @@ export function PageLayout(props: PageLayoutProps) {
             "lawdger-cream-pane",
           ].join(" ")}
         >
-          {/* ── INNER CONTENT WRAPPER (Phase 3h) ─────────────────────────
+          {/* ── INNER CONTENT WRAPPER (Phase 3h → tightened in 3r) ───────
               Universal padding contract for every consumer:
                 pl-2 lg:pl-3   8–12px from the cream pane's left edge — deep
                                inside the glassmorphism strip
-                pt-12 lg:pt-14 sits BELOW the 32px top rounded corner curve
+                pt-6 lg:pt-8   sits just below the 32px rounded-corner curve.
+                               Was pt-12/pt-14 — Phase 3r reclaimed 32-48px of
+                               dead top band per the cream-pane vertical audit.
                 pr-6 lg:pr-8   comfortable right gutter
                 pb-6           bottom gutter
               h-full flex flex-col min-h-0 lets the consumer's mainPaneContent
               slot use `flex-1 min-h-0 overflow-y-auto` (or per-column scroll,
               per the Tasks kanban pattern) for its own scroll strategy.
           */}
-          <div className="h-full flex flex-col min-h-0 pl-2 lg:pl-3 pt-12 lg:pt-14 pb-6 pr-6 lg:pr-8">
+          <div className="h-full flex flex-col min-h-0 pl-2 lg:pl-3 pt-6 lg:pt-8 pb-6 pr-6 lg:pr-8">
             {rightPanelNode}
           </div>
         </div>

@@ -253,14 +253,18 @@ export default function LegalBrainClient() {
       mainPaneContent={
         <div className="flex flex-col h-full">
 
-          {/* Messages area */}
+          {/* Messages area
+              Phase 3r: when empty (showSuggestions), the inner wrapper switches
+              to a centered flex layout so the quick-action cards sit vertically
+              centered in the available space rather than floating high with a
+              dead band below. When messages exist, normal stacked scroll. */}
           <div className="flex-1 overflow-y-auto p-8 pb-4 scrollbar-hide">
-            <div className="max-w-2xl mx-auto space-y-6">
+            <div className={`max-w-2xl mx-auto ${showSuggestions ? 'h-full flex flex-col items-center justify-center' : 'space-y-6'}`}>
 
               {/* Suggested prompts */}
               {showSuggestions && (
-                <div className="pt-4">
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-5 text-center">
+                <div className="w-full">
+                  <p className="text-[10px] text-lawdger-muted uppercase tracking-widest font-bold mb-5 text-center">
                     Start a conversation
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -268,9 +272,9 @@ export default function LegalBrainClient() {
                       <button
                         key={text}
                         onClick={() => sendMessage(text)}
-                        className="text-left px-5 py-4 rounded-2xl border border-white/60 dark:border-white/10 bg-white/70 dark:bg-card/80 hover:border-primary/40 hover:bg-primary/5 transition-all text-[13px] text-foreground/70 font-medium group flex items-start gap-3"
+                        className="text-left px-5 py-4 rounded-2xl border border-lawdger-border/15 bg-lawdger-cream/40 backdrop-blur-sm hover:border-lawdger-espresso/30 hover:bg-lawdger-cream/70 transition-all text-[13px] text-lawdger-espresso/80 font-medium group flex items-start gap-3 shadow-sm"
                       >
-                        <Icon className="w-4 h-4 text-primary shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                        <Icon className="w-4 h-4 text-lawdger-espresso shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                         {text}
                       </button>
                     ))}
@@ -332,46 +336,48 @@ export default function LegalBrainClient() {
             </div>
           </div>
 
-          {/* Input bar — pinned to bottom */}
-          <div className="shrink-0 border-t border-white/20 dark:border-white/5 bg-white/95 dark:bg-white/5 backdrop-blur-md px-8 py-5">
+          {/* Input bar — pinned to bottom (Phase 3r: themed glass treatment).
+              Outer wrapper holds positioning only; the actual input bar is the
+              inner glass container (bg-lawdger-cream/40 + blur + border) so it
+              reads as cream glassmorphism rather than the prior flat grey. */}
+          <div className="shrink-0 px-4 lg:px-8 pb-4 pt-2">
             <div className="max-w-2xl mx-auto">
-              <div className="flex items-end gap-3">
-                <div className="flex-1 relative">
-                  <textarea
-                    ref={textareaRef}
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask a question or give a command… (Enter to send, Shift+Enter for newline)"
-                    rows={1}
-                    disabled={isLoading || isRecording || isTranscribing}
-                    className="w-full bg-white/90 dark:bg-black/30 border border-white/50 dark:border-white/10 rounded-2xl px-5 py-3.5 text-[14px] text-gray-800 dark:text-white placeholder:text-muted-foreground/50 font-medium focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all resize-none disabled:opacity-50 shadow-sm"
-                  />
-                </div>
+              <div className="flex items-end gap-2 bg-lawdger-cream/40 backdrop-blur-sm border border-lawdger-border/15 rounded-2xl shadow-sm px-3 py-2">
+
+                <textarea
+                  ref={textareaRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask a question or give a command… (Enter to send, Shift+Enter for newline)"
+                  rows={1}
+                  disabled={isLoading || isRecording || isTranscribing}
+                  className="flex-1 bg-transparent px-3 py-2 text-[14px] text-lawdger-espresso placeholder:text-lawdger-muted font-medium outline-none resize-none disabled:opacity-50 leading-relaxed"
+                />
 
                 <button
                   onClick={toggleRecording}
                   disabled={isLoading || isTranscribing}
                   title={isRecording ? "Stop recording" : "Start voice input"}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 shadow-sm ${
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 ${
                     isRecording
-                      ? "bg-red-500/20 border border-red-500/40 text-red-500 hover:bg-red-500/30"
-                      : "bg-white/90 dark:bg-black/30 border border-white/50 dark:border-white/10 text-muted-foreground hover:text-foreground hover:border-primary/30"
+                      ? "bg-red-500/15 border border-red-500/40 text-red-500 hover:bg-red-500/25"
+                      : "bg-lawdger-base border border-lawdger-border/15 text-lawdger-muted hover:text-lawdger-espresso"
                   } disabled:opacity-40`}
                 >
-                  {isRecording ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </button>
 
                 <button
                   onClick={() => sendMessage(input)}
                   disabled={!input.trim() || isLoading || isRecording || isTranscribing}
                   title="Send message"
-                  className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-105 transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:scale-100"
+                  className="w-10 h-10 rounded-full bg-lawdger-espresso text-lawdger-cream flex items-center justify-center hover:bg-lawdger-espresso/90 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <Send className="h-5 w-5" />
+                  <Send className="h-4 w-4" />
                 </button>
               </div>
-              <p className="text-[10px] text-muted-foreground/50 mt-3 text-center font-medium">
+              <p className="text-[10px] text-lawdger-muted/70 mt-3 text-center font-medium">
                 Legal Brain can make mistakes — always verify important information with qualified counsel.
               </p>
             </div>
