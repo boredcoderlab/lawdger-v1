@@ -45,11 +45,11 @@ export default function Sidebar() {
 
   return (
     <aside className="w-24 h-[calc(100vh-3rem)] bg-lawdger-espresso rounded-[2.5rem] flex flex-col items-center py-6 relative z-50 shadow-[0_20px_60px_rgba(44,36,32,0.12)] border border-white/5 my-6 ml-6 shrink-0">
-      
+
       {/* Brand Anchor */}
       <Link
         href="/dashboard"
-        className="w-12 h-12 bg-lawdger-base rounded-[14px] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.9)] mb-10 hover:scale-105 transition-transform duration-300 relative z-20"
+        className="w-12 h-12 bg-lawdger-base rounded-[14px] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.06)] mb-10 hover:scale-105 transition-transform duration-300 relative z-20"
       >
         <Image
           src="/lawdger-logo-transparent.png"
@@ -65,7 +65,7 @@ export default function Sidebar() {
       <nav className="flex flex-col w-full relative items-center">
           {activeIndex >= 0 && (
             <div
-              className="absolute w-14 h-14 bg-lawdger-base rounded-[14px] transition-transform duration-500 ease-out z-0 shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
+              className="absolute w-14 h-14 bg-lawdger-base dark:bg-foreground/8 dark:border dark:border-lawdger-gold/20 rounded-[14px] transition-transform duration-500 ease-out z-0 shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
               style={{ transform: `translateY(${activeIndex * 72}px)` }}
             />
           )}
@@ -84,8 +84,8 @@ export default function Sidebar() {
                   size={22}
                   className={`transition-all duration-500 ${
                     isActive
-                      ? "text-lawdger-espresso scale-110 drop-shadow-sm"
-                      : "text-[#8A8078] group-hover:text-[#D4C9C0] group-hover:scale-110"
+                      ? "text-lawdger-espresso dark:text-lawdger-gold scale-110 drop-shadow-sm"
+                      : "text-[#8A8078] dark:text-lawdger-muted group-hover:text-[#D4C9C0] dark:group-hover:text-foreground group-hover:scale-110"
                   }`}
                 />
                 {item.alert && (
@@ -102,17 +102,17 @@ export default function Sidebar() {
 
       {/* Bottom Utility */}
       <div className="flex flex-col gap-6 w-full items-center mt-auto relative z-20">
-        <Moon strokeWidth={1.5} size={22} className="text-[#8A8078]" aria-hidden="true" />
+        <Moon strokeWidth={1.5} size={22} className="text-[#8A8078] dark:text-lawdger-muted" aria-hidden="true" />
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="text-[#8A8078] hover:text-[#D4C9C0] transition-colors cursor-pointer"
+          className="text-[#8A8078] dark:text-lawdger-muted hover:text-[#D4C9C0] dark:hover:text-foreground transition-colors cursor-pointer"
           aria-label="Sign out"
         >
           <LogOut strokeWidth={1.5} size={22} />
         </button>
         <div className="w-10 h-10 rounded-full bg-lawdger-base flex items-center justify-center shadow-inner mt-2 cursor-pointer hover:ring-2 hover:ring-white/10 transition-all">
-          <span className="text-lawdger-espresso text-sm font-semibold font-sans">
+          <span className="text-lawdger-espresso dark:text-lawdger-gold text-sm font-semibold font-sans">
             {firstName.charAt(0).toUpperCase()}
           </span>
         </div>
