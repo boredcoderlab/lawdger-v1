@@ -268,7 +268,7 @@ export default function CaseDetailClient({
 
             {/* Quick Case Notes */}
             <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 mb-3 ml-2">Quick Case Notes</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground/50 mb-3 ml-2">Quick Case Notes</h3>
               {noteOpen ? (
                 <form onSubmit={handleAddNote} className="space-y-3">
                   <textarea
@@ -541,7 +541,7 @@ export default function CaseDetailClient({
 function EditField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 mb-1.5 ml-1">
+      <label className="block text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground/50 mb-1.5 ml-1">
         {label}
       </label>
       {children}
@@ -564,10 +564,10 @@ function InfoRow({
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 mb-0.5">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground/50 mb-0.5">
           {label}
         </p>
-        <p className="text-[14px] font-bold text-lawdger-cream truncate">
+        <p className="text-[14px] font-bold text-lawdger-cream dark:text-foreground truncate">
           {value ?? <span className="text-white/30 italic text-[12px]">—</span>}
         </p>
       </div>
