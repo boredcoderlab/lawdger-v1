@@ -300,10 +300,10 @@ function AssignedCard({
       className={[
         hidden ? "hidden" : "block",
         "group bg-white rounded-xl shadow-sm",
-        "border border-lawdger-border/15 border-l-[3px]",
+        "border border-lawdger-border/15 dark:border-lawdger-border border-l-[3px]",
         priorityBorderClass(task.priority),
         "p-4 cursor-pointer",
-        "hover:shadow-md hover:-translate-y-px hover:border-lawdger-border/30",
+        "hover:shadow-md hover:-translate-y-px hover:border-lawdger-border/30 dark:hover:border-lawdger-border",
         "transition-all duration-150",
       ].join(" ")}
     >
@@ -333,7 +333,7 @@ function AssignedCardOverlay({ task }: { task: Task }) {
     <div
       className={[
         "rotate-2 bg-white rounded-xl shadow-xl shadow-lawdger-espresso/30",
-        "border border-lawdger-border/20 border-l-[3px]",
+        "border border-lawdger-border/20 dark:border-lawdger-border border-l-[3px]",
         priorityBorderClass(task.priority),
         "p-4 w-full",
       ].join(" ")}
@@ -388,8 +388,8 @@ function UnassignedCard({
       onClick={() => onClick(task.id)}
       className={[
         hidden ? "hidden" : "block",
-        "bg-lawdger-cream/8 border border-lawdger-cream/12 rounded-xl p-3",
-        "cursor-pointer hover:border-lawdger-gold/40 hover:bg-lawdger-cream/15",
+        "bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl p-3",
+        "cursor-pointer hover:border-lawdger-gold/40 hover:bg-lawdger-cream/15 dark:hover:bg-foreground/8",
         "transition-colors duration-150",
       ].join(" ")}
     >
@@ -411,7 +411,7 @@ function UnassignedCard({
 
 function UnassignedCardOverlay({ task }: { task: Task }) {
   return (
-    <div className="rotate-2 bg-lawdger-cream/15 border border-lawdger-gold/40 rounded-xl p-3 shadow-xl shadow-lawdger-espresso/40 w-full">
+    <div className="rotate-2 bg-lawdger-cream/15 dark:bg-foreground/5 border border-lawdger-gold/40 rounded-xl p-3 shadow-xl shadow-lawdger-espresso/40 w-full">
       <div className="font-sans text-[12.5px] font-medium text-lawdger-cream leading-snug line-clamp-2 tracking-normal">
         {task.title}
       </div>
@@ -456,7 +456,7 @@ function KanbanColumn({
       className={[
         "flex flex-col h-full min-h-0 rounded-2xl p-3 transition-colors",
         // Fix 3: right border as column divider (except last column)
-        !isLast ? "border-r border-lawdger-border/15" : "",
+        !isLast ? "border-r border-lawdger-border/15 dark:border-lawdger-border" : "",
         // Fix 5: three depth layers — cream pane → column zone → card
         isOver
           ? "bg-lawdger-base/60 ring-1 ring-lawdger-gold/40"
@@ -464,7 +464,7 @@ function KanbanColumn({
       ].join(" ")}
     >
       {/* Fix 1: Header — serif heading, sentence case, stronger separator */}
-      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 shrink-0">
+      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 dark:border-lawdger-border shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Icon className="w-3.5 h-3.5 text-lawdger-espresso/50 shrink-0" />
           <h3 className="font-serif text-base lg:text-lg text-lawdger-espresso leading-tight">
@@ -501,7 +501,7 @@ function KanbanColumn({
         </SortableContext>
 
         {visibleCount === 0 && (
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-dashed border-lawdger-border/25 text-center px-4 py-6">
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-dashed border-lawdger-border/25 dark:border-lawdger-border text-center px-4 py-6">
             <p className="text-[10.5px] font-semibold uppercase tracking-widest text-lawdger-muted">
               Drop tasks here
             </p>
@@ -555,16 +555,16 @@ function UnassignedZone({
       {/* Section header */}
       <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
         <div className="flex items-center gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lawdger-cream/50">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lawdger-cream/50 dark:text-foreground/50">
             Unassigned
           </p>
-          <span className="inline-flex items-center justify-center min-w-[20px] h-[18px] rounded-full bg-lawdger-cream/10 text-lawdger-cream/80 text-[10px] font-bold px-1.5">
+          <span className="inline-flex items-center justify-center min-w-[20px] h-[18px] rounded-full bg-lawdger-cream/10 dark:bg-foreground/10 text-lawdger-cream/80 dark:text-foreground/80 text-[10px] font-bold px-1.5">
             {visibleCount}
           </span>
         </div>
         <button
           onClick={() => setAdding((v) => !v)}
-          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/60 hover:text-lawdger-gold transition-colors"
+          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/60 dark:text-foreground/60 hover:text-lawdger-gold transition-colors"
         >
           <Plus className="w-3 h-3" />
           Quick Add
@@ -573,7 +573,7 @@ function UnassignedZone({
 
       {/* Inline quick-add */}
       {adding && (
-        <div className="mb-2 shrink-0 flex items-center gap-2 bg-lawdger-cream/8 border border-lawdger-cream/15 rounded-xl px-3 py-2">
+        <div className="mb-2 shrink-0 flex items-center gap-2 bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/15 dark:border-lawdger-border rounded-xl px-3 py-2">
           <input
             autoFocus
             value={draft}
@@ -617,8 +617,8 @@ function UnassignedZone({
 
         {visibleCount === 0 && (
           <div className="flex flex-col items-center justify-center py-6 gap-2">
-            <CheckCircle2 className="w-4 h-4 text-lawdger-cream/30" />
-            <p className="text-[10.5px] font-semibold text-lawdger-cream/40 text-center">
+            <CheckCircle2 className="w-4 h-4 text-lawdger-cream/30 dark:text-foreground/30" />
+            <p className="text-[10.5px] font-semibold text-lawdger-cream/40 dark:text-foreground/40 text-center">
               All caught up — no unassigned tasks
             </p>
           </div>
@@ -1038,11 +1038,11 @@ function StatTile({
       ? "text-lawdger-gold"
       : accent === "red"
       ? "text-destructive"
-      : "text-lawdger-cream";
+      : "text-lawdger-cream dark:text-foreground";
   return (
-    <div className="bg-lawdger-cream/8 border border-lawdger-cream/12 rounded-xl px-3 py-2.5 h-[78px] flex flex-col justify-between">
+    <div className="bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl px-3 py-2.5 h-[78px] flex flex-col justify-between">
       <div className="flex items-center justify-between">
-        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-lawdger-cream/50">
+        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-lawdger-cream/50 dark:text-foreground/50">
           {label}
         </p>
         {accent === "red" && (
@@ -1122,7 +1122,7 @@ function TaskDetailModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-lawdger-cream rounded-2xl shadow-2xl border border-lawdger-border/20 overflow-hidden"
+        className="w-full max-w-2xl bg-lawdger-cream dark:bg-card rounded-2xl shadow-2xl border border-lawdger-border/20 dark:border-lawdger-border overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header w/ priority left border accent */}
@@ -1130,7 +1130,7 @@ function TaskDetailModal({
           className={[
             "flex justify-between items-start px-6 py-5 border-l-[3px]",
             priorityBorderClass(priority),
-            "border-b border-lawdger-border/10",
+            "border-b border-lawdger-border/10 dark:border-lawdger-border",
           ].join(" ")}
         >
           <div className="flex-1 pr-4">
@@ -1141,14 +1141,14 @@ function TaskDetailModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Task title…"
-              className="w-full bg-transparent text-[18px] font-semibold text-lawdger-espresso placeholder:text-lawdger-muted focus:outline-none"
+              className="w-full bg-transparent text-[18px] font-semibold text-lawdger-espresso dark:text-foreground placeholder:text-lawdger-muted focus:outline-none"
               autoFocus
             />
           </div>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="p-2 rounded-full hover:bg-lawdger-espresso/5 text-lawdger-muted hover:text-lawdger-espresso transition-colors shrink-0"
+            className="p-2 rounded-full hover:bg-lawdger-espresso/5 text-lawdger-muted hover:text-lawdger-espresso dark:hover:text-foreground transition-colors shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -1160,7 +1160,7 @@ function TaskDetailModal({
             <select
               value={caseId}
               onChange={(e) => setCaseId(e.target.value)}
-              className="w-full bg-white border border-lawdger-border/20 rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso focus:outline-none focus:border-lawdger-gold/50"
+              className="w-full bg-white border border-lawdger-border/20 dark:border-lawdger-border rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso focus:outline-none focus:border-lawdger-gold/50"
             >
               <option value="">— No case —</option>
               {cases.map((c) => (
@@ -1177,7 +1177,7 @@ function TaskDetailModal({
               type="date"
               value={dueStr}
               onChange={(e) => setDueStr(e.target.value)}
-              className="w-full bg-white border border-lawdger-border/20 rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso focus:outline-none focus:border-lawdger-gold/50"
+              className="w-full bg-white border border-lawdger-border/20 dark:border-lawdger-border rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso focus:outline-none focus:border-lawdger-gold/50"
             />
           </Field>
 
@@ -1214,7 +1214,7 @@ function TaskDetailModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Additional context…"
-              className="w-full bg-white border border-lawdger-border/20 rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso placeholder:text-lawdger-muted focus:outline-none focus:border-lawdger-gold/50 min-h-[120px] resize-y"
+              className="w-full bg-white border border-lawdger-border/20 dark:border-lawdger-border rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso placeholder:text-lawdger-muted focus:outline-none focus:border-lawdger-gold/50 min-h-[120px] resize-y"
             />
           </Field>
 
@@ -1235,7 +1235,7 @@ function TaskDetailModal({
             <button
               type="submit"
               disabled={!title.trim()}
-              className="bg-lawdger-espresso text-lawdger-cream px-6 py-2.5 rounded-lg text-[11px] font-bold tracking-widest uppercase hover:bg-lawdger-sidebar disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="bg-lawdger-espresso text-lawdger-cream dark:text-foreground px-6 py-2.5 rounded-lg text-[11px] font-bold tracking-widest uppercase hover:bg-lawdger-sidebar disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               {mode === "create" ? "Create Task" : "Save Changes"}
             </button>
@@ -1273,7 +1273,7 @@ function SegmentedControl<T extends string>({
   options: { value: T; label: string }[];
 }) {
   return (
-    <div className="inline-flex rounded-lg bg-lawdger-base p-1 border border-lawdger-border/20 w-full">
+    <div className="inline-flex rounded-lg bg-lawdger-base p-1 border border-lawdger-border/20 dark:border-lawdger-border w-full">
       {options.map((opt) => (
         <button
           type="button"
@@ -1282,8 +1282,8 @@ function SegmentedControl<T extends string>({
           className={[
             "flex-1 px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors",
             value === opt.value
-              ? "bg-lawdger-espresso text-lawdger-cream"
-              : "text-lawdger-espresso/60 hover:text-lawdger-espresso",
+              ? "bg-lawdger-espresso text-lawdger-cream dark:text-foreground"
+              : "text-lawdger-espresso/60 dark:text-foreground/60 hover:text-lawdger-espresso dark:hover:text-foreground",
           ].join(" ")}
         >
           {opt.label}
