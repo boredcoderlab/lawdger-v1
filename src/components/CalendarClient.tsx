@@ -357,22 +357,22 @@ export default function CalendarClient({
             {/* Mini Calendar */}
             <div className="bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5 mb-8">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-serif text-[18px] font-bold text-lawdger-cream">{format(pickerMonth, "MMMM yyyy")}</h3>
+                <h3 className="font-serif text-[18px] font-bold text-lawdger-cream dark:text-foreground">{format(pickerMonth, "MMMM yyyy")}</h3>
                 <div className="flex gap-1">
                   <button onClick={() => setPickerMonth(subMonths(pickerMonth, 1))} className="p-2 rounded-full hover:bg-white/40 transition-colors">
-                    <ChevronLeft className="h-4 w-4 text-lawdger-cream/70" />
+                    <ChevronLeft className="h-4 w-4 text-lawdger-cream/70 dark:text-foreground/70" />
                   </button>
                   <button onClick={() => setPickerMonth(addMonths(pickerMonth, 1))} className="p-2 rounded-full hover:bg-white/40 transition-colors">
-                    <ChevronRight className="h-4 w-4 text-lawdger-cream/70" />
+                    <ChevronRight className="h-4 w-4 text-lawdger-cream/70 dark:text-foreground/70" />
                   </button>
                 </div>
               </div>
               <div className="grid grid-cols-7 gap-1 text-center mb-3">
                 {["S","M","T","W","T","F","S"].map((d, i) => (
-                  <div key={i} className="text-[10px] font-bold text-lawdger-cream/40 uppercase tracking-widest">{d}</div>
+                  <div key={i} className="text-[10px] font-bold text-lawdger-cream/40 dark:text-foreground/40 uppercase tracking-widest">{d}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-1 text-[13px] font-medium text-lawdger-cream">
+              <div className="grid grid-cols-7 gap-1 text-[13px] font-medium text-lawdger-cream dark:text-foreground">
                 {miniCalDays.map((day, i) => {
                   const isSelected     = isSameDay(day, currentDate);
                   const inMonth        = isSameMonth(day, pickerMonth);
@@ -404,7 +404,7 @@ export default function CalendarClient({
             </div>
 
             {/* Legend */}
-            <div className="space-y-4 text-[12px] font-medium text-lawdger-cream/70">
+            <div className="space-y-4 text-[12px] font-medium text-lawdger-cream/70 dark:text-foreground/70">
               <div className="flex items-center gap-3">
                 <div className="h-3 w-3 rounded-full bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]" />
                 <span>Hearings & Appointments</span>
