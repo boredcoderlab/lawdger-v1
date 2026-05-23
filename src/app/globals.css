@@ -20,6 +20,20 @@
   --overlay-strong: rgba(41, 30, 22, 0.45);
   --shadow-elevated: rgba(41, 30, 22, 0.06);
 
+  /* Phase 4c-1 — elevation ramp + extended type/status tokens.
+     Light values keep parity with existing surfaces so any new utility
+     usage in light mode degrades gracefully (no orphaned tokens). */
+  --surface-1:            #f4efe8;                /* alias of --card */
+  --surface-2:            #ece4d8;                /* slightly recessed from card */
+  --surface-3:            #e3d8c6;                /* elevated panel/popover */
+  --surface-inset:        #ddd0bd;                /* input wells */
+  --border-strong:        rgba(41, 30, 22, 0.22);
+  --foreground-secondary: #3d2e22;
+  --foreground-faint:     #8a7869;
+  --success:              #3f8a5b;
+  --danger:               #b54a3a;
+  --warning:              #a98532;
+
   /* Lawdger palette — light mode (Phase 4a tokenization).
      Values verified against tailwind.config.ts hardcoded set. */
   --lawdger-espresso: #453228;
@@ -32,36 +46,75 @@
 
 .dark {
   color-scheme: dark;
-  --background: #171717;
-  --foreground: #f4efe8;
-  --muted: #262626;
-  --muted-foreground: #a3a3a3;
-  --primary: #2dd4bf;
-  --primary-foreground: #171717;
-  --accent: #2dd4bf;
-  --accent-foreground: #171717;
-  --border: rgba(244, 239, 232, 0.1);
-  --card: #202020;
-  --card-foreground: #f4efe8;
 
-  --surface-soft: rgba(255, 255, 255, 0.05);
-  --surface-strong: rgba(255, 255, 255, 0.12);
-  --surface-contrast: rgba(0, 0, 0, 0.2);
-  --overlay-strong: rgba(0, 0, 0, 0.45);
-  --shadow-elevated: rgba(0, 0, 0, 0.28);
+  /* ───────────────────────────────────────────────────────────────
+     Phase 4c-1 — Warm-dark elevation ramp.
+     Architecture: true ramp (canvas → pane → card → modal), warm
+     espresso-tinted near-blacks, NEVER cold gray. Gold is the SOLE
+     accent — teal is dead at the token level.
+     ─────────────────────────────────────────────────────────────── */
 
-  /* Lawdger palette — dark mode overrides (Phase 4a). */
-  --lawdger-espresso: #0F0D0C;
-  --lawdger-cream:    #1C1917;
-  --lawdger-base:     #141210;
-  --lawdger-border:   rgba(252, 250, 248, 0.10);
-  --lawdger-gold:     #E8C547;
-  --lawdger-muted:    #6B6057;
+  /* Elevation ramp — darkest canvas → most-raised */
+  --background:     #0D0A09;   /* app canvas behind panes */
+  --card:           #15110F;   /* surface-1 — large glass panes */
+  --surface-1:      #15110F;   /* explicit alias */
+  --surface-2:      #1E1815;   /* cards / tiles / rows ON a pane */
+  --surface-3:      #271F1A;   /* modals / popovers / hover-elevated */
+  --surface-inset:  #100C0B;   /* input wells, inset fields */
+
+  /* Lines */
+  --border:         rgba(244, 238, 230, 0.07);   /* hairline */
+  --border-strong:  rgba(244, 238, 230, 0.13);   /* emphasized */
+
+  /* Text hierarchy — warm cream, ≥4.5:1 on surface-1/2 */
+  --foreground:           #F3ECE2;   /* primary */
+  --foreground-secondary: #C4B8AC;   /* subheads / secondary */
+  --muted-foreground:     #8C8073;   /* labels / captions */
+  --foreground-faint:     #6A6056;   /* timestamps / disabled */
+  --card-foreground:      #F3ECE2;
+
+  /* Accent — GOLD ONLY. Repointed from teal. Primary = highlight,
+     not a global fill. At most one solid-gold CTA per view. */
+  --primary:            #D4AF37;
+  --primary-foreground: #15110F;
+  --accent:             #D4AF37;
+  --accent-foreground:  #15110F;
+
+  /* Status — refined, desaturated for dark surfaces.
+     Use as low-tint surfaces (success/12 fill + success text),
+     never full-saturation. */
+  --success: #5BA776;
+  --danger:  #CC6657;
+  --warning: #C9A24B;
+
+  /* Legacy surface aliases — kept stable so existing utilities don't
+     break. Tuned warmer to match the ramp. */
+  --muted:             #1A1513;
+  --surface-soft:      rgba(244, 238, 230, 0.04);
+  --surface-strong:    rgba(244, 238, 230, 0.10);
+  --surface-contrast:  rgba(0, 0, 0, 0.25);
+  --overlay-strong:    rgba(8, 6, 5, 0.55);
+
+  /* Shadow color (consumed as a color inside shadow-[...]
+     utilities — must remain a single rgba, not a full spec). */
+  --shadow-elevated:   rgba(0, 0, 0, 0.55);
+
+  /* Lawdger palette — dark mode overrides (Phase 4a, refined 4c-1).
+     lawdger-gold aligned to canonical #D4AF37 so the legacy
+     bg-lawdger-gold matches the new --primary. */
+  --lawdger-espresso: #0D0A09;
+  --lawdger-cream:    #15110F;
+  --lawdger-base:     #100C0B;
+  --lawdger-border:   rgba(244, 238, 230, 0.10);
+  --lawdger-gold:     #D4AF37;
+  --lawdger-muted:    #8C8073;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-foreground-secondary: var(--foreground-secondary);
+  --color-foreground-faint: var(--foreground-faint);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-primary: var(--primary);
@@ -69,20 +122,31 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-inset: var(--surface-inset);
   --color-surface-soft: var(--surface-soft);
   --color-surface-strong: var(--surface-strong);
   --color-surface-contrast: var(--surface-contrast);
   --color-overlay-strong: var(--overlay-strong);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
   --color-lawdger-base: var(--lawdger-base);
   --color-lawdger-espresso: var(--lawdger-espresso);
   --color-lawdger-border: var(--lawdger-border);
   --color-lawdger-gold: var(--lawdger-gold);
   --color-lawdger-cream: var(--lawdger-cream);
   --color-lawdger-muted: var(--lawdger-muted);
-  --color-lawdger-teal: #2DD4BF;
-  --color-lawdger-sidebar: #1E1917;
+  /* lawdger-teal: legacy alias — now points at the gold accent so any
+     residual bg-lawdger-teal / text-lawdger-teal usage in the codebase
+     no longer leaks the old teal hue. True teal is dead. */
+  --color-lawdger-teal: var(--primary);
+  --color-lawdger-sidebar: #15110F;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
 }
