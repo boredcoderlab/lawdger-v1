@@ -556,17 +556,17 @@ export default function CasesClient({
 
             {/* Quick Search */}
             <div className="mt-auto">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 mb-3">
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground/50 mb-3">
                 Quick Search
               </label>
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-lawdger-cream/40" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-lawdger-cream/40 dark:text-foreground/40" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Find by name, client…"
-                  className="w-full bg-lawdger-base/10 border border-lawdger-cream/10 rounded-full pl-11 pr-4 py-3.5 text-[13px] text-lawdger-cream placeholder:text-lawdger-cream/30 focus:outline-none focus:border-lawdger-gold focus:ring-1 focus:ring-lawdger-gold/40 transition-all"
+                  className="w-full bg-lawdger-base/10 border border-lawdger-cream/10 dark:border-lawdger-border rounded-full pl-11 pr-4 py-3.5 text-[13px] text-lawdger-cream dark:text-foreground placeholder:text-lawdger-cream/30 dark:placeholder:text-foreground/30 focus:outline-none focus:border-lawdger-gold focus:ring-1 focus:ring-lawdger-gold/40 transition-all"
                 />
               </div>
             </div>
@@ -586,7 +586,7 @@ export default function CasesClient({
                     className={`px-4 py-1.5 rounded-full text-[11px] tracking-wide transition-all font-bold uppercase ${
                       statusFilter === id
                         ? "bg-lawdger-espresso text-lawdger-base shadow-sm"
-                        : "text-lawdger-muted hover:text-lawdger-espresso"
+                        : "text-lawdger-muted hover:text-lawdger-espresso dark:hover:text-foreground"
                     }`}
                   >
                     {label}
@@ -645,15 +645,15 @@ function MetricRow({
     <div
       className={`flex items-center justify-between rounded-2xl px-5 py-4 border ${
         prominent
-          ? "bg-lawdger-base/15 border-lawdger-cream/15"
+          ? "bg-lawdger-base/15 border-lawdger-cream/15 dark:border-lawdger-border"
           : accentDot
           ? "bg-lawdger-gold/15 border-lawdger-gold/25"
-          : "bg-lawdger-base/8 border-lawdger-cream/5"
+          : "bg-lawdger-base/8 border-lawdger-cream/5 dark:border-lawdger-border"
       }`}
     >
       <span
         className={`text-[13px] font-medium flex items-center gap-2 ${
-          dim ? "text-lawdger-cream/45" : "text-lawdger-cream/85"
+          dim ? "text-lawdger-cream/45 dark:text-foreground/45" : "text-lawdger-cream/85 dark:text-foreground"
         }`}
       >
         {accentDot && (
@@ -663,7 +663,7 @@ function MetricRow({
       </span>
       <span
         className={`font-serif text-[20px] font-bold ${
-          dim ? "text-lawdger-cream/45" : "text-lawdger-cream"
+          dim ? "text-lawdger-cream/45 dark:text-foreground/45" : "text-lawdger-cream dark:text-foreground"
         }`}
       >
         {value}
