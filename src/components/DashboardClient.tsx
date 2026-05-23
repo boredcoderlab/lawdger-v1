@@ -85,7 +85,7 @@ export default function DashboardClient({
         <div className="lg:col-span-8 flex flex-col gap-4 min-h-0">
           
           {/* TODAY AT A GLANCE (Hero Tile) */}
-          <div className="relative rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-cream/10 shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane p-6 lg:p-8 flex-1 min-h-0 overflow-hidden">
+          <div className="relative rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-border shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.5)] lawdger-cream-pane p-6 lg:p-8 flex-1 min-h-0 overflow-hidden">
             
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
@@ -98,10 +98,10 @@ export default function DashboardClient({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <button className="h-10 w-10 flex items-center justify-center rounded-full border border-foreground/20 text-foreground hover:bg-black/5 transition-colors">
+                <button className="h-10 w-10 flex items-center justify-center rounded-full border border-foreground/20 text-foreground hover:bg-black/5 dark:hover:bg-foreground/8 transition-colors">
                   <ChevronLeft className="h-5 w-5" />
                 </button>
-                <button className="h-10 w-10 flex items-center justify-center rounded-full border border-foreground/20 text-foreground hover:bg-black/5 transition-colors">
+                <button className="h-10 w-10 flex items-center justify-center rounded-full border border-foreground/20 text-foreground hover:bg-black/5 dark:hover:bg-foreground/8 transition-colors">
                   <ChevronRight className="h-5 w-5" />
                 </button>
               </div>
@@ -114,7 +114,7 @@ export default function DashboardClient({
               <div className="flex flex-col">
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">Next Up</h3>
                 {displayEvents.length > 0 ? (
-                  <div className="flex flex-col p-6 rounded-[1.5rem] bg-lawdger-espresso text-lawdger-cream border border-white/5 shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
+                  <div className="flex flex-col p-6 rounded-[1.5rem] bg-lawdger-espresso text-lawdger-cream dark:text-foreground border border-white/5 shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
                       <Bell className="w-16 h-16" />
                     </div>
@@ -179,7 +179,7 @@ export default function DashboardClient({
         <div className="lg:col-span-4 flex flex-col gap-4 z-10 min-h-0">
           
           {/* UPCOMING DATES */}
-          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-cream/10 shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane p-6 shrink-0">
+          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-border shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.5)] lawdger-cream-pane p-6 shrink-0">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[1.2rem] font-bold text-foreground">
                 Upcoming Dates
@@ -197,7 +197,7 @@ export default function DashboardClient({
                   { date: "Nov 2nd", title: "Coneping", sub: "Nov 2nd" },
                   { date: "Nov 3rd", title: "Client Remining", sub: "Nov 23rd" }
                 ].map((ev, i) => (
-                  <div key={i} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 p-1.5 -mx-2 rounded-xl transition-colors">
+                  <div key={i} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 dark:hover:bg-foreground/5 p-1.5 -mx-2 rounded-xl transition-colors">
                     <div className="flex items-center gap-3">
                       <div className={`flex flex-col items-center justify-center rounded-[0.8rem] h-[52px] w-[50px] shadow-sm ${i === 0 ? 'bg-lawdger-espresso text-lawdger-cream dark:bg-primary dark:text-white' : 'bg-card border-[1.5px] border-border text-foreground'}`}>
                         <span className="text-[11px] font-medium leading-tight">Nov</span>
@@ -213,7 +213,7 @@ export default function DashboardClient({
                 ))
               ) : (
                 upcomingEvents.slice(0, 3).map((ev, i) => (
-                  <div key={ev.id} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 p-1.5 -mx-2 rounded-xl transition-colors">
+                  <div key={ev.id} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 dark:hover:bg-foreground/5 p-1.5 -mx-2 rounded-xl transition-colors">
                     <div className="flex items-center gap-3">
                       <div className={`flex flex-col items-center justify-center rounded-[0.8rem] h-[52px] w-[50px] shadow-sm ${i === 0 ? 'bg-lawdger-espresso text-lawdger-cream dark:bg-primary dark:text-white' : 'bg-card border-[1.5px] border-border text-foreground'}`}>
                         <span className="text-[11px] font-medium leading-tight">{format(new Date(ev.hearingDate), "MMM")}</span>
@@ -232,7 +232,7 @@ export default function DashboardClient({
           </div>
 
           {/* RECENT DOCUMENTS */}
-          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-cream/10 shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
+          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-border shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.5)] lawdger-cream-pane p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[1.2rem] font-bold text-foreground">
                 Recent Documents
@@ -260,7 +260,7 @@ export default function DashboardClient({
                       <p className="text-[12px] text-muted-foreground mt-0.5">{doc.type} • {doc.time}</p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-black/5 transition-colors shrink-0">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-black/5 dark:hover:bg-foreground/8 transition-colors shrink-0">
                     <Download className="h-4 w-4 text-foreground opacity-40 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
@@ -290,7 +290,7 @@ export default function DashboardClient({
               { title: "Client Consultation #2", time: "2:00 PM - 2:00 PM", status: "Discovery Phase", dim: true },
               { title: "Client Appearance #3", time: "3:00 PM - 5:00 PM", status: "Awaiting Verdict", dim: false }
             ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between bg-lawdger-cream/8 border border-lawdger-cream/12 rounded-xl p-2 cursor-pointer group hover:bg-lawdger-cream/15 transition-colors duration-200">
+              <div key={i} className="flex items-center justify-between bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl p-2 cursor-pointer group hover:bg-lawdger-cream/15 dark:hover:bg-foreground/10 transition-colors duration-200">
                 <div>
                   <h4 className="text-[14px] font-bold text-lawdger-cream dark:text-white group-hover:text-white">{item.title}</h4>
                   <p className="text-[12px] text-lawdger-cream/50 dark:text-white/50">{item.time}</p>
@@ -307,7 +307,7 @@ export default function DashboardClient({
         </div>
 
         {/* The Frosted Glass Chatbot Widget overlapping on the right */}
-        <div className="absolute right-0 bottom-4 w-[45%] lg:w-[40%] rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-cream/10 shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane p-5 min-h-[180px] flex flex-col justify-end">
+        <div className="absolute right-0 bottom-4 w-[45%] lg:w-[40%] rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-border shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.5)] lawdger-cream-pane p-5 min-h-[180px] flex flex-col justify-end">
           
           {/* Logo overlapping top edge */}
           <div className="absolute -top-[2.5rem] left-6 flex items-center justify-center w-[70px] h-[80px] shadow-[0_4px_18px_rgba(69,50,40,0.25)] z-30">
@@ -327,7 +327,7 @@ export default function DashboardClient({
                 value={chatQuery}
                 onChange={(e) => setChatQuery(e.target.value)}
                 placeholder="Type a message..."
-                className="w-full bg-lawdger-base/70 backdrop-blur-sm border border-lawdger-border/15 rounded-full pl-6 pr-14 py-3.5 text-[14px] text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
+                className="w-full bg-lawdger-base/70 backdrop-blur-sm border border-lawdger-border/15 dark:border-lawdger-border rounded-full pl-6 pr-14 py-3.5 text-[14px] text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-inner"
               />
               <button className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 text-foreground rounded-full flex items-center justify-center hover:opacity-70 transition-opacity">
                 <Send className="h-5 w-5" />
