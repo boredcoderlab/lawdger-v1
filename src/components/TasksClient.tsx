@@ -299,20 +299,20 @@ function AssignedCard({
       onClick={() => onClick(task.id)}
       className={[
         hidden ? "hidden" : "block",
-        "group bg-white rounded-xl shadow-sm",
-        "border border-lawdger-border/15 dark:border-lawdger-border border-l-[3px]",
+        "group bg-white dark:bg-[var(--surface-2)] rounded-xl shadow-sm dark:shadow-[0_14px_32px_-18px_rgba(0,0,0,0.7)]",
+        "border border-lawdger-border/15 dark:border-[var(--border)] border-l-[3px]",
         priorityBorderClass(task.priority),
         "p-4 cursor-pointer",
-        "hover:shadow-md hover:-translate-y-px hover:border-lawdger-border/30 dark:hover:border-lawdger-border",
+        "hover:shadow-md hover:-translate-y-px hover:border-lawdger-border/30 dark:hover:bg-[var(--surface-3)] dark:hover:border-[var(--border-strong)]",
         "transition-all duration-150",
       ].join(" ")}
     >
       {/* Fix 2: espresso ink, text-sm */}
-      <div className="text-sm font-medium text-lawdger-espresso leading-snug line-clamp-2">
+      <div className="text-sm font-medium text-lawdger-espresso dark:text-foreground leading-snug line-clamp-2">
         {task.title}
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center bg-lawdger-espresso/8 text-lawdger-espresso/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
+        <span className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
           {task.caseName || "No case"}
         </span>
         <span
@@ -332,17 +332,17 @@ function AssignedCardOverlay({ task }: { task: Task }) {
   return (
     <div
       className={[
-        "rotate-2 bg-white rounded-xl shadow-xl shadow-lawdger-espresso/30",
-        "border border-lawdger-border/20 dark:border-lawdger-border border-l-[3px]",
+        "rotate-2 bg-white dark:bg-[var(--surface-3)] rounded-xl shadow-xl shadow-lawdger-espresso/30 dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]",
+        "border border-lawdger-border/20 dark:border-[var(--border-strong)] border-l-[3px]",
         priorityBorderClass(task.priority),
         "p-4 w-full",
       ].join(" ")}
     >
-      <div className="text-sm font-medium text-lawdger-espresso leading-snug line-clamp-2">
+      <div className="text-sm font-medium text-lawdger-espresso dark:text-foreground leading-snug line-clamp-2">
         {task.title}
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center bg-lawdger-espresso/8 text-lawdger-espresso/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
+        <span className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
           {task.caseName || "No case"}
         </span>
         <span
@@ -1160,7 +1160,7 @@ function TaskDetailModal({
             <select
               value={caseId}
               onChange={(e) => setCaseId(e.target.value)}
-              className="w-full bg-white border border-lawdger-border/20 dark:border-lawdger-border rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso focus:outline-none focus:border-lawdger-gold/50"
+              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground focus:outline-none focus:border-lawdger-gold/50"
             >
               <option value="">— No case —</option>
               {cases.map((c) => (
@@ -1177,7 +1177,7 @@ function TaskDetailModal({
               type="date"
               value={dueStr}
               onChange={(e) => setDueStr(e.target.value)}
-              className="w-full bg-white border border-lawdger-border/20 dark:border-lawdger-border rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso focus:outline-none focus:border-lawdger-gold/50"
+              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground focus:outline-none focus:border-lawdger-gold/50"
             />
           </Field>
 
@@ -1214,7 +1214,7 @@ function TaskDetailModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Additional context…"
-              className="w-full bg-white border border-lawdger-border/20 dark:border-lawdger-border rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso placeholder:text-lawdger-muted focus:outline-none focus:border-lawdger-gold/50 min-h-[120px] resize-y"
+              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground placeholder:text-lawdger-muted focus:outline-none focus:border-lawdger-gold/50 min-h-[120px] resize-y"
             />
           </Field>
 

@@ -419,13 +419,13 @@ function CaseTile({ c }: { c: CaseRecord }) {
 
   return (
     <Link href={`/cases/${c.id}`} className="group block">
-      <article className="h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/20 bg-white p-6 shadow-sm transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] hover:-translate-y-1 relative overflow-hidden">
+      <article className="h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/20 bg-white dark:bg-[var(--surface-2)] dark:border-[var(--border)] p-6 shadow-sm dark:shadow-[0_18px_40px_-18px_rgba(0,0,0,0.7)] transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] dark:hover:bg-[var(--surface-3)] hover:-translate-y-1 relative overflow-hidden">
         {/* Top accent line on hover */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-lawdger-gold/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
         {/* Title + status */}
         <div className="flex items-start justify-between gap-3 mb-4">
-          <h3 className="font-serif text-[1.2rem] font-bold text-lawdger-espresso leading-tight group-hover:text-lawdger-espresso transition-colors line-clamp-2">
+          <h3 className="font-serif text-[1.2rem] font-bold text-lawdger-espresso dark:text-foreground leading-tight group-hover:text-lawdger-espresso dark:group-hover:text-foreground transition-colors line-clamp-2">
             {c.title}
           </h3>
           <span
@@ -439,7 +439,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
 
         {/* Client */}
         {c.clientName && (
-          <p className="text-[13px] text-lawdger-espresso/80 font-medium mb-5 truncate">
+          <p className="text-[13px] text-lawdger-espresso/80 dark:text-foreground/80 font-medium mb-5 truncate">
             {c.clientName}
           </p>
         )}
@@ -450,7 +450,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
             <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-lawdger-muted mb-1">
               <Hash className="w-2.5 h-2.5" /> Matter ID
             </p>
-            <p className="text-[12px] font-semibold text-lawdger-espresso truncate">
+            <p className="text-[12px] font-semibold text-lawdger-espresso dark:text-foreground truncate">
               {c.matterId ?? <span className="text-lawdger-muted/70">—</span>}
             </p>
           </div>
@@ -458,7 +458,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
             <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-lawdger-muted mb-1">
               <Calendar className="w-2.5 h-2.5" /> Next Hearing
             </p>
-            <p className="text-[12px] font-semibold text-lawdger-espresso truncate">
+            <p className="text-[12px] font-semibold text-lawdger-espresso dark:text-foreground truncate">
               {formatHearing(c.nextHearingDate)}
             </p>
           </div>
@@ -469,7 +469,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
           <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-lawdger-muted mb-1.5">
             <Scale className="w-2.5 h-2.5" /> Forum / Court
           </p>
-          <p className="text-[12px] font-semibold text-lawdger-espresso leading-snug">
+          <p className="text-[12px] font-semibold text-lawdger-espresso dark:text-foreground leading-snug">
             {forumDisplay}
             <span className="text-lawdger-muted"> · </span>
             <span className="font-medium">{courtDisplay}</span>
