@@ -192,7 +192,7 @@ export default function LegalBrainClient() {
               { icon: Brain, label: "Legal Research", sub: "Summarise precedents and statutes" },
               { icon: Zap, label: "Smart Actions", sub: "Create tasks, hearings, and notes" },
             ].map(({ icon: Icon, label, sub }) => (
-              <div key={label} className="flex items-center gap-4 bg-white/5 dark:bg-[var(--surface-2)] border border-white/10 dark:border-[var(--border)] rounded-2xl p-4">
+              <div key={label} className="flex items-center gap-4 card-interactive bg-white/5 dark:bg-[var(--surface-2)] border border-white/10 dark:border-[var(--border)] rounded-2xl p-4 cursor-pointer">
                 <div className="w-9 h-9 rounded-xl bg-primary/15 dark:bg-[rgba(212,175,55,0.12)] border border-primary/20 dark:border-[rgba(212,175,55,0.28)] flex items-center justify-center shrink-0">
                   <Icon className="w-4 h-4 text-primary dark:text-[var(--gold-text)]" />
                 </div>

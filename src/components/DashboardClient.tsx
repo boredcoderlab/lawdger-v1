@@ -146,7 +146,7 @@ export default function DashboardClient({
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">On the Radar</h3>
                 <div className="flex flex-col gap-3">
                   {displayEvents.slice(1, 4).map((ev, idx) => (
-                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-2xl bg-white/95 dark:bg-[var(--surface-2)] hover:bg-white dark:hover:bg-[var(--surface-3)] border border-white/50 dark:border-[var(--border)] shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-2xl card-interactive bg-white/95 dark:bg-[var(--surface-2)] hover:bg-white dark:hover:bg-[var(--surface-3)] border border-white/50 dark:border-[var(--border)] shadow-sm hover:shadow-md transition-all cursor-pointer group">
                       <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-accent dark:bg-[var(--surface-2)] text-accent-foreground dark:text-[var(--gold-text)] font-bold shrink-0 shadow-sm border border-white/60 dark:border-[var(--border)]">
                         <span className="text-[14px] leading-none">{format(new Date(ev.hearingDate), "h")}</span>
                         <span className="text-[10px] leading-none uppercase mt-0.5">{format(new Date(ev.hearingDate), "a")}</span>
@@ -290,7 +290,7 @@ export default function DashboardClient({
               { title: "Client Consultation #2", time: "2:00 PM - 2:00 PM", status: "Discovery Phase", dim: true },
               { title: "Client Appearance #3", time: "3:00 PM - 5:00 PM", status: "Awaiting Verdict", dim: false }
             ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl p-2 cursor-pointer group hover:bg-lawdger-cream/15 dark:hover:bg-foreground/10 transition-colors duration-200">
+              <div key={i} className="flex items-center justify-between bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl p-2 cursor-pointer group card-interactive hover:bg-lawdger-cream/15 dark:hover:bg-foreground/10 transition-colors duration-200">
                 <div>
                   <h4 className="text-[14px] font-bold text-lawdger-cream dark:text-white group-hover:text-white">{item.title}</h4>
                   <p className="text-[12px] text-lawdger-cream/50 dark:text-white/50">{item.time}</p>

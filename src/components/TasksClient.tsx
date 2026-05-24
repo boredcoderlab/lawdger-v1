@@ -302,7 +302,7 @@ function AssignedCard({
         "group bg-white dark:bg-[var(--surface-2)] surface-inner rounded-xl shadow-sm dark:shadow-[0_14px_32px_-18px_rgba(0,0,0,0.7)]",
         "border border-lawdger-border/15 dark:border-[var(--border)] border-l-[3px]",
         priorityBorderClass(task.priority),
-        "p-4 cursor-pointer",
+        "p-4 cursor-pointer card-interactive",
         "hover:shadow-md hover:-translate-y-px hover:border-lawdger-border/30 dark:hover:bg-[var(--surface-3)] dark:hover:border-[var(--border-strong)]",
         "transition-all duration-150",
       ].join(" ")}
