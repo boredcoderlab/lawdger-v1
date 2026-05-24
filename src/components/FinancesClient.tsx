@@ -68,7 +68,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
         backToDashboard={true}
         headerAction={
           <button onClick={() => setModalCaseId(cases[0]?.id ?? null)}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3 rounded-full hover:scale-[1.02] transition-transform font-bold tracking-widest uppercase text-[12px] shadow-[0_0_20px_rgba(200,150,62,0.3)]">
+            className="btn-gold flex items-center gap-2 px-7 py-3 rounded-full font-bold tracking-widest uppercase text-[12px]">
             <Plus className="h-4 w-4" /> Log Payment
           </button>
         }
@@ -79,8 +79,8 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
           <>
             {/* KPI Cards */}
             <div className="space-y-4 mb-8">
-              <div className="bg-white/5 rounded-2xl p-5 border border-white/10">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">Total Agreed Fees</p>
+              <div className="bg-white/5 dark:bg-[var(--surface-2)] rounded-2xl p-5 border border-white/10">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 dark:text-muted-foreground mb-1">Total Agreed Fees</p>
                 <h3 className="font-serif text-[1.5rem] font-bold text-lawdger-cream dark:text-white">{fmt(totalExpected)}</h3>
               </div>
               <div className="flex gap-4">
@@ -98,7 +98,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
             {/* Collection Rate Progress Bar */}
             <div className="mb-8 bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5">
               <div className="flex justify-between items-end mb-3">
-                <span className="text-[12px] font-bold uppercase tracking-widest text-lawdger-cream/70 dark:text-white/70">Collection Rate</span>
+                <span className="text-[12px] font-bold uppercase tracking-widest text-lawdger-cream/70 dark:text-foreground-secondary">Collection Rate</span>
                 <span className="text-[18px] font-bold text-lawdger-cream dark:text-white">{collectionRate}%</span>
               </div>
               <div className="h-2 w-full bg-white/40 rounded-full overflow-hidden">
@@ -117,7 +117,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
               </div>
               <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-hide">
                 {forgottenDues.length === 0 ? (
-                  <p className="text-xs text-white/50 font-medium">No stagnant dues. All good!</p>
+                  <p className="text-xs text-white/50 dark:text-muted-foreground font-medium">No stagnant dues. All good!</p>
                 ) : (
                   forgottenDues.map((c) => {
                     const balance = (c.agreedFee ?? 0) - c.payments.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount, 0);
@@ -163,7 +163,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                     const pct = c.agreedFee && c.agreedFee > 0 ? Math.min(100, Math.round((received / c.agreedFee) * 100)) : 0;
 
                     return (
-                      <div key={c.id} className="rounded-[1.5rem] bg-white/70 dark:bg-card/80 border border-white/50 dark:border-white/10 shadow-sm overflow-hidden transition-all hover:shadow-md">
+                      <div key={c.id} className="surface-card rounded-[1.5rem] bg-white/70 border border-white/50 shadow-sm overflow-hidden transition-all hover:shadow-md">
                         {/* Premium Dark Header */}
                         <div className="bg-gradient-to-b from-lawdger-border to-lawdger-espresso px-6 py-4 flex items-center justify-between">
                           <Link href={`/cases/${c.id}`} className="font-serif text-[1.1rem] font-medium text-lawdger-cream hover:text-primary transition-colors">
@@ -211,7 +211,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                             
                             <div className="flex items-center gap-2">
                               <button onClick={() => setModalCaseId(c.id)}
-                                className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-primary border border-primary/30 rounded-full px-4 py-2 hover:bg-primary/10 transition-colors">
+                                className="btn-ghost-gold flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full px-4 py-2 transition-colors">
                                 <Plus className="h-3 w-3" /> Log
                               </button>
                               {c.payments.length > 0 && (
@@ -277,18 +277,18 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Case</label>
                 <select value={modalCaseId} onChange={(e) => setModalCaseId(e.target.value)}
-                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary shadow-sm appearance-none">
+                  className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary dark:focus:ring-[rgba(212,175,55,0.2)] shadow-sm appearance-none">
                   {cases.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Amount Received (₹)</label>
                 <input required autoFocus type="number" min="1" value={payAmount} onChange={(e) => setPayAmount(e.target.value)}
-                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary shadow-sm"
+                  className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary dark:focus:ring-[rgba(212,175,55,0.2)] shadow-sm"
                   placeholder="e.g. 25000" />
               </div>
               <button type="submit" disabled={isSubmitting}
-                className="w-full bg-primary text-primary-foreground font-bold uppercase tracking-widest text-[12px] py-4 rounded-xl hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] transition-all disabled:opacity-60">
+                className="btn-gold w-full py-4 rounded-xl font-bold uppercase tracking-widest text-[12px] disabled:opacity-60">
                 {isSubmitting ? "Saving…" : "Save Payment"}
               </button>
             </form>
