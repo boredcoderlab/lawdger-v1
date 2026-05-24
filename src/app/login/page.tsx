@@ -23,6 +23,7 @@ export default function LoginPage() {
                 src="/lawdger-logo-transparent.png"
                 alt="Lawdger"
                 fill
+                sizes="48px"
                 className="object-cover"
                 priority
               />
