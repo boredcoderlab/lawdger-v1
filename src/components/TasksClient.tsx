@@ -315,14 +315,18 @@ function AssignedCard({
         <span className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
           {task.caseName || "No case"}
         </span>
-        <span
-          className={`inline-flex items-center gap-1 text-xs font-medium ${dueClasses(
-            task.dueDate
-          )}`}
-        >
-          <CalendarIcon className="w-3 h-3" />
-          {dueLabel(task.dueDate)}
-        </span>
+        {dueLabel(task.dueDate) === "Overdue" ? (
+          <span className="chip chip-danger">Overdue</span>
+        ) : (
+          <span
+            className={`inline-flex items-center gap-1 text-xs font-medium ${dueClasses(
+              task.dueDate
+            )}`}
+          >
+            <CalendarIcon className="w-3 h-3" />
+            {dueLabel(task.dueDate)}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -345,14 +349,18 @@ function AssignedCardOverlay({ task }: { task: Task }) {
         <span className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
           {task.caseName || "No case"}
         </span>
-        <span
-          className={`inline-flex items-center gap-1 text-xs font-medium ${dueClasses(
-            task.dueDate
-          )}`}
-        >
-          <CalendarIcon className="w-3 h-3" />
-          {dueLabel(task.dueDate)}
-        </span>
+        {dueLabel(task.dueDate) === "Overdue" ? (
+          <span className="chip chip-danger">Overdue</span>
+        ) : (
+          <span
+            className={`inline-flex items-center gap-1 text-xs font-medium ${dueClasses(
+              task.dueDate
+            )}`}
+          >
+            <CalendarIcon className="w-3 h-3" />
+            {dueLabel(task.dueDate)}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -394,7 +402,7 @@ function UnassignedCard({
       ].join(" ")}
     >
       {/* Unassigned card: cream-on-espresso, 90% legibility */}
-      <div className="text-sm font-medium text-lawdger-cream/90 leading-snug line-clamp-2">
+      <div className="text-sm font-medium text-lawdger-cream/90 dark:text-foreground leading-snug line-clamp-2">
         {task.title}
       </div>
       <div className="mt-2 flex items-center gap-1.5">
