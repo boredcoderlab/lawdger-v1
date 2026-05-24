@@ -369,14 +369,20 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
   border-radius: 1.5rem;
   box-shadow: 0 12px 32px -16px var(--shadow-elevated);
 }
+/* Phase 4c-3a — floating pane. Three things make a pane look expensive:
+   (a) a stronger top edge-light vs near-zero bottom (vertical hairline gradient),
+   (b) a faint "light-from-above" wash painted on the surface (160px overlay),
+   (c) layered, soft, warm-black ambient shadow that grounds it in the void. */
 .dark .surface-card {
   background:
+    linear-gradient(180deg, rgba(255, 250, 242, 0.03), transparent 160px) padding-box,
     linear-gradient(var(--card), var(--card)) padding-box,
-    linear-gradient(180deg, rgba(247, 241, 232, 0.12), rgba(247, 241, 232, 0.03)) border-box;
+    linear-gradient(180deg, rgba(247, 241, 232, 0.16), rgba(247, 241, 232, 0.02)) border-box;
   border: 1px solid transparent;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.02) inset,
-    0 24px 48px -20px rgba(0, 0, 0, 0.65);
+    inset 0 1px 0 rgba(255, 250, 242, 0.04),
+    0 10px 28px -16px rgba(0, 0, 0, 0.50),
+    0 32px 64px -28px rgba(0, 0, 0, 0.72);
 }
 
 /* ── Status / phase chips — low-tint, never solid fill ──────────── */
@@ -424,6 +430,57 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
 :root:not(.dark) .chip-warning   { color: #7A6020; border-color: rgba(122, 96, 32, 0.22); }
 :root:not(.dark) .chip-success   { color: #2F6A47; border-color: rgba(47, 106, 71, 0.22); }
 :root:not(.dark) .chip-neutral   { background: rgba(41, 30, 22, 0.05); color: var(--foreground-secondary); border-color: var(--border); }
+
+/* ================================================================
+   PHASE 4c-3a — APP ATMOSPHERE (dark-only)
+   ----------------------------------------------------------------
+   Three stacked non-interactive layers paint the void with depth:
+     1. ::before — warm radial glow (top-left) + secondary (bottom-right)
+        AND vignette baked into the same paint (multi-radial stack).
+     2. ::after  — film grain (tiling SVG fractalNoise) at soft-light
+        blend, ~2.5% opacity. Kills banding in the dark gradients.
+   Light mode: every rule below is gated behind .dark, so the layer
+   renders as a transparent no-op (and the parent .app-atmosphere has
+   no styles of its own — just a positioned hit-target-free shell).
+   ================================================================ */
+.app-atmosphere {
+  /* The container itself paints nothing — the work is in the pseudos.
+     pointer-events:none is also set in JSX as a defensive duplicate. */
+  pointer-events: none;
+}
+.app-atmosphere::before,
+.app-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* Light mode: explicitly render nothing (defensive — no .dark in cascade
+   means the rules below never apply, but be explicit for safety). */
+:root:not(.dark) .app-atmosphere::before,
+:root:not(.dark) .app-atmosphere::after { display: none; }
+
+/* Layer 1 — warm radial glow (top-left + bottom-right) + vignette,
+   stacked into one paint. Low alpha, large radii — atmosphere, not chrome. */
+.dark .app-atmosphere::before {
+  background:
+    /* warm top-left glow */
+    radial-gradient(70% 55% at 28% 0%, rgba(212, 175, 55, 0.055), transparent 72%),
+    /* deeper bottom-right ember */
+    radial-gradient(50% 50% at 100% 100%, rgba(120, 80, 40, 0.05), transparent 70%),
+    /* vignette to push focus inward */
+    radial-gradient(125% 125% at 50% 38%, transparent 58%, rgba(0, 0, 0, 0.38));
+}
+
+/* Layer 2 — film grain. Inline SVG fractalNoise tiled at 220px, low alpha,
+   soft-light blend. The exact baseFrequency (~0.9) gives a fine pepper that
+   reads as paper/film, not video noise. */
+.dark .app-atmosphere::after {
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+  opacity: 0.025;
+  mix-blend-mode: soft-light;
+}
 
 /* ── Active-nav rail — surface-3 + 2px gold left border ─────────── */
 .nav-rail-active {
