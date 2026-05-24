@@ -419,7 +419,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
 
   return (
     <Link href={`/cases/${c.id}`} className="group block">
-      <article className="surface-card h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/20 bg-white p-6 shadow-sm transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] dark:hover:bg-[var(--surface-3)] hover:-translate-y-1 relative overflow-hidden">
+      <article className="surface-card surface-inner h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/20 bg-white p-6 shadow-sm transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] dark:hover:bg-[var(--surface-3)] hover:-translate-y-1 relative overflow-hidden">
         {/* Top accent line on hover */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-lawdger-gold/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 

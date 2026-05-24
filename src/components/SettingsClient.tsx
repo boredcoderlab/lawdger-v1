@@ -85,7 +85,7 @@ function Toggle({ name, checked, onChange, label, sub }: {
   label: string; sub: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 p-5 rounded-2xl border border-white/60 dark:border-[var(--border)] bg-white/90 dark:bg-[var(--surface-2)] shadow-sm">
+    <div className="flex items-start justify-between gap-4 p-5 rounded-2xl border border-white/60 dark:border-[var(--border)] surface-inner bg-white/90 dark:bg-[var(--surface-2)] shadow-sm">
       <div>
         <p className="text-[14px] font-bold text-gray-900 dark:text-foreground">{label}</p>
         <p className="text-[12px] font-medium text-muted-foreground dark:text-foreground-secondary mt-0.5">{sub}</p>
@@ -113,7 +113,7 @@ function SelectField({ label, name, value, onChange, options, sub }: {
   onChange: (v: string) => void; options: string[]; sub?: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 p-5 rounded-2xl border border-white/60 dark:border-[var(--border)] bg-white/90 dark:bg-[var(--surface-2)] shadow-sm">
+    <div className="flex items-start justify-between gap-4 p-5 rounded-2xl border border-white/60 dark:border-[var(--border)] surface-inner bg-white/90 dark:bg-[var(--surface-2)] shadow-sm">
       <div className="flex-1">
         <p className="text-[14px] font-bold text-gray-900 dark:text-foreground">{label}</p>
         {sub && <p className="text-[12px] font-medium text-muted-foreground dark:text-foreground-secondary mt-0.5 pr-4">{sub}</p>}

@@ -165,12 +165,15 @@ export function PageLayout(props: PageLayoutProps) {
           className={[
             "w-[35%]",
             "rounded-3xl",
-            "bg-lawdger-espresso",
+            // Light: espresso; Dark: surface-1 (4d elevation ramp — pane is the lowest raised layer)
+            "bg-lawdger-espresso dark:bg-[#15110F]",
             "p-10 pr-16",
-            "shadow-xl",
+            // Dark: surface-pane shadow (inset top-highlight + two-layer depth)
+            "shadow-xl dark:shadow-[inset_0_1px_0_rgba(244,238,230,0.02),0_8px_24px_-12px_rgba(0,0,0,0.45),0_24px_48px_-20px_rgba(0,0,0,0.55)]",
             "h-full flex flex-col",
             "z-10 shrink-0",
-            "border border-white/5",
+            // Dark: transparent border (edge-light comes from shadow inset, not border)
+            "border border-white/5 dark:border-transparent",
             "overflow-y-auto scrollbar-hide",
           ].join(" ")}
         >
@@ -203,10 +206,10 @@ export function PageLayout(props: PageLayoutProps) {
             // consumers (Tasks kanban et al.) can ride right up against the
             // 32px rounded corners — the corners clip overflow naturally.
             "overflow-hidden h-full",
-            // Layered depth lives in the inline style:
-            //   1) left-edge translucency strip so the espresso pane shows through the overlap
-            //   2) diagonal multi-tone cream → base gradient (top-left highlight → bottom-right deeper)
+            // Light: cream-glass gradient (lawdger-cream-pane).
+            // Dark: elevation-card overrides with surface-2 base + edge-light border + deep shadow.
             "lawdger-cream-pane",
+            "elevation-card",
           ].join(" ")}
         >
           {/* ── INNER CONTENT WRAPPER (Phase 3h → tightened in 3r) ───────

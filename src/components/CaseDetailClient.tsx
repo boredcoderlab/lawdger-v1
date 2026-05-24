@@ -367,7 +367,7 @@ export default function CaseDetailClient({
                   </button>
                 </div>
 
-                <div className="surface-card rounded-[2rem] border border-white/50 bg-white/70 shadow-inner overflow-hidden">
+                <div className="surface-card surface-inner rounded-[2rem] border border-white/50 bg-white/70 shadow-inner overflow-hidden">
                   {pendingTasks.length === 0 && completedTasks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 text-center">
                       <CheckCircle2 className="w-12 h-12 text-primary/30 dark:text-[rgba(212,175,55,0.3)] mb-4" />

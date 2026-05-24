@@ -271,7 +271,7 @@ export default function LegalBrainClient() {
                       <button
                         key={text}
                         onClick={() => sendMessage(text)}
-                        className="text-left px-5 py-4 rounded-2xl border border-lawdger-border/15 dark:border-[var(--border)] bg-lawdger-cream/40 dark:bg-[var(--surface-2)] backdrop-blur-sm hover:border-lawdger-espresso/30 dark:hover:border-[rgba(212,175,55,0.35)] hover:bg-lawdger-cream/70 dark:hover:bg-[var(--surface-3)] transition-all text-[13px] text-lawdger-espresso/80 dark:text-foreground-secondary font-medium group flex items-start gap-3 shadow-sm"
+                        className="text-left px-5 py-4 rounded-2xl border border-lawdger-border/15 dark:border-[var(--border)] surface-inner bg-lawdger-cream/40 dark:bg-[var(--surface-2)] backdrop-blur-sm hover:border-lawdger-espresso/30 dark:hover:border-[rgba(212,175,55,0.35)] hover:bg-lawdger-cream/70 dark:hover:bg-[var(--surface-3)] transition-all text-[13px] text-lawdger-espresso/80 dark:text-foreground-secondary font-medium group flex items-start gap-3 shadow-sm"
                       >
                         <Icon className="w-4 h-4 text-lawdger-espresso dark:text-[var(--gold-text)] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                         {text}

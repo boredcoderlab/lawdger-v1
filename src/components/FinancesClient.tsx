@@ -163,7 +163,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                     const pct = c.agreedFee && c.agreedFee > 0 ? Math.min(100, Math.round((received / c.agreedFee) * 100)) : 0;
 
                     return (
-                      <div key={c.id} className="surface-card rounded-[1.5rem] bg-white/70 border border-white/50 shadow-sm overflow-hidden transition-all hover:shadow-md">
+                      <div key={c.id} className="surface-card surface-inner rounded-[1.5rem] bg-white/70 border border-white/50 shadow-sm overflow-hidden transition-all hover:shadow-md">
                         {/* Premium Dark Header */}
                         <div className="bg-gradient-to-b from-lawdger-border to-lawdger-espresso px-6 py-4 flex items-center justify-between">
                           <Link href={`/cases/${c.id}`} className="font-serif text-[1.1rem] font-medium text-lawdger-cream hover:text-primary transition-colors">
@@ -237,7 +237,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                           <div className="bg-black/5 dark:bg-card/80 border-t border-black/5 dark:border-white/5 px-6 py-4 space-y-2">
                             <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Payment History</p>
                             {[...c.payments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((p) => (
-                              <div key={p.id} className="flex items-center justify-between group bg-white/95 dark:bg-white/5 rounded-xl px-4 py-3 hover:bg-white dark:hover:bg-white/40 transition-colors">
+                              <div key={p.id} className="flex items-center justify-between group surface-inner bg-white/95 dark:bg-white/5 rounded-xl px-4 py-3 hover:bg-white dark:hover:bg-white/40 transition-colors">
                                 <div className="flex items-center gap-4">
                                   <span className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
                                   <span className="text-[14px] font-bold text-foreground">{fmt(p.amount)}</span>

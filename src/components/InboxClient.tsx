@@ -75,7 +75,7 @@ export default function InboxClient({ initialDocuments, userName }: { initialDoc
                 </div>
             ) : (
               initialDocuments.map((doc, i) => (
-                <div key={i} className="group relative flex items-center justify-between p-5 rounded-2xl bg-white/95 dark:bg-[var(--surface-2)] hover:bg-white dark:hover:bg-[var(--surface-3)] border border-white/50 dark:border-[var(--border)] transition-all shadow-sm hover:shadow-md cursor-pointer overflow-hidden">
+                <div key={i} className="group relative flex items-center justify-between p-5 rounded-2xl surface-inner bg-white/95 dark:bg-[var(--surface-2)] hover:bg-white dark:hover:bg-[var(--surface-3)] border border-white/50 dark:border-[var(--border)] transition-all shadow-sm hover:shadow-md cursor-pointer overflow-hidden">
                   {/* Hover Accent */}
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   
