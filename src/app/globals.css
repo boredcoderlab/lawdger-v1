@@ -631,6 +631,48 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
 }
 
 /* ================================================================
+   PHASE 4d — ELEVATION APPLICATION UTILITIES
+   ----------------------------------------------------------------
+   .surface-inner  — surface-3 background for item cards nested
+                     inside a .surface-card / right content pane.
+                     Provides the third step in the elevation ramp.
+
+   .elevation-card — dark-only: applies the full .dark .surface-card
+                     treatment (edge-light border + deep shadow) to
+                     elements that already have a light-mode background
+                     class (lawdger-cream-pane, bg-white, etc.).
+                     In light mode this class is a zero-op so no
+                     existing cream/glass treatment is disturbed.
+   ================================================================ */
+
+/* ── Surface-3 inner-card ──────────────────────────────────────── */
+.surface-inner {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+}
+.dark .surface-inner {
+  background: var(--surface-3);
+  border-color: rgba(244, 238, 230, 0.06);
+}
+
+/* ── Elevation-card (dark only) ─────────────────────────────────── */
+/* Zero-op in light — no background or shadow rules here.           */
+/* In dark: overrides .dark .lawdger-cream-pane (same specificity,  */
+/* later in cascade) with the surface-2 base + edge-light gradient  */
+/* border + layered depth shadow from .dark .surface-card.          */
+.dark .elevation-card {
+  background:
+    linear-gradient(180deg, rgba(255, 250, 242, 0.03), transparent 160px) padding-box,
+    linear-gradient(var(--surface-2), var(--surface-2)) padding-box,
+    linear-gradient(180deg, rgba(247, 241, 232, 0.16), rgba(247, 241, 232, 0.02)) border-box;
+  border: 1px solid transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(244, 238, 230, 0.05),
+    0 10px 28px -16px rgba(0, 0, 0, 0.50),
+    0 32px 64px -28px rgba(0, 0, 0, 0.72);
+}
+
+/* ================================================================
    LANDING PAGE — Animations & Utilities
    ================================================================ */
 

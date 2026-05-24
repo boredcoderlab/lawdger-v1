@@ -271,11 +271,15 @@ export default function DashboardClient({
         </div>
       </div>
 
-      {/* ── BOTTOM OVAL CHATBOT WIDGET ────────────────────────────────────── */}
-      <div className="relative mt-2 lg:-mt-10 lg:ml-20 lg:w-[calc(100%-25%)] flex z-20 shrink-0">
-        
-        {/* The massive dark brown background card */}
-        <div className="w-[65%] rounded-3xl bg-lawdger-espresso border border-white/5 p-6 shadow-xl min-h-[220px] flex flex-col justify-between">
+      {/* ── BOTTOM ROW: Active Cases + Chat Widget ───────────────────────── */}
+      {/* Option (a): proper flex siblings — no absolute positioning, no     */}
+      {/* negative margin. This eliminates both overlaps:                    */}
+      {/*   1. Active Cases horizontal overlap (was 65%+45%=110% in one row) */}
+      {/*   2. Recent Documents vertical overlap (was lg:-mt-10 = -40px)     */}
+      <div className="mt-4 flex gap-4 z-20 shrink-0">
+
+        {/* Active Cases */}
+        <div className="flex-1 rounded-3xl bg-lawdger-espresso border border-white/5 p-6 shadow-xl min-h-[220px] flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <h2 className="text-[1.3rem] font-bold text-lawdger-cream dark:text-white">Active Cases</h2>
             <button className="text-lawdger-cream dark:text-white opacity-50 hover:opacity-100 transition-opacity">
@@ -306,8 +310,9 @@ export default function DashboardClient({
           </div>
         </div>
 
-        {/* The Frosted Glass Chatbot Widget overlapping on the right */}
-        <div className="absolute right-0 bottom-4 w-[45%] lg:w-[40%] rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-border shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.5)] lawdger-cream-pane p-5 min-h-[180px] flex flex-col justify-end">
+        {/* Chat Widget — flex sibling, no absolute, no overlap */}
+        {/* Dark: surface-2 base via elevation-card; light: cream-pane glass */}
+        <div className="w-[38%] rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-transparent shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.5)] lawdger-cream-pane elevation-card p-5 min-h-[180px] flex flex-col justify-end relative">
           
           {/* Logo overlapping top edge */}
           <div className="absolute -top-[2.5rem] left-6 flex items-center justify-center w-[70px] h-[80px] shadow-[0_4px_18px_rgba(69,50,40,0.25)] z-30">
