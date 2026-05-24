@@ -218,7 +218,7 @@ export default function CaseDetailClient({
                           onClick={() => setInfo({ ...info, status: s })}
                           className={`flex-1 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-colors border ${
                             info.status === s
-                              ? "bg-primary border-primary text-primary-foreground shadow-md"
+                              ? "bg-primary border-primary text-primary-foreground dark:bg-[var(--surface-3)] dark:border-[rgba(212,175,55,0.35)] dark:text-[var(--gold-text)] shadow-md"
                               : "border-white/10 text-white/50 hover:bg-white/5"
                           }`}
                         >
@@ -238,7 +238,7 @@ export default function CaseDetailClient({
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-widest hover:shadow-[0_0_15px_rgba(200,150,62,0.4)] transition-all disabled:opacity-60"
+                      className="btn-gold flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest disabled:opacity-60"
                     >
                       {saving ? "Saving…" : "Save Profile"}
                     </button>
@@ -248,7 +248,7 @@ export default function CaseDetailClient({
                 <div className="space-y-6">
                   <div className="flex items-center gap-3">
                     <span className={`inline-flex items-center rounded-lg border px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-white/5 ${
-                        info.status === 'active' ? 'text-primary border-primary/30' :
+                        info.status === 'active' ? 'text-primary border-primary/30 dark:text-[var(--gold-text)] dark:border-[rgba(212,175,55,0.35)]' :
                         info.status === 'inactive' ? 'text-amber-400 border-amber-400/30' :
                         'text-white/40 border-white/10'
                     }`}>
@@ -268,7 +268,7 @@ export default function CaseDetailClient({
 
             {/* Quick Case Notes */}
             <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground/50 mb-3 ml-2">Quick Case Notes</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-muted-foreground mb-3 ml-2">Quick Case Notes</h3>
               {noteOpen ? (
                 <form onSubmit={handleAddNote} className="space-y-3">
                   <textarea
@@ -277,7 +277,7 @@ export default function CaseDetailClient({
                     onChange={(e) => setNoteContent(e.target.value)}
                     rows={3}
                     placeholder="Drop a quick thought..."
-                    className="w-full bg-black/20 dark:bg-card/80 border border-white/5 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none shadow-inner"
+                    className="w-full bg-black/20 dark:bg-[var(--surface-2)] border border-white/5 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none shadow-inner"
                   />
                   <div className="flex gap-2">
                     <button type="button" onClick={() => { setNoteOpen(false); setNoteContent(""); }}
@@ -293,7 +293,7 @@ export default function CaseDetailClient({
               ) : (
                 <button
                   onClick={() => setNoteOpen(true)}
-                  className="w-full flex items-center justify-center gap-2.5 px-5 py-4 rounded-xl bg-black/20 dark:bg-card/80 border border-white/5 text-[12px] font-bold uppercase tracking-widest text-white/50 hover:text-white hover:border-primary/30 transition-all group"
+                  className="w-full flex items-center justify-center gap-2.5 px-5 py-4 rounded-xl bg-black/20 dark:bg-[var(--surface-2)] border border-white/5 dark:border-[var(--border)] text-[12px] font-bold uppercase tracking-widest text-white/50 hover:text-white dark:hover:border-[rgba(212,175,55,0.3)] transition-all group"
                 >
                   <StickyNote className="h-4 w-4 text-white/30 group-hover:text-primary transition-colors" />
                   Jot down note
@@ -307,7 +307,7 @@ export default function CaseDetailClient({
             <ContentHeading>{info.title}</ContentHeading>
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className="flex items-center gap-2 bg-primary/10 text-primary border border-primary/20 px-6 py-2.5 rounded-full hover:bg-primary hover:text-primary-foreground transition-all font-bold tracking-widest uppercase text-[10px] shadow-sm shrink-0"
+              className="btn-ghost-gold flex items-center gap-2 px-6 py-2.5 rounded-full transition-all font-bold tracking-widest uppercase text-[10px] shadow-sm shrink-0"
             >
               <Pencil className="h-3.5 w-3.5" />
               {isEditing ? "Cancel Edit" : "Edit Profile"}
@@ -360,17 +360,17 @@ export default function CaseDetailClient({
                   </h3>
                   <button
                     onClick={() => setTaskModalOpen(true)}
-                    className="flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest hover:bg-primary hover:text-primary-foreground transition-all shadow-sm"
+                    className="btn-ghost-gold flex items-center justify-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
                   >
                     <Plus className="h-3 w-3" />
                     Append Task
                   </button>
                 </div>
 
-                <div className="rounded-[2rem] border border-white/50 dark:border-white/5 bg-white/70 dark:bg-card/80 shadow-inner overflow-hidden">
+                <div className="surface-card rounded-[2rem] border border-white/50 bg-white/70 shadow-inner overflow-hidden">
                   {pendingTasks.length === 0 && completedTasks.length === 0 ? (
                     <div className="flex flex-col items-center justify-center p-12 text-center">
-                      <CheckCircle2 className="w-12 h-12 text-primary/30 mb-4" />
+                      <CheckCircle2 className="w-12 h-12 text-primary/30 dark:text-[rgba(212,175,55,0.3)] mb-4" />
                       <p className="text-[14px] font-bold text-foreground">Docket is clear.</p>
                       <p className="text-[12px] text-muted-foreground mt-1">No pending actions for this matter.</p>
                     </div>
@@ -404,17 +404,17 @@ export default function CaseDetailClient({
                         );
                       })}
                       {completedTasks.length > 0 && (
-                        <div className="bg-black/5 dark:bg-card/80 px-6 py-4">
+                        <div className="bg-black/5 dark:bg-[var(--surface-inset)] px-6 py-4">
                           <h4 className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Completed History</h4>
                           <div className="space-y-2">
                             {completedTasks.slice(0, 3).map((task) => (
                               <div key={task.id} className="flex items-center gap-3 opacity-50 hover:opacity-100 transition-opacity">
-                                <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                                <CheckCircle2 className="h-4 w-4 text-primary dark:text-[var(--gold-text)] shrink-0" />
                                 <p className="text-[13px] font-medium text-muted-foreground line-through truncate">{task.description}</p>
                               </div>
                             ))}
                             {completedTasks.length > 3 && (
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-primary pt-2 pl-7 cursor-pointer hover:underline">
+                              <p className="text-[10px] font-bold uppercase tracking-widest text-primary dark:text-[var(--gold-text)] pt-2 pl-7 cursor-pointer hover:underline">
                                 View all {completedTasks.length} completed
                               </p>
                             )}
@@ -435,8 +435,8 @@ export default function CaseDetailClient({
       {taskModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
           <div className="bg-background rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-visible relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center p-6 bg-white dark:bg-lawdger-sidebar border-b border-primary/10">
-              <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-white leading-none">Append Task</h2>
+            <div className="flex justify-between items-center p-6 bg-white dark:bg-[var(--surface-2)] border-b border-primary/10 dark:border-[var(--border)]">
+              <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-foreground leading-none">Append Task</h2>
               <button
                 onClick={() => { setTaskModalOpen(false); setDatePickerOpen(false); }}
                 className="text-foreground/40 hover:text-foreground transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
@@ -456,7 +456,7 @@ export default function CaseDetailClient({
                   autoFocus
                   value={newTask.desc}
                   onChange={(e) => setNewTask({ ...newTask, desc: e.target.value })}
-                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
+                  className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
                   placeholder="e.g. Draft reply affidavit"
                 />
               </div>
@@ -468,7 +468,7 @@ export default function CaseDetailClient({
                 <button
                   type="button"
                   onClick={() => setDatePickerOpen(!datePickerOpen)}
-                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary transition-all text-left flex justify-between items-center shadow-sm"
+                  className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] transition-all text-left flex justify-between items-center shadow-sm"
                 >
                   <span className={newTask.due ? "text-foreground font-bold" : "text-muted-foreground/60"}>
                     {newTask.due
@@ -507,7 +507,7 @@ export default function CaseDetailClient({
                             type="button"
                             onClick={() => { setNewTask({ ...newTask, due: format(day, "yyyy-MM-dd") }); setDatePickerOpen(false); }}
                             className={`p-2 rounded-full h-9 flex items-center justify-center transition-colors ${
-                              selected ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(200,150,62,0.4)]" : inMonth ? "hover:bg-primary/10 text-foreground" : "text-muted-foreground/30 hover:bg-white/5"
+                              selected ? "bg-primary text-primary-foreground dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] shadow-[0_0_15px_rgba(200,150,62,0.4)] dark:shadow-none" : inMonth ? "hover:bg-primary/10 text-foreground" : "text-muted-foreground/30 hover:bg-white/5"
                             }`}
                           >
                             {format(day, "d")}
@@ -523,7 +523,7 @@ export default function CaseDetailClient({
                 <button
                   type="submit"
                   disabled={taskSubmitting}
-                  className="w-full bg-primary text-primary-foreground font-bold py-4 rounded-xl hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-[1.01] transition-all uppercase tracking-widest text-[12px] disabled:opacity-60"
+                  className="btn-gold w-full py-4 rounded-xl font-bold uppercase tracking-widest text-[12px] disabled:opacity-60"
                 >
                   {taskSubmitting ? "Writing to Docket…" : "Add to Docket"}
                 </button>
@@ -541,7 +541,7 @@ export default function CaseDetailClient({
 function EditField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground/50 mb-1.5 ml-1">
+      <label className="block text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground-secondary mb-1.5 ml-1">
         {label}
       </label>
       {children}
@@ -564,7 +564,7 @@ function InfoRow({
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground/50 mb-0.5">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground-secondary mb-0.5">
           {label}
         </p>
         <p className="text-[14px] font-bold text-lawdger-cream dark:text-foreground truncate">
