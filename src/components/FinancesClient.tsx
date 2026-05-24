@@ -146,7 +146,9 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
             <div className="h-full">
               {cases.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-60">
-                  <Receipt className="h-12 w-12 mb-4" />
+                  <div className="empty-medallion">
+                    <Receipt className="h-8 w-8 text-lawdger-gold dark:text-[#D4AF37]" />
+                  </div>
                   <p className="font-serif text-xl font-medium">No cases yet</p>
                 </div>
               ) : (

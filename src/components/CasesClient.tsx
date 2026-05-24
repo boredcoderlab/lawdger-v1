@@ -683,8 +683,8 @@ function EmptyState({
 }) {
   return (
     <div className="flex-1 h-full rounded-[2rem] border border-dashed border-lawdger-gold/20 bg-lawdger-base flex flex-col items-center justify-center text-center p-10">
-      <div className="w-14 h-14 rounded-2xl bg-lawdger-gold/10 flex items-center justify-center text-lawdger-gold mb-5">
-        <Briefcase className="w-7 h-7" />
+      <div className="empty-medallion mb-5">
+        <Briefcase className="w-7 h-7 text-lawdger-gold dark:text-[#D4AF37]" />
       </div>
       <h4 className="font-serif text-[1.4rem] font-bold text-lawdger-espresso dark:text-foreground mb-2">
         {searchActive ? "No matches found" : "No matters yet"}

@@ -253,7 +253,7 @@ export function DarkPaneHeaderTitle({
   // dark-on-dark washout (Orchestration title regression).
   return (
     <>
-      <div className="w-12 h-12 bg-lawdger-cream/15 dark:bg-foreground/10 rounded-2xl flex items-center justify-center text-lawdger-cream dark:text-foreground shadow-inner shrink-0">
+      <div className="crest w-12 h-12 bg-lawdger-cream/15 dark:bg-foreground/10 rounded-2xl flex items-center justify-center text-lawdger-cream dark:text-foreground shadow-inner shrink-0">
         <Icon className="w-6 h-6" />
       </div>
       <div>
