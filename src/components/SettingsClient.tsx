@@ -34,12 +34,12 @@ function Card({ title, icon: Icon, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-[1.5rem] border border-white/60 dark:border-white/10 bg-white/70 dark:bg-card/80 overflow-hidden shadow-sm backdrop-blur-xl mb-8">
-      <div className="flex items-center gap-3 border-b border-white/60 dark:border-white/10 px-6 py-5 bg-white/95 dark:bg-white/5">
-        <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-          <Icon className="h-4 w-4 text-primary" />
+    <div className="surface-card overflow-hidden backdrop-blur-xl mb-8">
+      <div className="flex items-center gap-3 border-b border-white/60 dark:border-[var(--border)] px-6 py-5 bg-white/95 dark:bg-[var(--surface-2)]">
+        <div className="h-9 w-9 rounded-xl bg-primary/10 dark:bg-[rgba(212,175,55,0.12)] border border-primary/20 dark:border-[rgba(212,175,55,0.28)] flex items-center justify-center shrink-0">
+          <Icon className="h-4 w-4 text-primary dark:text-[var(--gold-text)]" />
         </div>
-        <h2 className="font-serif text-[1.2rem] font-semibold text-lawdger-espresso">{title}</h2>
+        <h2 className="font-serif text-[1.2rem] font-semibold text-lawdger-espresso dark:text-foreground">{title}</h2>
       </div>
       <div className="px-8 py-6 space-y-6">{children}</div>
     </div>
@@ -58,7 +58,7 @@ function Field({ label, name, type = "text", defaultValue, placeholder, disabled
       <input
         type={type} name={name} defaultValue={defaultValue}
         placeholder={placeholder} disabled={disabled}
-        className={`w-full bg-white/95 dark:bg-black/30 border border-white/50 dark:border-white/10 rounded-xl px-4 py-3 text-[14px] text-gray-900 dark:text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground/50 shadow-sm ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+        className={`w-full bg-white/95 dark:bg-[var(--surface-inset)] border border-white/50 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-gray-900 dark:text-foreground focus:outline-none focus:border-primary dark:focus:border-[var(--gold-text)] focus:ring-1 focus:ring-primary dark:focus:ring-[var(--gold-text)]/30 transition-all placeholder:text-muted-foreground/60 shadow-sm ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
       />
     </div>
   );
@@ -69,7 +69,7 @@ function SaveButton({ pending, label = "Save Changes" }: { pending: boolean; lab
     <div className="pt-2">
         <button
         type="submit" disabled={pending}
-        className="bg-primary text-primary-foreground px-8 py-3 rounded-xl text-[12px] uppercase tracking-widest font-bold hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-[1.01] transition-all disabled:opacity-50"
+        className="btn-gold px-8 py-3 text-[12px] uppercase tracking-widest"
         >
         {pending ? "Saving..." : label}
         </button>
@@ -85,17 +85,23 @@ function Toggle({ name, checked, onChange, label, sub }: {
   label: string; sub: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 p-5 rounded-2xl border border-white/60 dark:border-white/10 bg-white/90 dark:bg-white/5 shadow-sm">
+    <div className="flex items-start justify-between gap-4 p-5 rounded-2xl border border-white/60 dark:border-[var(--border)] bg-white/90 dark:bg-[var(--surface-2)] shadow-sm">
       <div>
-        <p className="text-[14px] font-bold text-gray-900 dark:text-white">{label}</p>
-        <p className="text-[12px] font-medium text-muted-foreground mt-0.5">{sub}</p>
+        <p className="text-[14px] font-bold text-gray-900 dark:text-foreground">{label}</p>
+        <p className="text-[12px] font-medium text-muted-foreground dark:text-foreground-secondary mt-0.5">{sub}</p>
       </div>
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 rounded-full shrink-0 transition-colors shadow-inner border border-black/5 dark:border-white/5 ${checked ? "bg-primary" : "bg-black/10 dark:bg-card/80"}`}
+        className={`relative h-6 w-11 rounded-full shrink-0 transition-colors shadow-inner border ${
+          checked
+            ? "bg-primary border-primary/40 dark:bg-[rgba(212,175,55,0.35)] dark:border-[rgba(212,175,55,0.55)]"
+            : "bg-black/10 border-black/5 dark:bg-[var(--surface-inset)] dark:border-[var(--border)]"
+        }`}
       >
-        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform shadow-sm ${checked ? "translate-x-[22px]" : "translate-x-1"}`} />
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white dark:bg-foreground transition-transform shadow-sm ${
+          checked ? "translate-x-[22px] dark:ring-1 dark:ring-[var(--gold-text)]" : "translate-x-1"
+        }`} />
         <input type="hidden" name={name} value={String(checked)} />
       </button>
     </div>
@@ -107,15 +113,15 @@ function SelectField({ label, name, value, onChange, options, sub }: {
   onChange: (v: string) => void; options: string[]; sub?: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 p-5 rounded-2xl border border-white/60 dark:border-white/10 bg-white/90 dark:bg-white/5 shadow-sm">
+    <div className="flex items-start justify-between gap-4 p-5 rounded-2xl border border-white/60 dark:border-[var(--border)] bg-white/90 dark:bg-[var(--surface-2)] shadow-sm">
       <div className="flex-1">
-        <p className="text-[14px] font-bold text-gray-900 dark:text-white">{label}</p>
-        {sub && <p className="text-[12px] font-medium text-muted-foreground mt-0.5 pr-4">{sub}</p>}
+        <p className="text-[14px] font-bold text-gray-900 dark:text-foreground">{label}</p>
+        {sub && <p className="text-[12px] font-medium text-muted-foreground dark:text-foreground-secondary mt-0.5 pr-4">{sub}</p>}
       </div>
       <select
         name={name} value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-white dark:bg-black/60 border border-white/50 dark:border-white/10 rounded-xl px-4 py-2.5 text-[13px] font-medium text-gray-900 dark:text-white focus:outline-none focus:border-primary transition-all shrink-0 min-w-[200px] shadow-sm appearance-none cursor-pointer"
+        className="bg-white dark:bg-[var(--surface-inset)] border border-white/50 dark:border-[var(--border)] rounded-xl px-4 py-2.5 text-[13px] font-medium text-gray-900 dark:text-foreground focus:outline-none focus:border-primary dark:focus:border-[var(--gold-text)] transition-all shrink-0 min-w-[200px] shadow-sm appearance-none cursor-pointer"
       >
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
@@ -167,40 +173,46 @@ export default function SettingsClient({
       darkPaneContent={
         <>
           {/* Profile Overview Card */}
-          <div className="bg-lawdger-sidebar/80 rounded-[1.5rem] p-5 mb-10 border border-lawdger-cream/10 shadow-inner shrink-0">
+          <div className="bg-lawdger-sidebar/80 dark:bg-[var(--surface-2)] rounded-[1.5rem] p-5 mb-10 border border-lawdger-cream/10 dark:border-[var(--border)] shadow-inner shrink-0">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-serif text-xl font-bold">
+              <div className="w-12 h-12 rounded-full bg-[var(--surface-3)] border border-[rgba(212,175,55,0.35)] flex items-center justify-center text-[var(--gold-text)] font-serif text-xl font-bold">
                 {name ? name.charAt(0) : "U"}
               </div>
               <div>
-                <h3 className="font-bold text-[15px] text-lawdger-cream">{name || "User Name"}</h3>
-                <p className="text-[12px] font-medium text-lawdger-cream/50">{email}</p>
+                <h3 className="font-bold text-[15px] text-lawdger-cream dark:text-foreground">{name || "User Name"}</h3>
+                <p className="text-[12px] font-medium text-lawdger-cream/50 dark:text-foreground-secondary">{email}</p>
               </div>
             </div>
           </div>
 
           {/* Vertical Navigation Menu */}
           <div className="flex flex-col gap-2 shrink-0">
-            {TABS.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold uppercase tracking-widest text-[11px] ${
-                  activeTab === id
-                    ? "bg-primary text-primary-foreground shadow-[0_0_20px_rgba(200,150,62,0.2)]"
-                    : "text-lawdger-cream/50 hover:bg-lawdger-cream/5 hover:text-lawdger-cream"
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${activeTab === id ? "text-primary-foreground" : "text-lawdger-cream/40"}`} />
-                {label}
-              </button>
-            ))}
+            {TABS.map(({ id, label, icon: Icon }) => {
+              const isActive = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActiveTab(id)}
+                  className={`relative flex items-center gap-4 px-5 py-4 rounded-2xl transition-all duration-300 font-bold uppercase tracking-widest text-[11px] overflow-hidden ${
+                    isActive
+                      ? "bg-[var(--surface-3)] text-[var(--gold-text)]"
+                      : "text-lawdger-cream/50 dark:text-foreground-secondary hover:bg-lawdger-cream/5 dark:hover:bg-[var(--surface-2)] hover:text-lawdger-cream dark:hover:text-foreground"
+                  }`}
+                >
+                  {isActive && (
+                    <span aria-hidden className="absolute left-0 top-3 bottom-3 w-[2px] rounded-r bg-[var(--gold)]" />
+                  )}
+                  <Icon className={`w-4 h-4 ${isActive ? "text-[var(--gold-text)]" : "text-lawdger-cream/40 dark:text-foreground-secondary"}`} />
+                  {label}
+                </button>
+              );
+            })}
           </div>
 
           {/* Footer */}
           <div className="mt-auto pt-10 shrink-0">
-            <div className="flex items-center gap-2 text-lawdger-cream/30">
+            <div className="flex items-center gap-2 text-lawdger-cream/30 dark:text-muted-foreground">
               <Shield className="w-3 h-3" />
               <span className="text-[9px] font-bold uppercase tracking-widest">End-to-End Encrypted Workspace</span>
             </div>
@@ -239,7 +251,7 @@ export default function SettingsClient({
                     defaultValue={preferences.officeAddress}
                     rows={3}
                     placeholder="Chamber no., Court complex, City"
-                    className="w-full bg-white/95 dark:bg-black/30 border border-white/50 dark:border-white/10 rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-muted-foreground/50 resize-none shadow-sm"
+                    className="w-full bg-white/95 dark:bg-[var(--surface-inset)] border border-white/50 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary dark:focus:border-[var(--gold-text)] focus:ring-1 focus:ring-primary dark:focus:ring-[var(--gold-text)]/30 transition-all placeholder:text-muted-foreground/60 resize-none shadow-sm"
                   />
                 </div>
                 <div className="opacity-70">

@@ -181,7 +181,7 @@ export default function LegalBrainClient() {
       darkPaneContent={
         <>
           {/* Description */}
-          <p className="text-[14px] font-medium text-white/60 leading-relaxed mb-8 shrink-0">
+          <p className="text-[14px] font-medium text-white/60 dark:text-foreground-secondary leading-relaxed mb-8 shrink-0">
             Your dedicated AI counsel. Ask anything about your cases, schedule tasks, draft documents, or get instant legal context.
           </p>
 
@@ -192,13 +192,13 @@ export default function LegalBrainClient() {
               { icon: Brain, label: "Legal Research", sub: "Summarise precedents and statutes" },
               { icon: Zap, label: "Smart Actions", sub: "Create tasks, hearings, and notes" },
             ].map(({ icon: Icon, label, sub }) => (
-              <div key={label} className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-4">
-                <div className="w-9 h-9 rounded-xl bg-primary/15 border border-primary/20 flex items-center justify-center shrink-0">
-                  <Icon className="w-4 h-4 text-primary" />
+              <div key={label} className="flex items-center gap-4 bg-white/5 dark:bg-[var(--surface-2)] border border-white/10 dark:border-[var(--border)] rounded-2xl p-4">
+                <div className="w-9 h-9 rounded-xl bg-primary/15 dark:bg-[rgba(212,175,55,0.12)] border border-primary/20 dark:border-[rgba(212,175,55,0.28)] flex items-center justify-center shrink-0">
+                  <Icon className="w-4 h-4 text-primary dark:text-[var(--gold-text)]" />
                 </div>
                 <div>
-                  <p className="text-[13px] font-bold text-lawdger-cream">{label}</p>
-                  <p className="text-[11px] text-white/40 mt-0.5">{sub}</p>
+                  <p className="text-[13px] font-bold text-lawdger-cream dark:text-foreground">{label}</p>
+                  <p className="text-[11px] text-white/40 dark:text-muted-foreground mt-0.5">{sub}</p>
                 </div>
               </div>
             ))}
@@ -263,7 +263,7 @@ export default function LegalBrainClient() {
               {/* Suggested prompts */}
               {showSuggestions && (
                 <div className="w-full">
-                  <p className="text-[10px] text-lawdger-muted uppercase tracking-widest font-bold mb-5 text-center">
+                  <p className="text-[10px] text-lawdger-muted dark:text-muted-foreground uppercase tracking-widest font-bold mb-5 text-center">
                     Start a conversation
                   </p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -271,9 +271,9 @@ export default function LegalBrainClient() {
                       <button
                         key={text}
                         onClick={() => sendMessage(text)}
-                        className="text-left px-5 py-4 rounded-2xl border border-lawdger-border/15 bg-lawdger-cream/40 backdrop-blur-sm hover:border-lawdger-espresso/30 hover:bg-lawdger-cream/70 transition-all text-[13px] text-lawdger-espresso/80 font-medium group flex items-start gap-3 shadow-sm"
+                        className="text-left px-5 py-4 rounded-2xl border border-lawdger-border/15 dark:border-[var(--border)] bg-lawdger-cream/40 dark:bg-[var(--surface-2)] backdrop-blur-sm hover:border-lawdger-espresso/30 dark:hover:border-[rgba(212,175,55,0.35)] hover:bg-lawdger-cream/70 dark:hover:bg-[var(--surface-3)] transition-all text-[13px] text-lawdger-espresso/80 dark:text-foreground-secondary font-medium group flex items-start gap-3 shadow-sm"
                       >
-                        <Icon className="w-4 h-4 text-lawdger-espresso shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
+                        <Icon className="w-4 h-4 text-lawdger-espresso dark:text-[var(--gold-text)] shrink-0 mt-0.5 group-hover:scale-110 transition-transform" />
                         {text}
                       </button>
                     ))}
@@ -286,20 +286,20 @@ export default function LegalBrainClient() {
                 <div key={idx} className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-1 shadow-sm ${
                     msg.role === "user"
-                      ? "bg-lawdger-espresso dark:bg-white/40 border border-white/20"
-                      : "bg-primary/20 border border-primary/30"
+                      ? "bg-lawdger-espresso dark:bg-[var(--surface-3)] border border-white/20 dark:border-[var(--border)]"
+                      : "bg-primary/20 dark:bg-[rgba(212,175,55,0.12)] border border-primary/30 dark:border-[rgba(212,175,55,0.28)]"
                   }`}>
                     {msg.role === "user"
-                      ? <User className="h-4 w-4 text-lawdger-cream" />
-                      : <Bot className="h-4 w-4 text-primary" />
+                      ? <User className="h-4 w-4 text-lawdger-cream dark:text-foreground" />
+                      : <Bot className="h-4 w-4 text-primary dark:text-[var(--gold-text)]" />
                     }
                   </div>
 
                   <div className={`max-w-[80%] space-y-2 flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
                     <div className={`px-5 py-4 rounded-2xl text-[14px] leading-relaxed font-medium whitespace-pre-wrap shadow-sm ${
                       msg.role === "user"
-                        ? "bg-lawdger-espresso dark:bg-white/40 border border-white/20 text-lawdger-cream rounded-tr-sm"
-                        : "bg-white/70 dark:bg-card/80 border border-white/50 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded-tl-sm"
+                        ? "bg-lawdger-espresso dark:bg-[var(--surface-3)] border border-white/20 dark:border-[var(--border)] text-lawdger-cream dark:text-foreground rounded-tr-sm"
+                        : "bg-white/70 dark:bg-[var(--surface-2)] border border-white/50 dark:border-[var(--border)] text-gray-800 dark:text-foreground-secondary rounded-tl-sm"
                     }`}>
                       {msg.content}
                     </div>
@@ -307,7 +307,7 @@ export default function LegalBrainClient() {
                     {msg.actions && msg.actions.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-1">
                         {msg.actions.map((action, i) => (
-                          <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 uppercase tracking-wider">
+                          <span key={i} className="chip chip-success uppercase">
                             ✓ {action}
                           </span>
                         ))}
@@ -319,12 +319,12 @@ export default function LegalBrainClient() {
 
               {isLoading && (
                 <div className="flex gap-4">
-                  <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center shrink-0 mt-1">
-                    <Bot className="h-4 w-4 text-primary" />
+                  <div className="w-9 h-9 rounded-xl bg-primary/20 dark:bg-[rgba(212,175,55,0.12)] border border-primary/30 dark:border-[rgba(212,175,55,0.28)] flex items-center justify-center shrink-0 mt-1">
+                    <Bot className="h-4 w-4 text-primary dark:text-[var(--gold-text)]" />
                   </div>
-                  <div className="px-5 py-4 rounded-2xl rounded-tl-sm bg-white/70 dark:bg-card/80 border border-white/50 dark:border-white/10 shadow-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground text-[13px] font-medium">
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <div className="px-5 py-4 rounded-2xl rounded-tl-sm bg-white/70 dark:bg-[var(--surface-2)] border border-white/50 dark:border-[var(--border)] shadow-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground dark:text-foreground-secondary text-[13px] font-medium">
+                      <Loader2 className="h-4 w-4 animate-spin text-primary dark:text-[var(--gold-text)]" />
                       Legal Brain is thinking…
                     </div>
                   </div>
@@ -341,7 +341,7 @@ export default function LegalBrainClient() {
               reads as cream glassmorphism rather than the prior flat grey. */}
           <div className="shrink-0 px-4 lg:px-8 pb-4 pt-2">
             <div className="max-w-2xl mx-auto">
-              <div className="flex items-end gap-2 bg-lawdger-cream/40 backdrop-blur-sm border border-lawdger-border/15 rounded-2xl shadow-sm px-3 py-2">
+              <div className="flex items-end gap-2 bg-lawdger-cream/40 dark:bg-[var(--surface-inset)] backdrop-blur-sm border border-lawdger-border/15 dark:border-[var(--border)] rounded-2xl shadow-sm px-3 py-2">
 
                 <textarea
                   ref={textareaRef}
@@ -351,7 +351,7 @@ export default function LegalBrainClient() {
                   placeholder="Ask a question or give a command… (Enter to send, Shift+Enter for newline)"
                   rows={1}
                   disabled={isLoading || isRecording || isTranscribing}
-                  className="flex-1 bg-transparent px-3 py-2 text-[14px] text-lawdger-espresso placeholder:text-lawdger-muted font-medium outline-none resize-none disabled:opacity-50 leading-relaxed"
+                  className="flex-1 bg-transparent px-3 py-2 text-[14px] text-lawdger-espresso dark:text-foreground placeholder:text-lawdger-muted dark:placeholder:text-muted-foreground font-medium outline-none resize-none disabled:opacity-50 leading-relaxed"
                 />
 
                 <button
@@ -360,8 +360,8 @@ export default function LegalBrainClient() {
                   title={isRecording ? "Stop recording" : "Start voice input"}
                   className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shrink-0 ${
                     isRecording
-                      ? "bg-red-500/15 border border-red-500/40 text-red-500 hover:bg-red-500/25"
-                      : "bg-lawdger-base border border-lawdger-border/15 text-lawdger-muted hover:text-lawdger-espresso"
+                      ? "bg-[rgba(204,102,87,0.14)] border border-[rgba(204,102,87,0.45)] text-[var(--danger)] hover:bg-[rgba(204,102,87,0.22)]"
+                      : "bg-lawdger-base dark:bg-[var(--surface-2)] border border-lawdger-border/15 dark:border-[var(--border)] text-lawdger-muted dark:text-foreground-secondary hover:text-lawdger-espresso dark:hover:text-foreground"
                   } disabled:opacity-40`}
                 >
                   {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -371,12 +371,12 @@ export default function LegalBrainClient() {
                   onClick={() => sendMessage(input)}
                   disabled={!input.trim() || isLoading || isRecording || isTranscribing}
                   title="Send message"
-                  className="w-10 h-10 rounded-full bg-lawdger-espresso text-lawdger-cream flex items-center justify-center hover:bg-lawdger-espresso/90 transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-gold w-10 h-10 p-0 shrink-0"
                 >
                   <Send className="h-4 w-4" />
                 </button>
               </div>
-              <p className="text-[10px] text-lawdger-muted/70 mt-3 text-center font-medium">
+              <p className="text-[10px] text-lawdger-muted/70 dark:text-muted-foreground mt-3 text-center font-medium">
                 Legal Brain can make mistakes — always verify important information with qualified counsel.
               </p>
             </div>

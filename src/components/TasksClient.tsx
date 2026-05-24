@@ -464,20 +464,20 @@ function KanbanColumn({
       ].join(" ")}
     >
       {/* Fix 1: Header — serif heading, sentence case, stronger separator */}
-      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 dark:border-lawdger-border shrink-0">
+      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 dark:border-[var(--border)] shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <Icon className="w-3.5 h-3.5 text-lawdger-espresso/50 shrink-0" />
-          <h3 className="font-serif text-base lg:text-lg text-lawdger-espresso leading-tight">
+          <Icon className="w-3.5 h-3.5 text-lawdger-espresso/50 dark:text-foreground-secondary shrink-0" />
+          <h3 className="font-serif text-base lg:text-lg text-lawdger-espresso dark:text-foreground leading-tight">
             {label}
           </h3>
-          <span className="text-xs font-sans font-medium text-lawdger-muted bg-lawdger-espresso/8 px-2 py-0.5 rounded-full shrink-0">
+          <span className="chip chip-neutral text-xs font-sans font-medium shrink-0">
             {visibleCount}
           </span>
         </div>
         <button
           onClick={() => onAdd(id)}
           aria-label={`Add task to ${label}`}
-          className="w-6 h-6 rounded-md text-lawdger-muted opacity-0 group-hover:opacity-100 hover:bg-lawdger-espresso/5 hover:text-lawdger-espresso flex items-center justify-center transition-opacity"
+          className="w-6 h-6 rounded-md text-lawdger-muted dark:text-foreground-secondary opacity-0 group-hover:opacity-100 hover:bg-lawdger-espresso/5 dark:hover:bg-[var(--surface-2)] hover:text-lawdger-espresso dark:hover:text-foreground flex items-center justify-center transition-opacity"
           tabIndex={-1}
         >
           <Plus className="w-3.5 h-3.5" />
@@ -555,16 +555,16 @@ function UnassignedZone({
       {/* Section header */}
       <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
         <div className="flex items-center gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lawdger-cream/50 dark:text-foreground/50">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lawdger-cream/50 dark:text-muted-foreground">
             Unassigned
           </p>
-          <span className="inline-flex items-center justify-center min-w-[20px] h-[18px] rounded-full bg-lawdger-cream/10 dark:bg-foreground/10 text-lawdger-cream/80 dark:text-foreground/80 text-[10px] font-bold px-1.5">
+          <span className="inline-flex items-center justify-center min-w-[20px] h-[18px] rounded-full bg-lawdger-cream/10 dark:bg-[var(--surface-2)] text-lawdger-cream/80 dark:text-foreground text-[10px] font-bold px-1.5">
             {visibleCount}
           </span>
         </div>
         <button
           onClick={() => setAdding((v) => !v)}
-          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/60 dark:text-foreground/60 hover:text-lawdger-gold transition-colors"
+          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/60 dark:text-foreground-secondary hover:text-lawdger-gold dark:hover:text-[var(--gold-text)] transition-colors"
         >
           <Plus className="w-3 h-3" />
           Quick Add
@@ -914,9 +914,9 @@ export default function TasksClient() {
         headerAction={
           <button
             onClick={() => openCreate("my-plate")}
-            className="flex items-center gap-2 bg-lawdger-espresso text-lawdger-cream px-5 py-2.5 rounded-full text-[11px] font-bold tracking-widest uppercase shadow-md hover:bg-lawdger-sidebar transition-colors"
+            className="btn-gold px-5 py-2.5 text-[11px] tracking-widest uppercase shadow-md"
           >
-            <Plus className="w-3.5 h-3.5 text-lawdger-gold" />
+            <Plus className="w-3.5 h-3.5" />
             New Task
           </button>
         }
@@ -966,7 +966,7 @@ export default function TasksClient() {
         mainPaneHeader={
           <>
             <ContentHeading>Active Assignments</ContentHeading>
-            <span className="text-xs font-sans font-medium text-lawdger-muted bg-lawdger-espresso/8 px-2.5 py-1 rounded-full shrink-0">
+            <span className="chip chip-neutral text-xs font-sans font-medium shrink-0">
               {kanbanTasks.length} tracked
             </span>
           </>
@@ -1040,9 +1040,9 @@ function StatTile({
       ? "text-destructive"
       : "text-lawdger-cream dark:text-foreground";
   return (
-    <div className="bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl px-3 py-2.5 h-[78px] flex flex-col justify-between">
+    <div className="bg-lawdger-cream/8 dark:bg-[var(--surface-2)] border border-lawdger-cream/12 dark:border-[var(--border)] rounded-xl px-3 py-2.5 h-[78px] flex flex-col justify-between">
       <div className="flex items-center justify-between">
-        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-lawdger-cream/50 dark:text-foreground/50">
+        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-lawdger-cream/50 dark:text-muted-foreground">
           {label}
         </p>
         {accent === "red" && (
@@ -1122,7 +1122,7 @@ function TaskDetailModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-lawdger-cream dark:bg-card rounded-2xl shadow-2xl border border-lawdger-border/20 dark:border-lawdger-border overflow-hidden"
+        className="w-full max-w-2xl bg-lawdger-cream dark:bg-[var(--surface-3)] rounded-2xl shadow-2xl border border-lawdger-border/20 dark:border-[var(--border-strong)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header w/ priority left border accent */}
@@ -1235,7 +1235,7 @@ function TaskDetailModal({
             <button
               type="submit"
               disabled={!title.trim()}
-              className="bg-lawdger-espresso text-lawdger-cream dark:text-foreground px-6 py-2.5 rounded-lg text-[11px] font-bold tracking-widest uppercase hover:bg-lawdger-sidebar disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="btn-gold px-6 py-2.5 rounded-lg text-[11px] tracking-widest uppercase"
             >
               {mode === "create" ? "Create Task" : "Save Changes"}
             </button>
@@ -1273,7 +1273,7 @@ function SegmentedControl<T extends string>({
   options: { value: T; label: string }[];
 }) {
   return (
-    <div className="inline-flex rounded-lg bg-lawdger-base p-1 border border-lawdger-border/20 dark:border-lawdger-border w-full">
+    <div className="inline-flex rounded-lg bg-lawdger-base dark:bg-[var(--surface-inset)] p-1 border border-lawdger-border/20 dark:border-[var(--border)] w-full">
       {options.map((opt) => (
         <button
           type="button"
@@ -1282,8 +1282,8 @@ function SegmentedControl<T extends string>({
           className={[
             "flex-1 px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors",
             value === opt.value
-              ? "bg-lawdger-espresso text-lawdger-cream dark:text-foreground"
-              : "text-lawdger-espresso/60 dark:text-foreground/60 hover:text-lawdger-espresso dark:hover:text-foreground",
+              ? "bg-lawdger-espresso text-lawdger-cream dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] dark:border dark:border-[rgba(212,175,55,0.28)]"
+              : "text-lawdger-espresso/60 dark:text-foreground-secondary hover:text-lawdger-espresso dark:hover:text-foreground",
           ].join(" ")}
         >
           {opt.label}
