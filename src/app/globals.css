@@ -500,6 +500,120 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
 }
 
 /* ================================================================
+   PHASE 4c-3a — RECESSED INPUTS
+   ----------------------------------------------------------------
+   .input-inset reads as a well sunk into the surface: warm-dark fill,
+   hairline border, top-edge inner shadow casting the rim down into
+   the field. Focus = gold hairline ring (handled by global :focus-visible).
+   Light mode degrades to the existing cream surface (no inset shadow
+   to avoid the muddy look on light backgrounds).
+   ================================================================ */
+.input-inset {
+  background: var(--surface-inset);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+.input-inset::placeholder { color: var(--foreground-faint); }
+
+.dark .input-inset {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+.dark .input-inset:hover:not(:disabled):not(:focus) {
+  border-color: var(--border-strong);
+}
+
+/* ================================================================
+   PHASE 4c-3a — GLOBAL FOCUS RING (gold, never browser blue)
+   ----------------------------------------------------------------
+   Replaces every default browser focus ring app-wide with a tasteful
+   gold hairline + soft gold halo. :focus-visible (not :focus) so mouse
+   clicks don't blast it onto buttons. Skip-link, summary, [tabindex],
+   contentEditable all covered by the universal selector.
+   ================================================================ */
+:focus { outline: none; }
+:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 1px var(--gold-deep),
+    0 0 0 4px rgba(212, 175, 55, 0.18);
+  border-radius: inherit;
+}
+/* Light-mode focus — same gold language, just slightly deeper hairline so
+   it reads cleanly on cream surfaces. Halo alpha unchanged. */
+:root:not(.dark) :focus-visible {
+  box-shadow:
+    0 0 0 1px #876A1F,
+    0 0 0 4px rgba(135, 106, 31, 0.16);
+}
+
+/* Inputs need a tighter ring (the recessed look would be muddied by a
+   full 4px halo). Override with a slimmer ring + colored border. */
+.input-inset:focus-visible,
+:where(input, textarea, select):focus-visible {
+  outline: none;
+  border-color: var(--gold-deep);
+  box-shadow:
+    0 0 0 1px var(--gold-deep),
+    0 0 0 3px rgba(212, 175, 55, 0.16),
+    inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+:root:not(.dark) :where(input, textarea, select):focus-visible {
+  box-shadow:
+    0 0 0 1px #876A1F,
+    0 0 0 3px rgba(135, 106, 31, 0.14);
+}
+
+/* ================================================================
+   PHASE 4c-3a — MOTION UTILITIES
+   ----------------------------------------------------------------
+   Defined here, applied to components in 4c-3b. All wrapped in
+   prefers-reduced-motion: no-preference so users who opted out of
+   motion see nothing animate.
+   ================================================================ */
+
+/* Card lift on hover — pairs with .surface-card. */
+.card-interactive {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  will-change: transform;
+}
+
+/* Status dot pulse (used by phase chips, sync indicator, etc.) */
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.55; transform: scale(0.85); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 250, 242, 0.05),
+      0 14px 32px -16px rgba(0, 0, 0, 0.55),
+      0 36px 72px -28px rgba(0, 0, 0, 0.78);
+  }
+
+  /* btn-gold sheen-sweep: pseudo-element travels diagonally across once.
+     The ::after itself is defined above; here we drive its motion. */
+  .dark .btn-gold:hover::after {
+    animation: btn-gold-sheen 0.65s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+  @keyframes btn-gold-sheen {
+    0%   { transform: translateX(-120%); opacity: 0; }
+    20%  { opacity: 1; }
+    100% { transform: translateX(120%); opacity: 0; }
+  }
+
+  .dot-pulse { animation: dot-pulse 1.8s ease-in-out infinite; }
+}
+
+/* ================================================================
    LANDING PAGE — Animations & Utilities
    ================================================================ */
 
