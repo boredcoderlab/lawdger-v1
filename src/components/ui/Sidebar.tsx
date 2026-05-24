@@ -85,7 +85,7 @@ export default function Sidebar() {
                   className={`transition-all duration-500 ${
                     isActive
                       ? "text-lawdger-espresso dark:text-lawdger-gold scale-110 drop-shadow-sm"
-                      : "text-[#8A8078] dark:text-lawdger-muted group-hover:text-[#D4C9C0] dark:group-hover:text-foreground group-hover:scale-110"
+                      : "text-[#8A8078] dark:text-foreground-secondary group-hover:text-[#D4C9C0] dark:group-hover:text-foreground group-hover:scale-110"
                   }`}
                 />
                 {item.alert && (
@@ -102,11 +102,11 @@ export default function Sidebar() {
 
       {/* Bottom Utility */}
       <div className="flex flex-col gap-6 w-full items-center mt-auto relative z-20">
-        <Moon strokeWidth={1.5} size={22} className="text-[#8A8078] dark:text-lawdger-muted" aria-hidden="true" />
+        <Moon strokeWidth={1.5} size={22} className="text-[#8A8078] dark:text-foreground-secondary" aria-hidden="true" />
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="text-[#8A8078] dark:text-lawdger-muted hover:text-[#D4C9C0] dark:hover:text-foreground transition-colors cursor-pointer"
+          className="text-[#8A8078] dark:text-foreground-secondary hover:text-[#D4C9C0] dark:hover:text-foreground transition-colors cursor-pointer"
           aria-label="Sign out"
         >
           <LogOut strokeWidth={1.5} size={22} />
