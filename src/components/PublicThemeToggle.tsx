@@ -25,5 +25,5 @@ export default function PublicThemeToggle() {
     return null
   }
 
-  return <ThemeToggle placement="floating" />
+  return <ThemeToggle />
 }

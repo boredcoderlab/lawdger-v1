@@ -21,7 +21,7 @@ declare module "@auth/core/jwt" {
   }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const nextAuth = NextAuth({
   session: {
     strategy: "jwt",
   },
@@ -82,3 +82,5 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
 })
+
+export const { handlers, signIn, signOut, auth } = nextAuth

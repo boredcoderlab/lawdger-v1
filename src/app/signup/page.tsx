@@ -72,6 +72,7 @@ export default function SignupPage() {
                 src="/lawdger-logo-transparent.png"
                 alt="Lawdger"
                 fill
+                sizes="48px"
                 className="object-cover"
                 priority
               />

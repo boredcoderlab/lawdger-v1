@@ -419,13 +419,13 @@ function CaseTile({ c }: { c: CaseRecord }) {
 
   return (
     <Link href={`/cases/${c.id}`} className="group block">
-      <article className="h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/20 bg-white p-6 shadow-sm transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] hover:-translate-y-1 relative overflow-hidden">
+      <article className="surface-card surface-inner card-interactive h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/20 bg-white p-6 shadow-sm transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] dark:hover:bg-[var(--surface-3)] hover:-translate-y-1 relative overflow-hidden">
         {/* Top accent line on hover */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-lawdger-gold/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
         {/* Title + status */}
         <div className="flex items-start justify-between gap-3 mb-4">
-          <h3 className="font-serif text-[1.2rem] font-bold text-lawdger-espresso leading-tight group-hover:text-lawdger-espresso transition-colors line-clamp-2">
+          <h3 className="font-serif text-[1.2rem] font-bold text-lawdger-espresso dark:text-foreground leading-tight group-hover:text-lawdger-espresso dark:group-hover:text-foreground transition-colors line-clamp-2">
             {c.title}
           </h3>
           <span
@@ -439,7 +439,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
 
         {/* Client */}
         {c.clientName && (
-          <p className="text-[13px] text-lawdger-espresso/80 font-medium mb-5 truncate">
+          <p className="text-[13px] text-lawdger-espresso/80 dark:text-foreground/80 font-medium mb-5 truncate">
             {c.clientName}
           </p>
         )}
@@ -450,7 +450,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
             <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-lawdger-muted mb-1">
               <Hash className="w-2.5 h-2.5" /> Matter ID
             </p>
-            <p className="text-[12px] font-semibold text-lawdger-espresso truncate">
+            <p className="text-[12px] font-semibold text-lawdger-espresso dark:text-foreground truncate">
               {c.matterId ?? <span className="text-lawdger-muted/70">—</span>}
             </p>
           </div>
@@ -458,7 +458,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
             <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-lawdger-muted mb-1">
               <Calendar className="w-2.5 h-2.5" /> Next Hearing
             </p>
-            <p className="text-[12px] font-semibold text-lawdger-espresso truncate">
+            <p className="text-[12px] font-semibold text-lawdger-espresso dark:text-foreground truncate">
               {formatHearing(c.nextHearingDate)}
             </p>
           </div>
@@ -469,7 +469,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
           <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-widest text-lawdger-muted mb-1.5">
             <Scale className="w-2.5 h-2.5" /> Forum / Court
           </p>
-          <p className="text-[12px] font-semibold text-lawdger-espresso leading-snug">
+          <p className="text-[12px] font-semibold text-lawdger-espresso dark:text-foreground leading-snug">
             {forumDisplay}
             <span className="text-lawdger-muted"> · </span>
             <span className="font-medium">{courtDisplay}</span>
@@ -527,7 +527,7 @@ export default function CasesClient({
         headerAction={
           <button
             onClick={() => setDialogOpen(true)}
-            className="flex items-center gap-2 bg-lawdger-espresso text-lawdger-base px-6 py-3 rounded-full hover:bg-lawdger-espresso/90 hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] transition-all font-bold tracking-widest uppercase text-[11px]"
+            className="btn-gold flex items-center gap-2 px-6 py-3 rounded-full font-bold tracking-widest uppercase text-[11px]"
           >
             <Plus className="h-4 w-4" />
             New Matter
@@ -556,17 +556,17 @@ export default function CasesClient({
 
             {/* Quick Search */}
             <div className="mt-auto">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 mb-3">
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground/50 mb-3">
                 Quick Search
               </label>
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-lawdger-cream/40" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-lawdger-cream/40 dark:text-foreground/40" />
                 <input
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Find by name, client…"
-                  className="w-full bg-lawdger-base/10 border border-lawdger-cream/10 rounded-full pl-11 pr-4 py-3.5 text-[13px] text-lawdger-cream placeholder:text-lawdger-cream/30 focus:outline-none focus:border-lawdger-gold focus:ring-1 focus:ring-lawdger-gold/40 transition-all"
+                  className="w-full bg-lawdger-base/10 border border-lawdger-cream/10 dark:border-lawdger-border rounded-full pl-11 pr-4 py-3.5 text-[13px] text-lawdger-cream dark:text-foreground placeholder:text-lawdger-cream/30 dark:placeholder:text-foreground/30 focus:outline-none focus:border-lawdger-gold focus:ring-1 focus:ring-lawdger-gold/40 transition-all"
                 />
               </div>
             </div>
@@ -585,8 +585,8 @@ export default function CasesClient({
                     onClick={() => setStatusFilter(id)}
                     className={`px-4 py-1.5 rounded-full text-[11px] tracking-wide transition-all font-bold uppercase ${
                       statusFilter === id
-                        ? "bg-lawdger-espresso text-lawdger-base shadow-sm"
-                        : "text-lawdger-muted hover:text-lawdger-espresso"
+                        ? "bg-lawdger-espresso text-lawdger-base dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] shadow-sm"
+                        : "text-lawdger-muted hover:text-lawdger-espresso dark:hover:text-foreground"
                     }`}
                   >
                     {label}
@@ -645,15 +645,15 @@ function MetricRow({
     <div
       className={`flex items-center justify-between rounded-2xl px-5 py-4 border ${
         prominent
-          ? "bg-lawdger-base/15 border-lawdger-cream/15"
+          ? "bg-lawdger-base/15 border-lawdger-cream/15 dark:border-lawdger-border"
           : accentDot
           ? "bg-lawdger-gold/15 border-lawdger-gold/25"
-          : "bg-lawdger-base/8 border-lawdger-cream/5"
+          : "bg-lawdger-base/8 border-lawdger-cream/5 dark:border-lawdger-border"
       }`}
     >
       <span
         className={`text-[13px] font-medium flex items-center gap-2 ${
-          dim ? "text-lawdger-cream/45" : "text-lawdger-cream/85"
+          dim ? "text-lawdger-cream/45 dark:text-foreground-secondary" : "text-lawdger-cream/85 dark:text-foreground"
         }`}
       >
         {accentDot && (
@@ -663,7 +663,7 @@ function MetricRow({
       </span>
       <span
         className={`font-serif text-[20px] font-bold ${
-          dim ? "text-lawdger-cream/45" : "text-lawdger-cream"
+          dim ? "text-lawdger-cream/45 dark:text-foreground-secondary" : "text-lawdger-cream dark:text-foreground"
         }`}
       >
         {value}
@@ -683,10 +683,10 @@ function EmptyState({
 }) {
   return (
     <div className="flex-1 h-full rounded-[2rem] border border-dashed border-lawdger-gold/20 bg-lawdger-base flex flex-col items-center justify-center text-center p-10">
-      <div className="w-14 h-14 rounded-2xl bg-lawdger-gold/10 flex items-center justify-center text-lawdger-gold mb-5">
-        <Briefcase className="w-7 h-7" />
+      <div className="empty-medallion mb-5">
+        <Briefcase className="w-7 h-7 text-lawdger-gold dark:text-[#D4AF37]" />
       </div>
-      <h4 className="font-serif text-[1.4rem] font-bold text-lawdger-espresso mb-2">
+      <h4 className="font-serif text-[1.4rem] font-bold text-lawdger-espresso dark:text-foreground mb-2">
         {searchActive ? "No matches found" : "No matters yet"}
       </h4>
       <p className="text-[13px] text-lawdger-muted max-w-sm mb-6">
@@ -697,7 +697,7 @@ function EmptyState({
       {!searchActive && (
         <button
           onClick={onNewMatter}
-          className="flex items-center gap-2 bg-lawdger-espresso text-lawdger-base px-6 py-3 rounded-full hover:bg-lawdger-espresso/90 hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] transition-all font-bold tracking-widest uppercase text-[11px]"
+          className="btn-gold flex items-center gap-2 px-6 py-3 rounded-full font-bold tracking-widest uppercase text-[11px]"
         >
           <Plus className="h-4 w-4" />
           New Matter

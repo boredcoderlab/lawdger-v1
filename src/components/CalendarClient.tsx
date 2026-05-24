@@ -339,7 +339,7 @@ export default function CalendarClient({
         headerAction={
           <button
             onClick={() => openNew(format(currentDate, "yyyy-MM-dd"))}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-7 py-3 rounded-full hover:scale-[1.02] transition-transform font-bold tracking-widest uppercase text-[12px] shadow-[0_0_20px_rgba(200,150,62,0.3)]"
+            className="btn-gold flex items-center gap-2 px-7 py-3 rounded-full font-bold tracking-widest uppercase text-[12px]"
           >
             <Plus className="h-4 w-4" />
             Book Slot
@@ -357,22 +357,22 @@ export default function CalendarClient({
             {/* Mini Calendar */}
             <div className="bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5 mb-8">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-serif text-[18px] font-bold text-lawdger-cream">{format(pickerMonth, "MMMM yyyy")}</h3>
+                <h3 className="font-serif text-[18px] font-bold text-lawdger-cream dark:text-foreground">{format(pickerMonth, "MMMM yyyy")}</h3>
                 <div className="flex gap-1">
                   <button onClick={() => setPickerMonth(subMonths(pickerMonth, 1))} className="p-2 rounded-full hover:bg-white/40 transition-colors">
-                    <ChevronLeft className="h-4 w-4 text-lawdger-cream/70" />
+                    <ChevronLeft className="h-4 w-4 text-lawdger-cream/70 dark:text-foreground/70" />
                   </button>
                   <button onClick={() => setPickerMonth(addMonths(pickerMonth, 1))} className="p-2 rounded-full hover:bg-white/40 transition-colors">
-                    <ChevronRight className="h-4 w-4 text-lawdger-cream/70" />
+                    <ChevronRight className="h-4 w-4 text-lawdger-cream/70 dark:text-foreground/70" />
                   </button>
                 </div>
               </div>
               <div className="grid grid-cols-7 gap-1 text-center mb-3">
                 {["S","M","T","W","T","F","S"].map((d, i) => (
-                  <div key={i} className="text-[10px] font-bold text-lawdger-cream/40 uppercase tracking-widest">{d}</div>
+                  <div key={i} className="text-[10px] font-bold text-lawdger-cream/40 dark:text-foreground/40 uppercase tracking-widest">{d}</div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 gap-1 text-[13px] font-medium text-lawdger-cream">
+              <div className="grid grid-cols-7 gap-1 text-[13px] font-medium text-lawdger-cream dark:text-foreground">
                 {miniCalDays.map((day, i) => {
                   const isSelected     = isSameDay(day, currentDate);
                   const inMonth        = isSameMonth(day, pickerMonth);
@@ -384,7 +384,7 @@ export default function CalendarClient({
                     <div key={i}
                       onClick={() => { setCurrentDate(day); setPickerMonth(day); setView("day"); }}
                       className={`p-2 rounded-full flex items-center justify-center cursor-pointer transition-colors relative h-10 ${
-                        isSelected ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(200,150,62,0.5)]"
+                        isSelected ? "bg-primary text-primary-foreground dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] shadow-[0_0_15px_rgba(200,150,62,0.5)] dark:shadow-none"
                           : inMonth ? "hover:bg-white/40"
                           : "text-white/20 hover:bg-white/5"
                       }`}
@@ -404,7 +404,7 @@ export default function CalendarClient({
             </div>
 
             {/* Legend */}
-            <div className="space-y-4 text-[12px] font-medium text-lawdger-cream/70">
+            <div className="space-y-4 text-[12px] font-medium text-lawdger-cream/70 dark:text-foreground/70">
               <div className="flex items-center gap-3">
                 <div className="h-3 w-3 rounded-full bg-orange-400 shadow-[0_0_10px_rgba(251,146,60,0.5)]" />
                 <span>Hearings & Appointments</span>
@@ -431,7 +431,7 @@ export default function CalendarClient({
               <div className="flex bg-black/5 dark:bg-white/5 rounded-full p-1 border border-white/10">
                 {(["day","week","month"] as ViewMode[]).map((v) => (
                   <button key={v} onClick={() => setView(v)}
-                    className={`px-4 py-1.5 rounded-full text-[12px] capitalize font-bold transition-all ${view === v ? "bg-primary text-primary-foreground shadow-sm scale-105" : "text-muted-foreground hover:text-foreground"}`}>
+                    className={`px-4 py-1.5 rounded-full text-[12px] capitalize font-bold transition-all ${view === v ? "bg-primary text-primary-foreground dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] shadow-sm scale-105" : "text-muted-foreground hover:text-foreground"}`}>
                     {v}
                   </button>
                 ))}
@@ -464,7 +464,7 @@ export default function CalendarClient({
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => handleDrop(e, currentDate, time)}>
                           <div className="w-24 shrink-0 pr-6 text-right">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 group-hover:text-primary transition-colors relative top-3">{time}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-foreground transition-colors relative top-3">{time}</span>
                           </div>
                           <div className="flex-1 border-l border-primary/10 pl-6 pb-2 pt-2 relative">
                             {slotEvents.map((ev, idx) => (
@@ -481,7 +481,7 @@ export default function CalendarClient({
                             )}
                             {slotEvents.length === 0 && !allocatedTask && (
                               <button onClick={() => openNew(format(currentDate, "yyyy-MM-dd"))}
-                                className="absolute inset-0 w-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[12px] font-bold uppercase tracking-widest text-primary hover:bg-primary/5 rounded-xl">
+                                className="absolute inset-0 w-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[12px] font-bold uppercase tracking-widest text-muted-foreground dark:text-[var(--gold-text)] hover:bg-black/5 dark:hover:bg-[rgba(212,175,55,0.05)] rounded-xl">
                                 + Book Slot
                               </button>
                             )}
@@ -504,7 +504,7 @@ export default function CalendarClient({
                     return (
                       <div key={i} className={`flex-1 border-r border-primary/10 last:border-0 ${isSameDay(day, new Date()) ? "bg-primary/5" : ""}`}>
                         <div className="p-3 text-center border-b border-primary/10">
-                          <span className={`text-[10px] font-bold uppercase tracking-widest ${isSameDay(day, new Date()) ? "text-primary" : "text-muted-foreground"}`}>
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${isSameDay(day, new Date()) ? "text-foreground font-extrabold" : "text-muted-foreground"}`}>
                             {format(day, "E d")}
                           </span>
                         </div>
@@ -523,7 +523,7 @@ export default function CalendarClient({
                   {TIME_SLOTS.map((time, i) => (
                     <div key={i} className="flex border-b border-primary/10 h-28">
                       <div className="w-20 shrink-0 border-r border-primary/10 pr-3 text-right">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60 relative top-3">{time}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground relative top-3">{time}</span>
                       </div>
                       {weekDays.map((day, j) => {
                         const slotEvs = eventsOnDayTime(day, time);
@@ -572,7 +572,7 @@ export default function CalendarClient({
                         onDrop={(e) => handleDrop(e, day)}>
                         <div className="text-right mb-1">
                           <span onClick={() => { setCurrentDate(day); setView("day"); }}
-                            className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-[13px] font-medium cursor-pointer ${todayFlag ? "bg-primary text-primary-foreground shadow-md" : !inMonth ? "text-muted-foreground/40" : "text-foreground hover:bg-primary/10"}`}>
+                            className={`inline-flex items-center justify-center h-8 w-8 rounded-full text-[13px] font-medium cursor-pointer ${todayFlag ? "bg-primary text-primary-foreground dark:bg-transparent dark:border dark:border-[var(--gold)] dark:text-foreground shadow-md dark:shadow-none" : !inMonth ? "text-muted-foreground/40" : "text-foreground hover:bg-primary/10"}`}>
                             {format(day, "d")}
                           </span>
                         </div>
@@ -612,7 +612,7 @@ export default function CalendarClient({
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
           <div className="bg-background rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-hidden relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center p-6 bg-white dark:bg-lawdger-sidebar border-b border-primary/10">
+            <div className="flex justify-between items-center p-6 bg-white dark:bg-[var(--surface-2)] border-b border-primary/10 dark:border-[var(--border)]">
               <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-white leading-none">
                 {editId ? "Edit Hearing" : editTaskId ? "Edit Task" : "Add New Slot"}
               </h2>
@@ -623,13 +623,13 @@ export default function CalendarClient({
 
             <form onSubmit={handleSave} className="p-8 space-y-6">
               {!isEditing && (
-                <div className="flex bg-black/5 dark:bg-white/5 border border-primary/10 rounded-xl p-1">
+                <div className="flex bg-black/5 dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl p-1">
                   {(["hearing", "task"] as const).map((t) => (
                     <button
                       key={t}
                       type="button"
                       onClick={() => setForm({ ...form, type: t })}
-                      className={`flex-1 py-3 rounded-lg text-[12px] font-bold uppercase tracking-widest transition-all ${form.type === t ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                      className={`flex-1 py-3 rounded-lg text-[12px] font-bold uppercase tracking-widest transition-all ${form.type === t ? "bg-primary text-primary-foreground dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
                     >
                       {t === "hearing" ? "Hearing" : "Task"}
                     </button>
@@ -645,7 +645,7 @@ export default function CalendarClient({
                   required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
+                  className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary dark:focus:ring-[rgba(212,175,55,0.2)] transition-all shadow-sm text-foreground"
                 />
               </div>
 
@@ -659,7 +659,7 @@ export default function CalendarClient({
                     required
                     value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })}
-                    className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
+                    className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary dark:focus:ring-[rgba(212,175,55,0.2)] transition-all shadow-sm text-foreground"
                   />
                 </div>
                 {form.type === "hearing" && (
@@ -668,7 +668,7 @@ export default function CalendarClient({
                     <select
                       value={form.time}
                       onChange={(e) => setForm({ ...form, time: e.target.value })}
-                      className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground appearance-none"
+                      className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary dark:focus:ring-[rgba(212,175,55,0.2)] transition-all shadow-sm text-foreground appearance-none"
                     >
                       {TIME_SLOTS.map((ts) => <option key={ts} value={ts} className="bg-card">{ts}</option>)}
                     </select>
@@ -687,7 +687,7 @@ export default function CalendarClient({
                   <select
                     value={form.caseId}
                     onChange={(e) => setForm({ ...form, caseId: e.target.value })}
-                    className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground appearance-none"
+                    className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary dark:focus:ring-[rgba(212,175,55,0.2)] transition-all shadow-sm text-foreground appearance-none"
                   >
                     {form.type === "task" && (
                       <option value="" className="bg-card">— No Case (Independent Task)</option>
@@ -704,7 +704,7 @@ export default function CalendarClient({
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     rows={2}
-                    className="w-full bg-white dark:bg-black/30 border border-primary/10 rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground resize-none"
+                    className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary dark:focus:ring-[rgba(212,175,55,0.2)] transition-all shadow-sm text-foreground resize-none"
                   />
                 </div>
               )}
@@ -717,7 +717,7 @@ export default function CalendarClient({
                   </button>
                 )}
                 <button type="submit" disabled={isSubmitting}
-                  className="flex-1 bg-primary text-primary-foreground font-bold py-4 rounded-xl hover:shadow-[0_0_20px_rgba(200,150,62,0.3)] hover:scale-[1.01] transition-all uppercase tracking-widest text-[12px] disabled:opacity-60">
+                  className="btn-gold flex-1 py-4 rounded-xl font-bold uppercase tracking-widest text-[12px] disabled:opacity-60">
                   {isSubmitting ? "Saving…" : "Confirm Slot"}
                 </button>
               </div>
