@@ -419,7 +419,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
 
   return (
     <Link href={`/cases/${c.id}`} className="group block">
-      <article className="h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/20 bg-white dark:bg-[var(--surface-2)] dark:border-[var(--border)] p-6 shadow-sm dark:shadow-[0_18px_40px_-18px_rgba(0,0,0,0.7)] transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] dark:hover:bg-[var(--surface-3)] hover:-translate-y-1 relative overflow-hidden">
+      <article className="surface-card h-full flex flex-col rounded-[1.5rem] border border-lawdger-gold/20 bg-white p-6 shadow-sm transition-all duration-300 hover:border-lawdger-gold/50 hover:shadow-[0_15px_30px_rgba(212,175,55,0.12)] dark:hover:bg-[var(--surface-3)] hover:-translate-y-1 relative overflow-hidden">
         {/* Top accent line on hover */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-lawdger-gold/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -527,7 +527,7 @@ export default function CasesClient({
         headerAction={
           <button
             onClick={() => setDialogOpen(true)}
-            className="flex items-center gap-2 bg-lawdger-espresso text-lawdger-base px-6 py-3 rounded-full hover:bg-lawdger-espresso/90 hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] transition-all font-bold tracking-widest uppercase text-[11px]"
+            className="btn-gold flex items-center gap-2 px-6 py-3 rounded-full font-bold tracking-widest uppercase text-[11px]"
           >
             <Plus className="h-4 w-4" />
             New Matter
@@ -585,7 +585,7 @@ export default function CasesClient({
                     onClick={() => setStatusFilter(id)}
                     className={`px-4 py-1.5 rounded-full text-[11px] tracking-wide transition-all font-bold uppercase ${
                       statusFilter === id
-                        ? "bg-lawdger-espresso text-lawdger-base shadow-sm"
+                        ? "bg-lawdger-espresso text-lawdger-base dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] shadow-sm"
                         : "text-lawdger-muted hover:text-lawdger-espresso dark:hover:text-foreground"
                     }`}
                   >
@@ -653,7 +653,7 @@ function MetricRow({
     >
       <span
         className={`text-[13px] font-medium flex items-center gap-2 ${
-          dim ? "text-lawdger-cream/45 dark:text-foreground/45" : "text-lawdger-cream/85 dark:text-foreground"
+          dim ? "text-lawdger-cream/45 dark:text-foreground-secondary" : "text-lawdger-cream/85 dark:text-foreground"
         }`}
       >
         {accentDot && (
@@ -663,7 +663,7 @@ function MetricRow({
       </span>
       <span
         className={`font-serif text-[20px] font-bold ${
-          dim ? "text-lawdger-cream/45 dark:text-foreground/45" : "text-lawdger-cream dark:text-foreground"
+          dim ? "text-lawdger-cream/45 dark:text-foreground-secondary" : "text-lawdger-cream dark:text-foreground"
         }`}
       >
         {value}
@@ -686,7 +686,7 @@ function EmptyState({
       <div className="w-14 h-14 rounded-2xl bg-lawdger-gold/10 flex items-center justify-center text-lawdger-gold mb-5">
         <Briefcase className="w-7 h-7" />
       </div>
-      <h4 className="font-serif text-[1.4rem] font-bold text-lawdger-espresso mb-2">
+      <h4 className="font-serif text-[1.4rem] font-bold text-lawdger-espresso dark:text-foreground mb-2">
         {searchActive ? "No matches found" : "No matters yet"}
       </h4>
       <p className="text-[13px] text-lawdger-muted max-w-sm mb-6">
@@ -697,7 +697,7 @@ function EmptyState({
       {!searchActive && (
         <button
           onClick={onNewMatter}
-          className="flex items-center gap-2 bg-lawdger-espresso text-lawdger-base px-6 py-3 rounded-full hover:bg-lawdger-espresso/90 hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] transition-all font-bold tracking-widest uppercase text-[11px]"
+          className="btn-gold flex items-center gap-2 px-6 py-3 rounded-full font-bold tracking-widest uppercase text-[11px]"
         >
           <Plus className="h-4 w-4" />
           New Matter
