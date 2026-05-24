@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import Sidebar from "@/components/ui/Sidebar";
 import Header from "@/components/ui/Header";
 import VoiceFAB from "@/components/VoiceFAB";
+import Atmosphere from "@/components/Atmosphere";
 
 export default function LawdgerLayout({
   children,
@@ -15,10 +16,7 @@ export default function LawdgerLayout({
 
   return (
     <div className="h-screen flex bg-background text-foreground font-sans relative overflow-hidden">
-      {/* Global Background Ambience — Phase 4c-3a.
-          Dark-only: warm radial glow + film grain + vignette painted via
-          .app-atmosphere pseudo-elements in globals.css. Light mode = no-op. */}
-      <div className="app-atmosphere absolute inset-0 pointer-events-none z-0" aria-hidden="true" />
+      <Atmosphere />
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden z-10">
         <Header />
