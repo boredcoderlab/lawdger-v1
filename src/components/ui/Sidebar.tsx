@@ -11,10 +11,10 @@ import {
   Calendar as CalIcon,
   CheckSquare,
   Settings,
-  Moon,
   LogOut,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type NavItem = {
   id: string;
@@ -102,7 +102,7 @@ export default function Sidebar() {
 
       {/* Bottom Utility */}
       <div className="flex flex-col gap-6 w-full items-center mt-auto relative z-20">
-        <Moon strokeWidth={1.5} size={22} className="text-[#8A8078] dark:text-foreground-secondary" aria-hidden="true" />
+        <ThemeToggle placement="inline" />
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
