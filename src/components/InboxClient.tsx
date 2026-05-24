@@ -27,7 +27,7 @@ export default function InboxClient({ initialDocuments, userName }: { initialDoc
     <PageLayout
       pageTitle="Document Intake"
       headerAction={
-        <div className="px-4 py-1.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-[13px] font-bold shadow-inner">
+        <div className="chip chip-attention text-[13px] font-bold shadow-inner">
           {initialDocuments.length} Unsorted
         </div>
       }
@@ -51,7 +51,7 @@ export default function InboxClient({ initialDocuments, userName }: { initialDoc
            <p className="text-[14px] text-[#f4efe8]/60 dark:text-white/50 text-center max-w-[280px]">
              Drag & drop case files, evidence, or emails here to securely enqueue them for sorting.
            </p>
-           <button className="mt-8 px-8 py-3 rounded-full bg-primary text-primary-foreground font-bold text-[13px] hover:shadow-[0_0_20px_rgba(200,150,62,0.4)] transition-all uppercase tracking-widest">
+           <button className="btn-gold mt-8 px-8 py-3 rounded-full font-bold text-[13px] uppercase tracking-widest">
              Browse System
            </button>
         </div>
@@ -59,7 +59,7 @@ export default function InboxClient({ initialDocuments, userName }: { initialDoc
       mainPaneHeader={
         <>
           <ContentHeading>Needs Sorting</ContentHeading>
-          <button className="text-[12px] font-bold uppercase tracking-widest text-primary hover:opacity-70 transition-opacity shrink-0">
+          <button className="btn-ghost-gold text-[12px] font-bold uppercase tracking-widest transition-opacity shrink-0">
             Sort All
           </button>
         </>
@@ -75,12 +75,12 @@ export default function InboxClient({ initialDocuments, userName }: { initialDoc
                 </div>
             ) : (
               initialDocuments.map((doc, i) => (
-                <div key={i} className="group relative flex items-center justify-between p-5 rounded-2xl bg-white/95 dark:bg-white/5 hover:bg-white dark:hover:bg-white/40 border border-white/50 dark:border-white/5 transition-all shadow-sm hover:shadow-md cursor-pointer overflow-hidden">
+                <div key={i} className="group relative flex items-center justify-between p-5 rounded-2xl bg-white/95 dark:bg-[var(--surface-2)] hover:bg-white dark:hover:bg-[var(--surface-3)] border border-white/50 dark:border-[var(--border)] transition-all shadow-sm hover:shadow-md cursor-pointer overflow-hidden">
                   {/* Hover Accent */}
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center shadow-inner shrink-0 group-hover:scale-105 transition-transform">
+                    <div className="w-12 h-12 bg-primary/10 dark:bg-[rgba(212,175,55,0.12)] text-primary dark:text-[var(--gold-text)] rounded-xl flex items-center justify-center shadow-inner shrink-0 group-hover:scale-105 transition-transform">
                       {doc.title.includes('png') || doc.title.includes('jpeg') ? <ImageIcon className="w-6 h-6" /> : <FileText className="w-6 h-6" />}
                     </div>
                     <div className="min-w-0 pr-4">
@@ -92,7 +92,7 @@ export default function InboxClient({ initialDocuments, userName }: { initialDoc
                     </div>
                   </div>
                   
-                  <button className="opacity-0 group-hover:opacity-100 px-4 py-2 bg-primary text-primary-foreground text-[12px] font-bold uppercase tracking-wider rounded-full shadow-md hover:scale-105 transition-all shrink-0">
+                  <button className="btn-ghost-gold opacity-0 group-hover:opacity-100 px-4 py-2 text-[12px] font-bold uppercase tracking-wider rounded-full shadow-md hover:scale-105 transition-all shrink-0">
                     Assign
                   </button>
                 </div>
