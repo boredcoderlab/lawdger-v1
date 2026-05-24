@@ -85,7 +85,7 @@ export default function DashboardClient({
         <div className="lg:col-span-8 flex flex-col gap-4 min-h-0">
           
           {/* TODAY AT A GLANCE (Hero Tile) */}
-          <div className="relative rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-border shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.5)] lawdger-cream-pane p-6 lg:p-8 flex-1 min-h-0 overflow-hidden">
+          <div className="relative rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-transparent shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane elevation-card p-6 lg:p-8 flex-1 min-h-0 overflow-hidden">
             
             {/* Header */}
             <div className="flex items-start justify-between mb-6">
@@ -114,7 +114,7 @@ export default function DashboardClient({
               <div className="flex flex-col">
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">Next Up</h3>
                 {displayEvents.length > 0 ? (
-                  <div className="flex flex-col p-6 rounded-[1.5rem] bg-lawdger-espresso text-lawdger-cream dark:text-foreground border border-white/5 shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
+                  <div className="flex flex-col p-6 rounded-[1.5rem] bg-lawdger-espresso dark:bg-[var(--surface-3)] text-lawdger-cream dark:text-foreground border border-white/5 dark:border-[var(--border)] shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
                       <Bell className="w-16 h-16" />
                     </div>
@@ -146,7 +146,7 @@ export default function DashboardClient({
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">On the Radar</h3>
                 <div className="flex flex-col gap-3">
                   {displayEvents.slice(1, 4).map((ev, idx) => (
-                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-2xl bg-white/95 dark:bg-[var(--surface-2)] hover:bg-white dark:hover:bg-[var(--surface-3)] border border-white/50 dark:border-[var(--border)] shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                    <div key={ev.id} className="flex items-center gap-4 p-3 rounded-2xl surface-inner bg-white/95 dark:bg-[var(--surface-2)] hover:bg-white dark:hover:bg-[var(--surface-3)] border border-white/50 dark:border-[var(--border)] shadow-sm hover:shadow-md transition-all cursor-pointer group">
                       <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-accent dark:bg-[var(--surface-2)] text-accent-foreground dark:text-[var(--gold-text)] font-bold shrink-0 shadow-sm border border-white/60 dark:border-[var(--border)]">
                         <span className="text-[14px] leading-none">{format(new Date(ev.hearingDate), "h")}</span>
                         <span className="text-[10px] leading-none uppercase mt-0.5">{format(new Date(ev.hearingDate), "a")}</span>
@@ -179,7 +179,7 @@ export default function DashboardClient({
         <div className="lg:col-span-4 flex flex-col gap-4 z-10 min-h-0">
           
           {/* UPCOMING DATES */}
-          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-border shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.5)] lawdger-cream-pane p-6 shrink-0">
+          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-transparent shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane elevation-card p-6 shrink-0">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[1.2rem] font-bold text-foreground">
                 Upcoming Dates
@@ -232,7 +232,7 @@ export default function DashboardClient({
           </div>
 
           {/* RECENT DOCUMENTS */}
-          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-lawdger-border shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.5)] lawdger-cream-pane p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
+          <div className="rounded-[2rem] backdrop-blur-2xl border border-lawdger-cream/30 dark:border-transparent shadow-[0_24px_60px_-20px_color-mix(in_srgb,var(--color-lawdger-border)_35%,transparent)] lawdger-cream-pane elevation-card p-6 flex-1 min-h-0 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[1.2rem] font-bold text-foreground">
                 Recent Documents
@@ -278,8 +278,8 @@ export default function DashboardClient({
       {/*   2. Recent Documents vertical overlap (was lg:-mt-10 = -40px)     */}
       <div className="mt-4 flex gap-4 z-20 shrink-0">
 
-        {/* Active Cases */}
-        <div className="flex-1 rounded-3xl bg-lawdger-espresso border border-white/5 p-6 shadow-xl min-h-[220px] flex flex-col justify-between">
+        {/* Active Cases — dark: surface-2 base + depth shadow (espresso in light) */}
+        <div className="flex-1 rounded-3xl bg-lawdger-espresso dark:bg-[var(--surface-2)] border border-white/5 dark:border-transparent p-6 shadow-xl dark:shadow-[inset_0_1px_0_rgba(244,238,230,0.05),0_10px_28px_-16px_rgba(0,0,0,0.50),0_32px_64px_-28px_rgba(0,0,0,0.72)] min-h-[220px] flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <h2 className="text-[1.3rem] font-bold text-lawdger-cream dark:text-white">Active Cases</h2>
             <button className="text-lawdger-cream dark:text-white opacity-50 hover:opacity-100 transition-opacity">
