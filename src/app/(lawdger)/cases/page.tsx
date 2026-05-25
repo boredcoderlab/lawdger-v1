@@ -1,12 +1,7 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
 import CasesClient from "@/components/CasesClient";
 import { getCases, getCaseCounts } from "./actions";
 
 export default async function CasesPage() {
-  const session = await auth();
-  if (!session) redirect("/login");
-
   const [cases, counts] = await Promise.all([getCases(), getCaseCounts()]);
 
   return (

@@ -1,16 +1,13 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { getServerUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import DashboardClient from "@/components/DashboardClient";
 import { format } from "date-fns";
 import { Bell, Scale } from "lucide-react";
 
 export default async function DashboardPage() {
-  const session = await auth();
-  if (!session?.user?.id) redirect("/login");
-
-  const userId = session.user.id;
-  const userName = session.user.name ?? "Advocate";
+  const user = await getServerUser();
+  const userId = user.id;
+  const userName = user.name ?? "Advocate";
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
