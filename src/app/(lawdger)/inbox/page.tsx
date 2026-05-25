@@ -1,12 +1,8 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { getServerUser } from "@/lib/session";
 import InboxClient from "@/components/InboxClient";
 
 export default async function InboxPage() {
-  const session = await auth();
-  if (!session?.user) {
-    redirect("/login");
-  }
+  const user = await getServerUser();
 
   // In a real app, fetch unsorted documents from the DB here
   const unsortedDocuments = [
@@ -15,5 +11,5 @@ export default async function InboxPage() {
     { id: "3", title: "Client_Aadhar_Card.png", size: "850 KB", time: "2 hours ago" },
   ];
 
-  return <InboxClient initialDocuments={unsortedDocuments} userName={session.user.name || "User"} />;
+  return <InboxClient initialDocuments={unsortedDocuments} userName={user.name || "User"} />;
 }

@@ -1,7 +1,9 @@
+import "@/env" // validates required env vars at boot — throws if missing
 import { compare } from "bcryptjs"
 import NextAuth, { type DefaultSession } from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import { prisma } from "@/lib/prisma"
+import { authConfig } from "./auth.config"
 
 declare module "next-auth" {
   interface Session {
@@ -21,10 +23,8 @@ declare module "@auth/core/jwt" {
   }
 }
 
-const nextAuth = NextAuth({
-  session: {
-    strategy: "jwt",
-  },
+export const { handlers, signIn, signOut, auth } = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       name: "Email and Password",
@@ -62,25 +62,4 @@ const nextAuth = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id
-        token.name = user.name
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string
-      }
-      if (token.name) session.user.name = token.name
-      return session
-    },
-  },
-  pages: {
-    signIn: "/login",
-  },
 })
-
-export const { handlers, signIn, signOut, auth } = nextAuth
