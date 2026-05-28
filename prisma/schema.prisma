@@ -13,40 +13,48 @@ model User {
   email          String          @unique
   name           String?
   password       String?
-  preferences    String?         // Stored as JSON string for now
+  preferences    String? // Stored as JSON string for now
   cases          Case[]
   notes          Note[]
   tasks          Task[]
   calendarEvents CalendarEvent[]
   payments       Payment[]
+  documents      Document[]
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 }
 
 model Case {
-  id              String          @id @default(uuid())
-  userId          String
-  title           String
-  clientName      String?
-  courtName       String?
-  agreedFee       Float?
-  status          String          @default("active") // active, pending, closed, urgent, dormant
+  id         String  @id @default(uuid())
+  userId     String
+  title      String
+  clientName String?
+  courtName  String?
+  agreedFee  Float?
+  status     String  @default("active") // active, pending, closed, urgent, dormant
 
   // Path B additive fields — Case Registry expansion
   matterId        String?
   forum           String?
   court           String?
-  caseType        String?         // CIVIL | CRIMINAL | WRIT | APPEAL | COMMERCIAL | FAMILY | ARBITRATION | OTHER
+  caseType        String? // CIVIL | CRIMINAL | WRIT | APPEAL | COMMERCIAL | FAMILY | ARBITRATION | OTHER
   nextHearingDate DateTime?
   description     String?
 
-  user            User            @relation(fields: [userId], references: [id])
-  notes           Note[]
-  tasks           Task[]
-  calendarEvents  CalendarEvent[]
-  payments        Payment[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  // Phase 2a additive — litigation metadata
+  filingDate    DateTime?
+  actsSections  String?
+  firNumber     String?
+  policeStation String?
+
+  user           User            @relation(fields: [userId], references: [id])
+  notes          Note[]
+  tasks          Task[]
+  calendarEvents CalendarEvent[]
+  payments       Payment[]
+  documents      Document[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@index([userId])
   @@index([status])
@@ -58,7 +66,7 @@ model Note {
   userId        String
   rawTranscript String?
   cleanContent  String
-  category      String   // Client Update, Next Date, Task, General Note
+  category      String // Client Update, Next Date, Task, General Note
   case          Case     @relation(fields: [caseId], references: [id])
   user          User     @relation(fields: [userId], references: [id])
   createdAt     DateTime @default(now())
@@ -103,4 +111,22 @@ model Payment {
   user      User      @relation(fields: [userId], references: [id])
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+}
+
+model Document {
+  id         String   @id @default(uuid())
+  userId     String
+  caseId     String?
+  filename   String
+  storageKey String?
+  size       Int?
+  mimeType   String?
+  status     String   @default("unsorted") // unsorted, sorted
+  user       User     @relation(fields: [userId], references: [id])
+  case       Case?    @relation(fields: [caseId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([caseId])
 }
