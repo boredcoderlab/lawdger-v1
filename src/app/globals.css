@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+/* ================================================================
+   TAILWIND v4 — class-based dark mode
+   ----------------------------------------------------------------
+   next-themes manages `.dark` on <html>. Tailwind v4's default
+   `dark:` variant fires from `@media (prefers-color-scheme: dark)`,
+   which decouples utility classes from the class-scoped CSS tokens
+   in :root / .dark above. Result: when the user's OS prefers dark
+   but they set the app to light (or vice versa), `dark:` utilities
+   fire against the wrong token set — e.g. `text-lawdger-cream
+   dark:text-foreground` on the espresso pane resolved to
+   `var(--foreground)` = #291e16 in light tokens, painting espresso
+   headings invisible on the espresso pane.
+
+   Redefine `dark` as a class-based variant so it ONLY fires when
+   `.dark` is on <html>, keeping every `dark:*` utility in lockstep
+   with the CSS-var theme.
+   ================================================================ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   color-scheme: light;
   --background: #e3d5c8;
