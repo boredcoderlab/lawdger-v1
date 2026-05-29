@@ -666,9 +666,15 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
 /* ================================================================
    PHASE 4d — ELEVATION APPLICATION UTILITIES
    ----------------------------------------------------------------
-   .surface-inner  — surface-3 background for item cards nested
-                     inside a .surface-card / right content pane.
-                     Provides the third step in the elevation ramp.
+   .surface-inner  — dark-only: surface-3 background for item cards
+                     nested inside a .surface-card / right content pane.
+                     Provides the third step in the dark elevation ramp.
+                     In light mode this class is a zero-op so the
+                     component's own bg-white / bg-lawdger-cream/* wins
+                     (Tailwind v4 utilities live in @layer utilities;
+                     an unlayered base rule here would override them
+                     and stamp the dark-only #e3d8c6 surface-3 colour
+                     onto every cream pane in light mode).
 
    .elevation-card — dark-only: applies the full .dark .surface-card
                      treatment (edge-light border + deep shadow) to
@@ -678,14 +684,10 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
                      existing cream/glass treatment is disturbed.
    ================================================================ */
 
-/* ── Surface-3 inner-card ──────────────────────────────────────── */
-.surface-inner {
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-}
+/* ── Surface-3 inner-card (dark only) ──────────────────────────── */
 .dark .surface-inner {
   background: var(--surface-3);
-  border-color: rgba(244, 238, 230, 0.06);
+  border: 1px solid rgba(244, 238, 230, 0.06);
 }
 
 /* ── Elevation-card (dark only) ─────────────────────────────────── */
