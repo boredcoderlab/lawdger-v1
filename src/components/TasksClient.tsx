@@ -406,7 +406,7 @@ function UnassignedCard({
         {task.title}
       </div>
       <div className="mt-2 flex items-center gap-1.5">
-        <span className="inline-flex items-center bg-lawdger-cream/10 border border-lawdger-cream/15 text-lawdger-cream/50 text-xs font-medium px-2 py-0.5 rounded-full">
+        <span className="chip-on-dark is-meta">
           {task.caseName || "Untriaged"}
         </span>
         {task.priority === "urgent" && (
@@ -424,7 +424,7 @@ function UnassignedCardOverlay({ task }: { task: Task }) {
         {task.title}
       </div>
       <div className="mt-2">
-        <span className="inline-flex items-center bg-lawdger-cream/10 text-lawdger-cream/70 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+        <span className="chip-on-dark is-meta">
           {task.caseName || "Untriaged"}
         </span>
       </div>

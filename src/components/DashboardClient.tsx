@@ -296,7 +296,7 @@ export default function DashboardClient({
                   <p className="text-[12px] text-lawdger-cream/50 dark:text-white/50">{item.time}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`chip ${item.dim ? 'chip-neutral' : 'chip-attention'}`}>
+                  <span className={`chip-on-dark ${item.dim ? '' : 'is-attention'}`}>
                     {item.status}
                   </span>
                   <ChevronRight className="h-4 w-4 text-lawdger-cream/50 dark:text-white/50 group-hover:text-white" />
