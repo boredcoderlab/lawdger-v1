@@ -951,13 +951,13 @@ export default function TasksClient() {
 
             {/* Quick search */}
             <div className="relative shrink-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-lawdger-cream/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-lawdger-cream/40 dark:text-foreground/40" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search tasks…"
-                className="w-full bg-lawdger-cream/8 border border-lawdger-cream/12 rounded-xl pl-9 pr-3 py-2.5 text-[12.5px] text-lawdger-cream placeholder:text-lawdger-cream/30 focus:outline-none focus:border-lawdger-gold/40 transition-colors"
+                className="w-full bg-lawdger-cream/8 dark:bg-white/8 border border-lawdger-cream/12 dark:border-white/15 rounded-xl pl-9 pr-3 py-2.5 text-[12.5px] text-lawdger-cream dark:text-foreground placeholder:text-lawdger-cream/30 dark:placeholder:text-foreground/40 focus:outline-none focus:border-lawdger-gold/40 transition-colors"
               />
             </div>
 
