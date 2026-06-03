@@ -114,7 +114,7 @@ export default function DashboardClient({
               <div className="flex flex-col">
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">Next Up</h3>
                 {displayEvents.length > 0 ? (
-                  <div className="flex flex-col p-6 rounded-[1.5rem] bg-lawdger-espresso text-lawdger-cream dark:text-foreground border border-white/5 shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
+                  <div className="flex flex-col p-6 rounded-[1.5rem] bg-lawdger-espresso dark:bg-[var(--surface-3)] text-lawdger-cream dark:text-foreground border border-white/5 dark:border-[rgba(255,240,220,0.06)] shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
                       <Bell className="w-16 h-16" />
                     </div>
@@ -275,7 +275,7 @@ export default function DashboardClient({
       <div className="relative mt-2 lg:-mt-10 lg:ml-20 lg:w-[calc(100%-25%)] flex z-20 shrink-0">
         
         {/* The massive dark brown background card */}
-        <div className="w-[65%] rounded-3xl bg-lawdger-espresso border border-white/5 p-6 shadow-xl min-h-[220px] flex flex-col justify-between">
+        <div className="w-[65%] rounded-3xl bg-lawdger-espresso dark:bg-[#2C2520] border border-white/5 dark:border-[rgba(255,240,220,0.04)] p-6 shadow-xl dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,240,220,0.08)] min-h-[220px] flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <h2 className="text-[1.3rem] font-bold text-lawdger-cream dark:text-white">Active Cases</h2>
             <button className="text-lawdger-cream dark:text-white opacity-50 hover:opacity-100 transition-opacity">
