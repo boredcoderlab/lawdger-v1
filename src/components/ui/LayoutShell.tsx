@@ -164,16 +164,21 @@ export function PageLayout(props: PageLayoutProps) {
         <div
           className={[
             "w-[35%]",
-            "rounded-3xl",
-            // Light: espresso; Dark: surface-1 (4d elevation ramp — pane is the lowest raised layer)
-            "bg-lawdger-espresso dark:bg-[#15110F]",
+            // Phase 4d-1: radius bump (24 → 28) reads as embossed leather not stamped tile
+            "rounded-[28px]",
+            // Light: espresso; Dark: elevated warm-dark step UP from #0D0A09 canvas
+            // (was surface-1 #15110F — only a 5pt step, pane blended into the void)
+            "bg-lawdger-espresso dark:bg-[#2C2520]",
             "p-10 pr-16",
-            // Dark: surface-pane shadow (inset top-highlight + two-layer depth)
-            "shadow-xl dark:shadow-[inset_0_1px_0_rgba(244,238,230,0.02),0_8px_24px_-12px_rgba(0,0,0,0.45),0_24px_48px_-20px_rgba(0,0,0,0.55)]",
+            // Light: embossed shadow ramp (drop + contact + top-edge highlight)
+            // Dark: warm grounding shadow + top edge highlight for visible separation
+            "shadow-[0_16px_48px_-12px_rgba(20,14,10,0.18),0_2px_4px_rgba(20,14,10,0.08),inset_0_1px_0_rgba(255,240,220,0.04)]",
+            "dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,240,220,0.08)]",
             "h-full flex flex-col",
             "z-10 shrink-0",
-            // Dark: transparent border (edge-light comes from shadow inset, not border)
-            "border border-white/5 dark:border-transparent",
+            // Dark: hairline warm-cream border so the seam against canvas reads even
+            // when shadows fail (e.g. high-contrast OS settings)
+            "border border-white/5 dark:border-[rgba(255,240,220,0.04)]",
             "overflow-y-auto scrollbar-hide",
           ].join(" ")}
         >
