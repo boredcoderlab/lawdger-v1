@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Image from "next/image";
+import LawdgerLogo from "@/components/ui/LawdgerLogo";
 import {
   ChevronRight, Bell, Send, ChevronLeft, FileText, Download
 } from "lucide-react";
@@ -312,7 +312,7 @@ export default function DashboardClient({
           {/* Logo overlapping top edge */}
           <div className="absolute -top-[2.5rem] left-6 flex items-center justify-center w-[70px] h-[80px] shadow-[0_4px_18px_rgba(69,50,40,0.25)] z-30">
             <div className="relative w-full h-full">
-              <Image src="/lawdger-logo-transparent.png" alt="Lawdger Logo" fill sizes="70px" className="object-contain drop-shadow-lg" />
+              <LawdgerLogo fill sizes="70px" className="object-contain drop-shadow-lg" />
             </div>
           </div>
 

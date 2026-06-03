@@ -1,8 +1,8 @@
 "use client";
 
 import type { ElementType } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import LawdgerLogo from "@/components/ui/LawdgerLogo";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -51,9 +51,7 @@ export default function Sidebar() {
         href="/dashboard"
         className="w-12 h-12 bg-lawdger-base rounded-[14px] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.06)] mb-10 hover:scale-105 transition-transform duration-300 relative z-20"
       >
-        <Image
-          src="/lawdger-logo-transparent.png"
-          alt="Lawdger Logo"
+        <LawdgerLogo
           width={34}
           height={34}
           className="object-contain w-auto h-auto drop-shadow-md"
