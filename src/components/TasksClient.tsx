@@ -475,7 +475,7 @@ function KanbanColumn({
       <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 dark:border-[var(--border)] shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Icon className="w-3.5 h-3.5 text-lawdger-espresso/50 dark:text-foreground-secondary shrink-0" />
-          <h3 className="font-serif text-base lg:text-lg text-lawdger-espresso dark:text-foreground leading-tight">
+          <h3 className="font-serif font-bold text-lg lg:text-xl text-lawdger-espresso dark:text-foreground leading-tight tracking-tight">
             {label}
           </h3>
           <span className="chip chip-neutral text-xs font-sans font-medium shrink-0">
