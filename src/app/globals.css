@@ -299,14 +299,36 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
   background: var(--primary);
   color: var(--primary-foreground);
   font-weight: 600;
+  letter-spacing: 0.02em;
   border: 1px solid transparent;
   border-radius: 9999px;
-  transition: filter 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  transition: filter 180ms ease, transform 180ms ease, box-shadow 180ms ease, background-position 180ms ease;
   cursor: pointer;
 }
 .btn-gold:hover:not(:disabled) { filter: brightness(1.05); }
 .btn-gold:active:not(:disabled) { transform: translateY(1px); }
 .btn-gold:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Phase 4d-1 — Unified gold identity in light mode.
+   Was a flat espresso pill (var(--primary) = #291e16) that read as
+   "blackish" on the cream canvas. The dark mode .btn-gold already paints
+   a brushed-metal champagne ramp; light gets a simpler but unmistakably
+   gold gradient so primary CTAs share one luxury identity across modes.
+   :root:not(.dark) so the .dark override below still wins for dark. */
+:root:not(.dark) .btn-gold {
+  background: linear-gradient(180deg, #DDB849 0%, #D4AF37 50%, #C69A2E 100%);
+  color: #1F1812;
+  box-shadow:
+    0 4px 12px -2px rgba(212, 175, 55, 0.35),
+    0 1px 2px rgba(20, 14, 10, 0.12);
+}
+:root:not(.dark) .btn-gold:hover:not(:disabled) {
+  filter: none;
+  background-position: 0 -2px;
+  box-shadow:
+    0 6px 16px -2px rgba(212, 175, 55, 0.45),
+    0 2px 4px rgba(20, 14, 10, 0.16);
+}
 
 /* Phase 4c-3a — brushed-metal CTA.
    Bloom KILLED: gold-tinted halo replaced with grounding warm-black shadow.

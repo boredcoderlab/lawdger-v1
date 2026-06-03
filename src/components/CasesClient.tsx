@@ -326,7 +326,7 @@ function NewMatterDialog({
             <button
               type="submit"
               disabled={isPending}
-              className="flex-1 bg-lawdger-espresso text-lawdger-base px-7 py-3 rounded-xl text-[12px] uppercase tracking-widest font-bold hover:bg-lawdger-espresso/90 hover:shadow-[0_0_20px_rgba(212,175,55,0.25)] transition-all disabled:opacity-60"
+              className="btn-gold flex-1 px-7 py-3 rounded-xl text-[12px] uppercase tracking-widest font-bold disabled:opacity-60"
             >
               {isPending ? "Committing…" : "Commit to Registry"}
             </button>
