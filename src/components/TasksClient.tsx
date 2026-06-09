@@ -406,7 +406,7 @@ function UnassignedCard({
         {task.title}
       </div>
       <div className="mt-2 flex items-center gap-1.5">
-        <span className="inline-flex items-center bg-lawdger-cream/10 border border-lawdger-cream/15 text-lawdger-cream/50 text-xs font-medium px-2 py-0.5 rounded-full">
+        <span className="chip-on-dark is-meta">
           {task.caseName || "Untriaged"}
         </span>
         {task.priority === "urgent" && (
@@ -424,7 +424,7 @@ function UnassignedCardOverlay({ task }: { task: Task }) {
         {task.title}
       </div>
       <div className="mt-2">
-        <span className="inline-flex items-center bg-lawdger-cream/10 text-lawdger-cream/70 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+        <span className="chip-on-dark is-meta">
           {task.caseName || "Untriaged"}
         </span>
       </div>
@@ -475,7 +475,7 @@ function KanbanColumn({
       <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 dark:border-[var(--border)] shrink-0">
         <div className="flex items-center gap-2 min-w-0">
           <Icon className="w-3.5 h-3.5 text-lawdger-espresso/50 dark:text-foreground-secondary shrink-0" />
-          <h3 className="font-serif text-base lg:text-lg text-lawdger-espresso dark:text-foreground leading-tight">
+          <h3 className="font-serif font-bold text-lg lg:text-xl text-lawdger-espresso dark:text-foreground leading-tight tracking-tight">
             {label}
           </h3>
           <span className="chip chip-neutral text-xs font-sans font-medium shrink-0">
@@ -951,13 +951,13 @@ export default function TasksClient() {
 
             {/* Quick search */}
             <div className="relative shrink-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-lawdger-cream/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-lawdger-cream/40 dark:text-foreground/40" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search tasks…"
-                className="w-full bg-lawdger-cream/8 border border-lawdger-cream/12 rounded-xl pl-9 pr-3 py-2.5 text-[12.5px] text-lawdger-cream placeholder:text-lawdger-cream/30 focus:outline-none focus:border-lawdger-gold/40 transition-colors"
+                className="w-full bg-lawdger-cream/8 dark:bg-white/8 border border-lawdger-cream/12 dark:border-white/15 rounded-xl pl-9 pr-3 py-2.5 text-[12.5px] text-lawdger-cream dark:text-foreground placeholder:text-lawdger-cream/30 dark:placeholder:text-foreground/40 focus:outline-none focus:border-lawdger-gold/40 transition-colors"
               />
             </div>
 

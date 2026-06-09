@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+/* ================================================================
+   TAILWIND v4 — class-based dark mode
+   ----------------------------------------------------------------
+   next-themes manages `.dark` on <html>. Tailwind v4's default
+   `dark:` variant fires from `@media (prefers-color-scheme: dark)`,
+   which decouples utility classes from the class-scoped CSS tokens
+   in :root / .dark above. Result: when the user's OS prefers dark
+   but they set the app to light (or vice versa), `dark:` utilities
+   fire against the wrong token set — e.g. `text-lawdger-cream
+   dark:text-foreground` on the espresso pane resolved to
+   `var(--foreground)` = #291e16 in light tokens, painting espresso
+   headings invisible on the espresso pane.
+
+   Redefine `dark` as a class-based variant so it ONLY fires when
+   `.dark` is on <html>, keeping every `dark:*` utility in lockstep
+   with the CSS-var theme.
+   ================================================================ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   color-scheme: light;
   --background: #e3d5c8;
@@ -280,14 +299,36 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
   background: var(--primary);
   color: var(--primary-foreground);
   font-weight: 600;
+  letter-spacing: 0.02em;
   border: 1px solid transparent;
   border-radius: 9999px;
-  transition: filter 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+  transition: filter 180ms ease, transform 180ms ease, box-shadow 180ms ease, background-position 180ms ease;
   cursor: pointer;
 }
 .btn-gold:hover:not(:disabled) { filter: brightness(1.05); }
 .btn-gold:active:not(:disabled) { transform: translateY(1px); }
 .btn-gold:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Phase 4d-1 — Unified gold identity in light mode.
+   Was a flat espresso pill (var(--primary) = #291e16) that read as
+   "blackish" on the cream canvas. The dark mode .btn-gold already paints
+   a brushed-metal champagne ramp; light gets a simpler but unmistakably
+   gold gradient so primary CTAs share one luxury identity across modes.
+   :root:not(.dark) so the .dark override below still wins for dark. */
+:root:not(.dark) .btn-gold {
+  background: linear-gradient(180deg, #DDB849 0%, #D4AF37 50%, #C69A2E 100%);
+  color: #1F1812;
+  box-shadow:
+    0 4px 12px -2px rgba(212, 175, 55, 0.35),
+    0 1px 2px rgba(20, 14, 10, 0.12);
+}
+:root:not(.dark) .btn-gold:hover:not(:disabled) {
+  filter: none;
+  background-position: 0 -2px;
+  box-shadow:
+    0 6px 16px -2px rgba(212, 175, 55, 0.45),
+    0 2px 4px rgba(20, 14, 10, 0.16);
+}
 
 /* Phase 4c-3a — brushed-metal CTA.
    Bloom KILLED: gold-tinted halo replaced with grounding warm-black shadow.
@@ -447,6 +488,40 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
 :root:not(.dark) .chip-warning   { color: #7A6020; border-color: rgba(122, 96, 32, 0.22); }
 :root:not(.dark) .chip-success   { color: #2F6A47; border-color: rgba(47, 106, 71, 0.22); }
 :root:not(.dark) .chip-neutral   { background: rgba(41, 30, 22, 0.05); color: var(--foreground-secondary); border-color: var(--border); }
+
+/* Phase 4d-1 — chips that ALWAYS sit on a dark surface (left espresso pane,
+   dashboard Active Cases block) in both modes. lawdger-cream/lawdger-espresso
+   tokens flip with mode, so chips hard-coded with those classes go invisible
+   in dark. .chip-on-dark hard-codes warm-cream alpha values that read on any
+   dark surface regardless of theme. Pair with .is-attention for the gold
+   accent (e.g. "Awaiting Verdict"). */
+.chip-on-dark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  background: rgba(252, 250, 248, 0.10);
+  color: rgba(252, 250, 248, 0.85);
+  border: 1px solid rgba(252, 250, 248, 0.16);
+}
+.chip-on-dark.is-attention {
+  background: rgba(212, 175, 55, 0.18);
+  color: #E6CC78;
+  border-color: rgba(212, 175, 55, 0.40);
+}
+.chip-on-dark.is-meta {
+  /* Tighter metadata chip: file sizes, "Untriaged", small counts. */
+  font-size: 0.625rem;
+  padding: 0.0625rem 0.5rem;
+  background: rgba(252, 250, 248, 0.08);
+  color: rgba(252, 250, 248, 0.72);
+  border-color: rgba(252, 250, 248, 0.12);
+}
 
 /* ================================================================
    PHASE 4c-3a — APP ATMOSPHERE (dark-only)
@@ -666,9 +741,15 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
 /* ================================================================
    PHASE 4d — ELEVATION APPLICATION UTILITIES
    ----------------------------------------------------------------
-   .surface-inner  — surface-3 background for item cards nested
-                     inside a .surface-card / right content pane.
-                     Provides the third step in the elevation ramp.
+   .surface-inner  — dark-only: surface-3 background for item cards
+                     nested inside a .surface-card / right content pane.
+                     Provides the third step in the dark elevation ramp.
+                     In light mode this class is a zero-op so the
+                     component's own bg-white / bg-lawdger-cream/* wins
+                     (Tailwind v4 utilities live in @layer utilities;
+                     an unlayered base rule here would override them
+                     and stamp the dark-only #e3d8c6 surface-3 colour
+                     onto every cream pane in light mode).
 
    .elevation-card — dark-only: applies the full .dark .surface-card
                      treatment (edge-light border + deep shadow) to
@@ -678,14 +759,10 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
                      existing cream/glass treatment is disturbed.
    ================================================================ */
 
-/* ── Surface-3 inner-card ──────────────────────────────────────── */
-.surface-inner {
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-}
+/* ── Surface-3 inner-card (dark only) ──────────────────────────── */
 .dark .surface-inner {
   background: var(--surface-3);
-  border-color: rgba(244, 238, 230, 0.06);
+  border: 1px solid rgba(244, 238, 230, 0.06);
 }
 
 /* ── Elevation-card (dark only) ─────────────────────────────────── */

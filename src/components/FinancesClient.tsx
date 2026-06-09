@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { IndianRupee, AlertCircle, Plus, Receipt, History, Send, X, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { createPayment, updateCaseAgreedFee, deletePayment } from "@/actions/financeActions";
-import { PageLayout, DarkPaneHeaderTitle, ContentHeading, DashboardLink } from "@/components/ui/LayoutShell";
+import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 import { format } from "date-fns";
 
 type Payment = { id: string; amount: number; status: string; dueDate: Date | null; createdAt: Date };
@@ -31,8 +31,6 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
   const totalReceived = cases.reduce((s, c) =>
     s + c.payments.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount, 0), 0);
   const totalBalance = totalExpected - totalReceived;
-
-  const collectionRate = totalExpected > 0 ? Math.round((totalReceived / totalExpected) * 100) : 0;
 
   const forgottenDues = cases.filter((c) => {
     const balance = (c.agreedFee ?? 0) - c.payments.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount, 0);
@@ -65,7 +63,6 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
     <>
       <PageLayout
         pageTitle="Finances"
-        backToDashboard={true}
         headerAction={
           <button onClick={() => setModalCaseId(cases[0]?.id ?? null)}
             className="btn-gold flex items-center gap-2 px-7 py-3 rounded-full font-bold tracking-widest uppercase text-[12px]">
@@ -92,17 +89,6 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                   <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-1">Outstanding</p>
                   <h3 className="font-serif text-[1.4rem] font-bold text-red-400">{fmt(Math.max(0, totalBalance))}</h3>
                 </div>
-              </div>
-            </div>
-
-            {/* Collection Rate Progress Bar */}
-            <div className="mb-8 bg-black/20 dark:bg-card/80 rounded-[2rem] p-6 shadow-inner border border-white/5">
-              <div className="flex justify-between items-end mb-3">
-                <span className="text-[12px] font-bold uppercase tracking-widest text-lawdger-cream/70 dark:text-foreground-secondary">Collection Rate</span>
-                <span className="text-[18px] font-bold text-lawdger-cream dark:text-white">{collectionRate}%</span>
-              </div>
-              <div className="h-2 w-full bg-white/40 rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full transition-all duration-1000" style={{ width: `${collectionRate}%` }} />
               </div>
             </div>
 

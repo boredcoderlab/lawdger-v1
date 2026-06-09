@@ -172,15 +172,17 @@ export default function SettingsClient({
       }
       darkPaneContent={
         <>
-          {/* Profile Overview Card */}
-          <div className="bg-lawdger-sidebar/80 dark:bg-[var(--surface-2)] rounded-[1.5rem] p-5 mb-10 border border-lawdger-cream/10 dark:border-[var(--border)] shadow-inner shrink-0">
+          {/* Profile Overview Card — raised cream-on-espresso tile (light) /
+              step-up surface (dark). bg-lawdger-sidebar (#15110F both modes)
+              was reading as a black blob on the espresso pane in light. */}
+          <div className="bg-[var(--card)] dark:bg-[#3A322C] rounded-[1.5rem] p-5 mb-10 border border-lawdger-cream/30 dark:border-[rgba(255,240,220,0.06)] shadow-[0_4px_12px_-2px_rgba(20,14,10,0.18),inset_0_1px_0_rgba(255,255,255,0.5)] dark:shadow-[0_4px_12px_-2px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,240,220,0.06)] shrink-0">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-[var(--surface-3)] border border-[rgba(212,175,55,0.35)] flex items-center justify-center text-[var(--gold-text)] font-serif text-xl font-bold">
+              <div className="w-12 h-12 rounded-full bg-[var(--gold)] border border-[var(--gold-deep)] flex items-center justify-center text-lawdger-espresso dark:text-[var(--gold-ink)] font-serif text-xl font-bold shadow-[0_2px_8px_rgba(212,175,55,0.35)]">
                 {name ? name.charAt(0) : "U"}
               </div>
               <div>
-                <h3 className="font-bold text-[15px] text-lawdger-cream dark:text-foreground">{name || "User Name"}</h3>
-                <p className="text-[12px] font-medium text-lawdger-cream/50 dark:text-foreground-secondary">{email}</p>
+                <h3 className="font-bold text-[15px] text-lawdger-espresso dark:text-foreground">{name || "User Name"}</h3>
+                <p className="text-[12px] font-medium text-lawdger-espresso/60 dark:text-foreground-secondary">{email}</p>
               </div>
             </div>
           </div>

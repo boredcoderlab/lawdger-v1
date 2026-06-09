@@ -86,7 +86,7 @@ export default function InboxClient({ initialDocuments, userName }: { initialDoc
                     <div className="min-w-0 pr-4">
                       <h4 className="text-[15px] font-bold text-foreground truncate">{doc.title}</h4>
                       <div className="flex items-center gap-2 mt-1">
-                          <span className="px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/40 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{doc.size}</span>
+                          <span className="px-2 py-0.5 rounded-md bg-black/5 dark:bg-[rgba(252,250,248,0.10)] border border-transparent dark:border-[rgba(252,250,248,0.16)] text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:text-[rgba(252,250,248,0.80)]">{doc.size}</span>
                           <span className="text-[12px] text-muted-foreground">• {doc.time}</span>
                       </div>
                     </div>

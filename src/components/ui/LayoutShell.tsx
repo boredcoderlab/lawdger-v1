@@ -115,33 +115,35 @@ export function PageLayout(props: PageLayoutProps) {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="relative flex flex-col flex-1 px-8 pt-3 pb-8 lg:px-12 lg:pt-4 lg:pb-12 min-h-screen bg-lawdger-base text-foreground font-sans z-0">
+    <div className="relative flex flex-col flex-1 px-8 pt-1 pb-8 lg:px-12 lg:pt-2 lg:pb-12 min-h-screen bg-lawdger-base text-foreground font-sans z-0">
 
       {/* Ambient background orb — warm espresso glow */}
       <div className="absolute top-[10%] left-[-5%] w-[60%] h-[70%] bg-primary/10 dark:bg-lawdger-gold/5 rounded-full blur-[140px] -z-10 pointer-events-none" />
 
-      {/* ── Page Header (Phase 3r: slim row, not a tall band) ────────────
-          Was: items-end + mb-10 → baseline-anchored band ~80px tall reserving
-               dead space for a lone action button.
-          Now: items-center + mb-4 + py-2 lg:py-3 + shrink-0 → slim CTA row that
-               only takes the button's natural height plus minimal vertical
-               padding. h1 stays suppressed (Header.tsx owns route title).
+      {/* ── Page Header (Phase 4d-1: even tighter than 3r) ────────────────
+          Hide the row entirely when there is no CTA and no back-link — an
+          empty flex row was still reserving ~28-32px on every page that did
+          not pass actionButton, producing the wasted gap below the global
+          Header strip. When the row IS rendered, padding is squeezed to the
+          button's natural height with a 4px mb-1 below it.
       */}
-      <div className="flex justify-between items-center mb-2 py-1 lg:py-2 z-10 shrink-0">
-        <div>
-          {backToDashboard && (
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ChevronLeft className="h-3 w-3" />
-              Back to Dashboard
-            </Link>
-          )}
-          {/* h1 suppressed — Header.tsx renders the route-aware page title */}
+      {(actionButton || backToDashboard) && (
+        <div className="flex justify-between items-center mb-1 py-0 z-10 shrink-0">
+          <div>
+            {backToDashboard && (
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronLeft className="h-3 w-3" />
+                Back to Dashboard
+              </Link>
+            )}
+            {/* h1 suppressed — Header.tsx renders the route-aware page title */}
+          </div>
+          {actionButton && <div>{actionButton}</div>}
         </div>
-        {actionButton && <div>{actionButton}</div>}
-      </div>
+      )}
 
       {/* ── OVERLAPPING PANES ───────────────────────────────────────────── */}
       {/*
@@ -154,7 +156,7 @@ export function PageLayout(props: PageLayoutProps) {
         the cream pane's inner overflow-y-auto on long pages (e.g. /calendar).
         min-h-[600px] guards small viewports.
       */}
-      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto h-[calc(100vh-12.5rem)] min-h-[600px]">
+      <div className="relative lg:w-[98%] xl:w-[95%] flex z-20 mx-auto h-[calc(100vh-10.5rem)] min-h-[600px]">
 
         {/* ── LEFT DARK PANE (Espresso Gradient) ─────────────────────────
             w-[42%] / lg:w-[38%]
@@ -164,16 +166,21 @@ export function PageLayout(props: PageLayoutProps) {
         <div
           className={[
             "w-[35%]",
-            "rounded-3xl",
-            // Light: espresso; Dark: surface-1 (4d elevation ramp — pane is the lowest raised layer)
-            "bg-lawdger-espresso dark:bg-[#15110F]",
+            // Phase 4d-1: radius bump (24 → 28) reads as embossed leather not stamped tile
+            "rounded-[28px]",
+            // Light: espresso; Dark: elevated warm-dark step UP from #0D0A09 canvas
+            // (was surface-1 #15110F — only a 5pt step, pane blended into the void)
+            "bg-lawdger-espresso dark:bg-[#2C2520]",
             "p-10 pr-16",
-            // Dark: surface-pane shadow (inset top-highlight + two-layer depth)
-            "shadow-xl dark:shadow-[inset_0_1px_0_rgba(244,238,230,0.02),0_8px_24px_-12px_rgba(0,0,0,0.45),0_24px_48px_-20px_rgba(0,0,0,0.55)]",
+            // Light: embossed shadow ramp (drop + contact + top-edge highlight)
+            // Dark: warm grounding shadow + top edge highlight for visible separation
+            "shadow-[0_16px_48px_-12px_rgba(20,14,10,0.18),0_2px_4px_rgba(20,14,10,0.08),inset_0_1px_0_rgba(255,240,220,0.04)]",
+            "dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,240,220,0.08)]",
             "h-full flex flex-col",
             "z-10 shrink-0",
-            // Dark: transparent border (edge-light comes from shadow inset, not border)
-            "border border-white/5 dark:border-transparent",
+            // Dark: hairline warm-cream border so the seam against canvas reads even
+            // when shadows fail (e.g. high-contrast OS settings)
+            "border border-white/5 dark:border-[rgba(255,240,220,0.04)]",
             "overflow-y-auto scrollbar-hide",
           ].join(" ")}
         >

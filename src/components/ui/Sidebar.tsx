@@ -1,8 +1,8 @@
 "use client";
 
 import type { ElementType } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import LawdgerLogo from "@/components/ui/LawdgerLogo";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -44,16 +44,14 @@ export default function Sidebar() {
   );
 
   return (
-    <aside className="w-24 h-[calc(100vh-3rem)] bg-lawdger-espresso rounded-[2.5rem] flex flex-col items-center py-6 relative z-50 shadow-[0_20px_60px_rgba(44,36,32,0.12)] border border-white/5 my-6 ml-6 shrink-0">
+    <aside className="w-24 h-[calc(100vh-3rem)] bg-lawdger-espresso dark:bg-[#2C2520] rounded-[2.5rem] flex flex-col items-center py-6 relative z-50 shadow-[0_20px_60px_rgba(44,36,32,0.12)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)] border border-white/5 dark:border-[rgba(255,240,220,0.04)] my-6 ml-6 shrink-0">
 
       {/* Brand Anchor */}
       <Link
         href="/dashboard"
         className="w-12 h-12 bg-lawdger-base rounded-[14px] flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.4),inset_0_2px_4px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.6),inset_0_1px_2px_rgba(255,255,255,0.06)] mb-10 hover:scale-105 transition-transform duration-300 relative z-20"
       >
-        <Image
-          src="/lawdger-logo-transparent.png"
-          alt="Lawdger Logo"
+        <LawdgerLogo
           width={34}
           height={34}
           className="object-contain w-auto h-auto drop-shadow-md"
