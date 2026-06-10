@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-09
+**Last updated:** 2026-06-10
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -126,6 +126,25 @@ USING (current_setting('app.current_user_id', true)::text = "userId"::text)
 The scoped Prisma client sets `SET LOCAL app.current_user_id = '<userId>'`
 before each user-scoped query.
 
+### Case model — enums and key fields
+
+**`CaseStatus`** (enum): `ACTIVE` | `CLOSED`. Default `ACTIVE`. Replaces the former string `status` field.
+
+**`MatterType`** (enum): `LITIGATION` | `ADVISORY` | `PRE_LITIGATION`. Default `LITIGATION`.
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `status` | `CaseStatus` | `ACTIVE \| CLOSED`; default `ACTIVE` |
+| `matterType` | `MatterType` | `LITIGATION \| ADVISORY \| PRE_LITIGATION`; default `LITIGATION` |
+| `court` | `String?` | Free-text court name |
+| `caseNumber` | `String?` | Court-assigned case number |
+| `caseType` | `String?` | String: CIVIL \| CRIMINAL \| WRIT \| APPEAL \| COMMERCIAL \| FAMILY \| ARBITRATION \| OTHER |
+| `nextHearingDate` | `DateTime?` | |
+| `filingDate` | `DateTime?` | |
+| `actsSections` | `String?` | Pipe-delimited relevant acts/sections |
+| `firNumber` | `String?` | For criminal matters |
+| `policeStation` | `String?` | For criminal matters |
+
 ### Migration history
 
 | Migration | Date | Purpose |
@@ -133,6 +152,7 @@ before each user-scoped query.
 | `0_init` | 2026-05-26 | Baseline schema (User, Case, Note, Task, CalendarEvent, Payment) |
 | `20260527051415_add_documents_litigation_rls` | 2026-05-27 | Document model, Indian litigation fields on Case, RLS on 6 matter tables |
 | `20260609030200_enable_rls_user_and_migrations` | 2026-06-09 | RLS on User + _prisma_migrations (default deny) |
+| `20260609113647_phase_3_1_schema_cleanup` | 2026-06-09 | `CaseStatus` enum (ACTIVE \| CLOSED), `MatterType` enum (LITIGATION \| ADVISORY \| PRE_LITIGATION), `caseNumber` field; drop legacy string fields (courtName, forum, matterId) |
 
 ---
 
