@@ -10,26 +10,19 @@ export const CASE_TYPES = [
 ] as const;
 export type CaseType = (typeof CASE_TYPES)[number];
 
-export const CASE_STATUSES = [
-  "active",
-  "pending",
-  "closed",
-  "urgent",
-  "dormant",
-] as const;
-export type CaseStatus = (typeof CASE_STATUSES)[number];
+// Status domain now lives in Prisma enum (CaseStatus = ACTIVE | CLOSED).
+// Re-exported so app-layer call sites have one canonical import.
+export type { CaseStatus } from "@prisma/client";
+import type { CaseStatus } from "@prisma/client";
 
 export type CaseRecord = {
   id: string;
   userId: string;
   title: string;
   clientName: string | null;
-  courtName: string | null;
-  matterId: string | null;
-  forum: string | null;
   court: string | null;
   caseType: string | null;
-  status: string;
+  status: CaseStatus;
   nextHearingDate: Date | null;
   description: string | null;
   createdAt: Date;

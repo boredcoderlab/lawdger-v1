@@ -13,6 +13,7 @@ import {
   createNote,
   type NoteCategory,
 } from "@/actions/caseActions";
+import type { CaseStatus } from "@prisma/client";
 import {
   getTasks,
   createTask,
@@ -454,7 +455,9 @@ async function executeTool(
       return { result: "Hearing updated.", action: `✅ Updated hearing` };
     }
     case "update_case_status": {
-      await updateCaseStatus(args.caseId, args.status);
+      // LLM tool schema still emits lowercase legacy values; map to enum domain.
+      // Tool spec realignment owned by phase 3.2.
+      await updateCaseStatus(args.caseId, args.status.toUpperCase() as CaseStatus);
       return {
         result: "Case status updated.",
         action: `✅ Case marked as ${args.status}`,

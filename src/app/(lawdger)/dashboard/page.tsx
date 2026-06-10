@@ -39,7 +39,7 @@ export default async function DashboardPage() {
       prisma.case.findMany({
         where: { userId },
         orderBy: { updatedAt: "desc" },
-        select: { id: true, title: true, clientName: true, courtName: true, status: true },
+        select: { id: true, title: true, clientName: true, status: true },
       }),
       prisma.case.count({ where: { userId } }),
       prisma.task.count({ where: { userId, status: "pending" } }),

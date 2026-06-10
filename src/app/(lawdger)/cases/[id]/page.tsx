@@ -89,11 +89,11 @@ export default async function CaseDetail({
               {caseData.clientName && (
                 <span className="text-sm text-muted-foreground font-light">{caseData.clientName}</span>
               )}
-              {caseData.clientName && caseData.courtName && (
+              {caseData.clientName && caseData.court && (
                 <span className="text-muted-foreground/30">·</span>
               )}
-              {caseData.courtName && (
-                <span className="text-sm text-muted-foreground font-light">{caseData.courtName}</span>
+              {caseData.court && (
+                <span className="text-sm text-muted-foreground font-light">{caseData.court}</span>
               )}
             </div>
           </div>
@@ -273,7 +273,7 @@ export default async function CaseDetail({
               caseId={caseData.id}
               initialTitle={caseData.title}
               initialClientName={caseData.clientName}
-              initialCourtName={caseData.courtName}
+              initialCourtName={caseData.court}
               initialAgreedFee={caseData.agreedFee}
               initialStatus={caseData.status}
               initialTasks={caseData.tasks}

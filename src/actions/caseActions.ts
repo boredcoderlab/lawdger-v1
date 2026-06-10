@@ -2,6 +2,7 @@
 
 import { requireUserId } from "@/actions/requireUserId";
 import { prisma } from "@/lib/prisma";
+import type { CaseStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 async function assertCaseAccess(caseId: string, userId: string) {
@@ -44,6 +45,7 @@ export async function getCaseById(id: string) {
 export async function createCase(data: {
   title: string;
   clientName?: string;
+  /** Caller-facing field name kept as `courtName` for compatibility; persisted to `court`. */
   courtName?: string;
   agreedFee?: number;
 }) {
@@ -54,8 +56,10 @@ export async function createCase(data: {
       userId,
       title: data.title,
       clientName: data.clientName ?? null,
-      courtName: data.courtName ?? null,
-      status: "active",
+      // Param name `courtName` preserved at the boundary for caller compatibility,
+      // but persisted to the surviving `court` column.
+      court: data.courtName ?? null,
+      status: "ACTIVE",
     },
   });
   revalidatePath("/cases");
@@ -68,7 +72,7 @@ export async function updateCaseDetails(
     clientName?: string | null;
     courtName?: string | null;
     agreedFee?: number | null;
-    status?: string;
+    status?: CaseStatus;
   }
 ) {
   const userId = await requireUserId();
@@ -78,7 +82,8 @@ export async function updateCaseDetails(
     data: {
       ...(data.title !== undefined && { title: data.title }),
       ...(data.clientName !== undefined && { clientName: data.clientName }),
-      ...(data.courtName !== undefined && { courtName: data.courtName }),
+      // Param `courtName` writes to surviving `court` column.
+      ...(data.courtName !== undefined && { court: data.courtName }),
       ...(data.status !== undefined && { status: data.status }),
     },
   });
@@ -89,7 +94,7 @@ export async function updateCaseDetails(
   revalidatePath("/cases");
 }
 
-export async function updateCaseStatus(id: string, status: string) {
+export async function updateCaseStatus(id: string, status: CaseStatus) {
   const userId = await requireUserId();
 
   const result = await prisma.case.updateMany({

@@ -82,7 +82,7 @@ export async function deleteCalendarEvent(id: string) {
 export async function getCasesForSelect() {
   const userId = await requireUserId();
   return prisma.case.findMany({
-    where: { userId, status: "active" },
+    where: { userId, status: "ACTIVE" },
     select: { id: true, title: true },
     orderBy: { title: "asc" },
   });

@@ -16,6 +16,7 @@ import {
   createCaseTask, toggleCaseTaskStatus, deleteCaseTask,
   createNote, updateCaseDetails,
 } from "@/actions/caseActions";
+import type { CaseStatus } from "@prisma/client";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -84,7 +85,10 @@ export default function CaseDetailClient({
       clientName: info.clientName || null,
       courtName:  info.courtName  || null,
       agreedFee:  info.agreedFee ? parseFloat(info.agreedFee) : null,
-      status:     info.status,
+      // Local UI status is lowercase ("active" | "inactive" | "closed"); the
+      // Prisma enum domain is uppercase (ACTIVE | CLOSED). Phase 3.5 will
+      // redesign the status picker against the enum directly.
+      status:     info.status.toUpperCase() as CaseStatus,
     });
     setIsEditing(false);
     setSaving(false);
