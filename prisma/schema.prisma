@@ -8,6 +8,17 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum CaseStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum MatterType {
+  LITIGATION
+  ADVISORY
+  PRE_LITIGATION
+}
+
 model User {
   id             String          @id @default(uuid())
   email          String          @unique
@@ -25,19 +36,18 @@ model User {
 }
 
 model Case {
-  id         String  @id @default(uuid())
+  id         String     @id @default(uuid())
   userId     String
   title      String
   clientName String?
-  courtName  String?
   agreedFee  Float?
-  status     String  @default("active") // active, pending, closed, urgent, dormant
+  status     CaseStatus @default(ACTIVE)
 
   // Path B additive fields — Case Registry expansion
-  matterId        String?
-  forum           String?
   court           String?
+  caseNumber      String?
   caseType        String? // CIVIL | CRIMINAL | WRIT | APPEAL | COMMERCIAL | FAMILY | ARBITRATION | OTHER
+  matterType      MatterType @default(LITIGATION)
   nextHearingDate DateTime?
   description     String?
 

@@ -37,7 +37,7 @@ export async function POST() {
           userId: user.id,
           title: "Sharma v. State",
           clientName: "Rajeev Sharma",
-          courtName: "High Court",
+          court: "High Court",
         }
       });
     }

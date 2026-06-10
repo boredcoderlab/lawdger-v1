@@ -44,7 +44,7 @@ async function ensureFixtures(userId: string, prefix: "A" | "B") {
           userId,
           title,
           clientName: `${prefix}-Client`,
-          status: "active",
+          status: "ACTIVE",
         },
       }))
 

@@ -35,10 +35,10 @@ export async function getDashboardData() {
     }),
     prisma.case.findMany({
       where: { userId },
-      select: { id: true, title: true, clientName: true, courtName: true, status: true },
+      select: { id: true, title: true, clientName: true, status: true },
       orderBy: { updatedAt: "desc" },
     }),
-    prisma.case.count({ where: { userId, status: "active" } }),
+    prisma.case.count({ where: { userId, status: "ACTIVE" } }),
     prisma.task.count({ where: { userId, status: "pending" } }),
   ]);
 

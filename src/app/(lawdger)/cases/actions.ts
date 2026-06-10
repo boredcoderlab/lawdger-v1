@@ -39,11 +39,11 @@ export async function createCase(
         userId: session.user.id,
         title: parsed.data.title,
         clientName: parsed.data.clientName,
-        matterId: parsed.data.matterId || null,
-        forum: parsed.data.forum,
+        // matterId + forum dropped at the schema level in phase 3.1 — Zod still
+        // accepts them from the dialog but they no longer persist. New fields
+        // (caseNumber, matterType) are intentionally not wired here yet; phase
+        // 3.4 owns the dialog rewrite.
         court: parsed.data.court,
-        // Mirror to legacy field so CaseDetailClient keeps rendering
-        courtName: parsed.data.court,
         caseType: parsed.data.caseType,
         nextHearingDate: parsed.data.nextHearingDate
           ? new Date(parsed.data.nextHearingDate)
@@ -84,12 +84,15 @@ export async function getCaseCounts(): Promise<{
   }
 
   const userId = session.user.id;
-  const [total, active, pending, closed] = await Promise.all([
+  const [total, active, closed] = await Promise.all([
     prisma.case.count({ where: { userId } }),
-    prisma.case.count({ where: { userId, status: "active" } }),
-    prisma.case.count({ where: { userId, status: "pending" } }),
-    prisma.case.count({ where: { userId, status: "closed" } }),
+    prisma.case.count({ where: { userId, status: "ACTIVE" } }),
+    prisma.case.count({ where: { userId, status: "CLOSED" } }),
   ]);
+  // The new CaseStatus enum has no `pending` value, but the UI tab strip in
+  // CasesClient still expects this shape. Returning 0 keeps the tab visible
+  // and always-empty until phase 3.3 reduces the UI to two tabs.
+  const pending = 0;
 
   return { total, active, pending, closed };
 }

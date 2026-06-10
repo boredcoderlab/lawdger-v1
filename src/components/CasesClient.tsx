@@ -411,8 +411,11 @@ function FormSelect({
 // ── Case Tile ─────────────────────────────────────────────────────────────────
 
 function CaseTile({ c }: { c: CaseRecord }) {
-  const forumDisplay = c.forum ?? "—";
-  const courtDisplay = c.court ?? c.courtName ?? "—";
+  // `forum` and legacy `courtName` were dropped from the schema in phase 3.1.
+  // Tile still renders the "Forum / Court" slot for layout stability — forum
+  // shows a dash until the UI is restructured in phase 3.3/3.4.
+  const forumDisplay = "—";
+  const courtDisplay = c.court ?? "—";
   const typeLabel = c.caseType
     ? CASE_TYPE_LABEL[c.caseType as CaseType] ?? c.caseType
     : null;
@@ -451,7 +454,8 @@ function CaseTile({ c }: { c: CaseRecord }) {
               <Hash className="w-2.5 h-2.5" /> Matter ID
             </p>
             <p className="text-[12px] font-semibold text-lawdger-espresso dark:text-foreground truncate">
-              {c.matterId ?? <span className="text-lawdger-muted/70">—</span>}
+              {/* matterId column dropped in phase 3.1; caseNumber wiring is phase 3.4 */}
+              <span className="text-lawdger-muted/70">—</span>
             </p>
           </div>
           <div className="rounded-lg bg-lawdger-base/60 border border-lawdger-gold/10 px-3 py-2.5">

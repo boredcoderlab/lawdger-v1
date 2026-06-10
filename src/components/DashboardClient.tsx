@@ -28,7 +28,6 @@ type CaseItem = {
   id: string;
   title: string;
   clientName: string | null;
-  courtName: string | null;
   status: string;
 };
 
