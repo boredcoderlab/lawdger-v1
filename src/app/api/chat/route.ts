@@ -6,13 +6,12 @@ import type { LLMMessage, LLMTool } from "@/lib/llm/types";
 // ── Server actions used as tools ──────────────────────────────────────────────
 import { getDashboardData } from "@/actions/dashboardActions";
 import {
-  getCases,
-  getCaseById,
+  listCases,
+  getCase,
   createCase,
   updateCaseStatus,
-  createNote,
-  type NoteCategory,
 } from "@/actions/caseActions";
+import { createNote, type NoteCategory } from "@/actions/noteActions";
 import type { CaseStatus } from "@prisma/client";
 import {
   getTasks,
@@ -51,7 +50,7 @@ const TOOLS: LLMTool[] = [
       properties: {
         status: {
           type: "string",
-          enum: ["active", "inactive", "closed"],
+          enum: ["ACTIVE", "CLOSED"],
           description: "Filter by case status (optional).",
         },
       },
@@ -99,7 +98,7 @@ const TOOLS: LLMTool[] = [
       properties: {
         title: { type: "string", description: "Case title, e.g. 'Sharma v. State'." },
         clientName: { type: "string", description: "Name of the client (optional)." },
-        courtName: { type: "string", description: "Name of the court or forum (optional)." },
+        court: { type: "string", description: "Name of the court or forum (optional)." },
         agreedFee: { type: "number", description: "Agreed professional fee in INR (optional)." },
       },
       required: ["title"],
@@ -240,7 +239,7 @@ const TOOLS: LLMTool[] = [
       type: "object",
       properties: {
         caseId: { type: "string", description: "Case ID." },
-        status: { type: "string", enum: ["active", "inactive", "closed"] },
+        status: { type: "string", enum: ["ACTIVE", "CLOSED"] },
       },
       required: ["caseId", "status"],
     },
@@ -328,7 +327,7 @@ async function executeTool(
   const args = rawArgs as {
     title: string;
     clientName: string;
-    courtName: string;
+    court: string;
     agreedFee: number;
     description: string;
     caseId: string;
@@ -347,15 +346,16 @@ async function executeTool(
       return { result: JSON.stringify(data) };
     }
     case "get_cases": {
-      const cases = await getCases();
-      const filtered = args.status
-        ? cases.filter((c) => c.status === args.status)
-        : cases;
-      return { result: JSON.stringify(filtered) };
+      const result = await listCases(
+        args.status ? { status: args.status as CaseStatus } : undefined,
+      );
+      if (!result.ok) return { result: result.error };
+      return { result: JSON.stringify(result.data.items) };
     }
     case "get_case_detail": {
-      const c = await getCaseById(args.caseId);
-      return { result: JSON.stringify(c) };
+      const result = await getCase(args.caseId);
+      if (!result.ok) return { result: result.error };
+      return { result: JSON.stringify(result.data) };
     }
     case "get_tasks": {
       const tasks = await getTasks();
@@ -371,9 +371,10 @@ async function executeTool(
     }
     case "create_case": {
       // Server-side dedup guard — prevents the agent from creating a near-duplicate case.
-      const existing = await getCases();
+      const existingResult = await listCases({ take: 200 });
+      if (!existingResult.ok) return { result: existingResult.error };
       const incomingNorm = normalizeCaseTitle(args.title);
-      const match = existing.find((c) => {
+      const match = existingResult.data.items.find((c) => {
         const existingNorm = normalizeCaseTitle(c.title);
         return existingNorm === incomingNorm || similarity(existingNorm, incomingNorm) >= 0.82;
       });
@@ -382,12 +383,17 @@ async function executeTool(
           result: `A similar case already exists: title="${match.title}", id="${match.id}". Use this existing case ID instead — do NOT create a duplicate. If the user wanted a hearing, task, or note for this case, call create_hearing/create_task/create_note with caseId="${match.id}".`,
         };
       }
-      await createCase({
+      // Tool surface kept narrow per phase 3.2 plan; caseType defaults to
+      // "OTHER" since the LLM tool spec doesn't capture it. 3.3 will widen
+      // the tool surface alongside the New Matter dialog rewrite.
+      const created = await createCase({
         title: args.title,
         clientName: args.clientName,
-        courtName: args.courtName,
+        court: args.court,
         agreedFee: args.agreedFee,
+        caseType: "OTHER",
       });
+      if (!created.ok) return { result: created.error };
       return { result: "Case created.", action: `✅ Created case: ${args.title}` };
     }
     case "create_task": {
@@ -411,12 +417,13 @@ async function executeTool(
       };
     }
     case "create_note": {
-      await createNote({
+      const result = await createNote({
         caseId: args.caseId,
         cleanContent: args.cleanContent,
         category: args.category,
         source: "manual",
       });
+      if (!result.ok) return { result: result.error };
       return { result: "Note created.", action: `✅ Added note (${args.category})` };
     }
     case "create_payment": {
@@ -455,9 +462,8 @@ async function executeTool(
       return { result: "Hearing updated.", action: `✅ Updated hearing` };
     }
     case "update_case_status": {
-      // LLM tool schema still emits lowercase legacy values; map to enum domain.
-      // Tool spec realignment owned by phase 3.2.
-      await updateCaseStatus(args.caseId, args.status.toUpperCase() as CaseStatus);
+      const result = await updateCaseStatus(args.caseId, args.status as CaseStatus);
+      if (!result.ok) return { result: result.error };
       return {
         result: "Case status updated.",
         action: `✅ Case marked as ${args.status}`,

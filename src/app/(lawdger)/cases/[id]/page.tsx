@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Calendar, CheckSquare, Mic } from "lucide-react";
 import { format } from "date-fns";
-import { getCaseById } from "@/actions/caseActions";
+import { getCaseWithChildren } from "@/actions/caseActions";
 import CaseDetailClient from "@/components/CaseDetailClient";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -24,7 +24,9 @@ export default async function CaseDetail({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const caseData = await getCaseById(id);
+  const result = await getCaseWithChildren(id);
+  if (!result.ok) throw new Error(result.error);
+  const caseData = result.data;
   if (!caseData) notFound();
 
   const manualNotes  = caseData.notes;
