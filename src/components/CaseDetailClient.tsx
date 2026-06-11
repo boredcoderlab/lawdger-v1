@@ -12,10 +12,13 @@ import {
   subMonths, addMonths, startOfWeek, endOfWeek,
   startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, parse,
 } from "date-fns";
+import { updateCase, updateCaseStatus } from "@/actions/caseActions";
+import { createNote } from "@/actions/noteActions";
 import {
-  createCaseTask, toggleCaseTaskStatus, deleteCaseTask,
-  createNote, updateCaseDetails,
-} from "@/actions/caseActions";
+  createCaseTask,
+  deleteCaseTask,
+  toggleCaseTaskStatus,
+} from "@/actions/taskActions";
 import type { CaseStatus } from "@prisma/client";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
@@ -80,16 +83,17 @@ export default function CaseDetailClient({
 
   const handleSave = async () => {
     setSaving(true);
-    await updateCaseDetails(caseId, {
+    // TODO(3.3): drop "inactive" from STATUS_OPTIONS — updateCaseStatus
+    // Zod rejects it. Local UI status is lowercase ("active" | "closed");
+    // Prisma enum domain is uppercase. "inactive" has no enum home and
+    // will produce { ok: false } here. Phase 3.3 redesigns the picker.
+    await updateCase(caseId, {
       title:      info.title || undefined,
-      clientName: info.clientName || null,
-      courtName:  info.courtName  || null,
-      agreedFee:  info.agreedFee ? parseFloat(info.agreedFee) : null,
-      // Local UI status is lowercase ("active" | "inactive" | "closed"); the
-      // Prisma enum domain is uppercase (ACTIVE | CLOSED). Phase 3.5 will
-      // redesign the status picker against the enum directly.
-      status:     info.status.toUpperCase() as CaseStatus,
+      clientName: info.clientName || undefined,
+      court:      info.courtName || undefined,
+      agreedFee:  info.agreedFee ? parseFloat(info.agreedFee) : undefined,
     });
+    await updateCaseStatus(caseId, info.status.toUpperCase() as CaseStatus);
     setIsEditing(false);
     setSaving(false);
   };

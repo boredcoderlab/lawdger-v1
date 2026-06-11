@@ -1,8 +1,29 @@
 "use server";
 
+/**
+ * Mixed contract module.
+ *
+ * Functions added in phase 3.2 (createCaseTask, toggleCaseTaskStatus,
+ * deleteCaseTask) follow the 3.2 contract: Zod input, RLS-scoped Prisma
+ * via getServerScopedPrisma, defence-in-depth `where: { userId }`, and a
+ * Result<T> envelope.
+ *
+ * Pre-existing functions (getTasks, createTask, updateTask, updateTaskStatus,
+ * updateTaskAssignee, getTasksWithDueDate, deleteTask) still use bare
+ * `prisma` + `requireUserId` and throw on error. They are pending the
+ * post-3.3 sibling-uplift mini-phase (3.2.x) and are intentionally left
+ * untouched here to keep the 3.2 PR scoped.
+ */
+
 import { requireUserId } from "@/actions/requireUserId";
+import { getServerScopedPrisma, getServerUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+export type Result<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };
 
 export async function getTasks() {
   const userId = await requireUserId();
@@ -126,4 +147,109 @@ export async function deleteTask(id: string) {
   }
 
   revalidatePath("/tasks");
+}
+
+// ─── Phase 3.2 — case-scoped task actions (moved from caseActions.ts) ─────────
+
+const createCaseTaskSchema = z.object({
+  caseId: z.string().min(1, "caseId required"),
+  description: z.string().min(1, "Description required"),
+  dueDate: z.coerce.date().optional(),
+});
+
+export async function createCaseTask(input: {
+  caseId: string;
+  description: string;
+  dueDate?: Date;
+}): Promise<Result<{ id: string }>> {
+  const parsed = createCaseTaskSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const user = await getServerUser();
+  const db = await getServerScopedPrisma();
+
+  // Defence-in-depth: confirm parent case belongs to user.
+  const parent = await db.case.findFirst({
+    where: { id: parsed.data.caseId, userId: user.id },
+    select: { id: true },
+  });
+  if (!parent) return { ok: false, error: "Case not found" };
+
+  const task = await db.task.create({
+    data: {
+      userId: user.id,
+      caseId: parsed.data.caseId,
+      description: parsed.data.description,
+      dueDate: parsed.data.dueDate ?? null,
+      status: "pending",
+    },
+    select: { id: true },
+  });
+
+  revalidatePath(`/cases/${parsed.data.caseId}`);
+  revalidatePath("/tasks");
+  return { ok: true, data: { id: task.id } };
+}
+
+const toggleCaseTaskStatusSchema = z.object({
+  id: z.string().min(1, "Task id required"),
+  currentStatus: z.string().min(1),
+  caseId: z.string().min(1, "caseId required"),
+});
+
+export async function toggleCaseTaskStatus(
+  id: string,
+  currentStatus: string,
+  caseId: string,
+): Promise<Result<{ id: string; status: string }>> {
+  const parsed = toggleCaseTaskStatusSchema.safeParse({ id, currentStatus, caseId });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const user = await getServerUser();
+  const db = await getServerScopedPrisma();
+
+  const newStatus = parsed.data.currentStatus === "pending" ? "completed" : "pending";
+
+  const result = await db.task.updateMany({
+    where: { id: parsed.data.id, userId: user.id, caseId: parsed.data.caseId },
+    data: { status: newStatus },
+  });
+
+  if (!result.count) return { ok: false, error: "Task not found" };
+
+  revalidatePath(`/cases/${parsed.data.caseId}`);
+  revalidatePath("/tasks");
+  return { ok: true, data: { id: parsed.data.id, status: newStatus } };
+}
+
+const deleteCaseTaskSchema = z.object({
+  id: z.string().min(1, "Task id required"),
+  caseId: z.string().min(1, "caseId required"),
+});
+
+export async function deleteCaseTask(
+  id: string,
+  caseId: string,
+): Promise<Result<{ id: string }>> {
+  const parsed = deleteCaseTaskSchema.safeParse({ id, caseId });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const user = await getServerUser();
+  const db = await getServerScopedPrisma();
+
+  const result = await db.task.deleteMany({
+    where: { id: parsed.data.id, userId: user.id, caseId: parsed.data.caseId },
+  });
+
+  if (!result.count) return { ok: false, error: "Task not found" };
+
+  revalidatePath(`/cases/${parsed.data.caseId}`);
+  revalidatePath("/tasks");
+  return { ok: true, data: { id: parsed.data.id } };
 }

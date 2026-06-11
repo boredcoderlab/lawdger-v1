@@ -14,12 +14,11 @@ import {
   Hash,
   ArrowRight,
 } from "lucide-react";
-import { createCase } from "@/app/(lawdger)/cases/actions";
-import {
-  CASE_TYPES,
-  type CaseRecord,
-  type CaseType,
-} from "@/app/(lawdger)/cases/types";
+import { createCase } from "@/actions/caseActions";
+import { CASE_TYPES, type CaseType } from "@/lib/case-constants";
+// CaseRecord retired with cases/types.ts; the list view consumes the raw
+// Prisma Case shape now. 3.3 will swap this for a UI-tailored DTO.
+import type { Case as CaseRecord } from "@prisma/client";
 import {
   PageLayout,
   DarkPaneHeaderTitle,
@@ -171,17 +170,18 @@ function NewMatterDialog({
     e.preventDefault();
     setError(null);
     startTransition(async () => {
+      // matterId/forum dropped at the schema level in 3.1; dialog still
+      // collects them for layout but they're discarded here. Dialog rewrite
+      // is 3.3 territory.
       const result = await createCase({
         title,
         clientName,
-        matterId: matterId || undefined,
-        forum,
         court,
         caseType,
         nextHearingDate: nextHearingDate || undefined,
         description: description || undefined,
       });
-      if ("error" in result) {
+      if (!result.ok) {
         setError(result.error);
       } else {
         onCreated();
