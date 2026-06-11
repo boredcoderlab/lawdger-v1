@@ -1,66 +1,12 @@
 'use client'
 
+import { useActionState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
-import { signIn } from "next-auth/react"
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { createAccount } from "./actions"
 
 export default function SignupPage() {
-  const [error, setError] = useState("")
-  const [pending, setPending] = useState(false)
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    setError("")
-
-    const form = e.currentTarget
-    const name = (form.elements.namedItem("name") as HTMLInputElement).value.trim()
-    const email = (form.elements.namedItem("email") as HTMLInputElement).value.trim().toLowerCase()
-    const password = (form.elements.namedItem("password") as HTMLInputElement).value
-    const confirmPassword = (form.elements.namedItem("confirmPassword") as HTMLInputElement).value
-
-    if (name.length < 2) {
-      setError("Name must be at least 2 characters.")
-      return
-    }
-    if (!EMAIL_RE.test(email)) {
-      setError("Please enter a valid email address.")
-      return
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.")
-      return
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.")
-      return
-    }
-
-    setPending(true)
-
-    try {
-      const res = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
-      })
-
-      const data = (await res.json()) as { error?: string; success?: boolean }
-
-      if (!res.ok) {
-        setError(data.error ?? "Something went wrong.")
-        setPending(false)
-        return
-      }
-
-      await signIn("credentials", { email, password, callbackUrl: "/dashboard" })
-    } catch {
-      setError("Something went wrong. Please try again.")
-      setPending(false)
-    }
-  }
+  const [state, action, pending] = useActionState(createAccount, { message: "" })
 
   return (
     <main className="min-h-screen bg-background px-6 py-10 text-foreground transition-colors">
@@ -94,7 +40,7 @@ export default function SignupPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form action={action} className="space-y-4">
             <label className="block">
               <span className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                 Full Name
@@ -104,6 +50,7 @@ export default function SignupPage() {
                 name="name"
                 autoComplete="name"
                 required
+                minLength={2}
                 className="w-full rounded-2xl border border-[color:var(--surface-strong)] bg-surface-soft px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent focus:bg-card/90"
               />
             </label>
@@ -130,6 +77,7 @@ export default function SignupPage() {
                 name="password"
                 autoComplete="new-password"
                 required
+                minLength={8}
                 className="w-full rounded-2xl border border-[color:var(--surface-strong)] bg-surface-soft px-4 py-3 text-sm text-foreground outline-none transition focus:border-accent focus:bg-card/90"
               />
             </label>
@@ -161,7 +109,7 @@ export default function SignupPage() {
               aria-live="polite"
               className="min-h-5 text-sm text-destructive"
             >
-              {error}
+              {state.message}
             </p>
           </form>
 
