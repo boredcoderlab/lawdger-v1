@@ -7,7 +7,9 @@
  *   1. "use server"
  *   2. Zod-validate input.
  *   3. Acquire user via getServerUser() (redirects if unauth).
- *   4. Acquire RLS-scoped Prisma via getServerScopedPrisma().
+ *   4. Acquire RLS-scoped Prisma via getServerScopedPrisma() for SINGLE
+ *      queries, OR withServerUserContext((tx) => ...) for MULTI-query
+ *      actions / actions needing atomicity.
  *   5. Include `where: { userId }` as defence-in-depth alongside RLS.
  *      RLS is the primary isolation guarantee; the app-layer filter is
  *      a seatbelt against future RLS misconfiguration on migration.
@@ -15,10 +17,23 @@
  *        { ok: true, data: T } | { ok: false, error: string }
  *      Unexpected DB errors may still throw; the envelope is for
  *      known/expected failure modes (validation, not-found, etc.).
+ *
+ * BANNED in this module and every other scoped-action module:
+ *   db.$transaction([a, b, c])                  // array form
+ *   Promise.all([db.x.findMany(), db.y.count()]) // parallel scoped ops
+ * Both deadlock against the pgbouncer-pooled connection_limit and
+ * surface as Prisma P2024. Use withServerUserContext((tx) => { ... })
+ * for multi-query atomicity or parallel reads — all queries inside
+ * share one connection and one RLS context. See src/lib/prisma-rls.ts
+ * for the architecture rationale.
  */
 
 import { CASE_TYPES } from "@/lib/case-constants";
-import { getServerScopedPrisma, getServerUser } from "@/lib/session";
+import {
+  getServerScopedPrisma,
+  getServerUser,
+  withServerUserContext,
+} from "@/lib/session";
 import {
   CaseStatus,
   MatterType,
@@ -146,8 +161,6 @@ export async function listCases(
   }
 
   const user = await getServerUser();
-  const db = await getServerScopedPrisma();
-
   const { status, q, skip, take } = parsed.data;
 
   const where = {
@@ -163,17 +176,18 @@ export async function listCases(
       : {}),
   };
 
-  const [items, total] = await Promise.all([
-    db.case.findMany({
+  // Serial findMany + count inside one scoped tx. NOT Promise.all — see
+  // BAN note in file header.
+  return withServerUserContext(async (tx) => {
+    const items = await tx.case.findMany({
       where,
       orderBy: { updatedAt: "desc" },
       skip,
       take,
-    }),
-    db.case.count({ where }),
-  ]);
-
-  return { ok: true, data: { items, total } };
+    });
+    const total = await tx.case.count({ where });
+    return { ok: true, data: { items, total } };
+  });
 }
 
 // ─── getCase ─────────────────────────────────────────────────────────────────
@@ -312,17 +326,23 @@ export async function getCaseCounts(): Promise<
   Result<{ total: number; active: number; pending: number; closed: number }>
 > {
   const user = await getServerUser();
-  const db = await getServerScopedPrisma();
 
-  const userId = user.id;
-  const [total, active, closed] = await Promise.all([
-    db.case.count({ where: { userId } }),
-    db.case.count({ where: { userId, status: CaseStatus.ACTIVE } }),
-    db.case.count({ where: { userId, status: CaseStatus.CLOSED } }),
-  ]);
-
-  // TODO(3.3): drop phantom `pending` field once CasesClient tab is removed.
-  return { ok: true, data: { total, active, pending: 0, closed } };
+  // Single groupBy inside one scoped tx — replaces the prior
+  // Promise.all of three parallel scoped counts (P2024 deadlock).
+  return withServerUserContext(async (tx) => {
+    const grouped = await tx.case.groupBy({
+      by: ["status"],
+      where: { userId: user.id },
+      _count: { _all: true },
+    });
+    const total = grouped.reduce((sum, g) => sum + g._count._all, 0);
+    const active =
+      grouped.find((g) => g.status === CaseStatus.ACTIVE)?._count._all ?? 0;
+    const closed =
+      grouped.find((g) => g.status === CaseStatus.CLOSED)?._count._all ?? 0;
+    // TODO(3.3): drop phantom `pending` field once CasesClient tab is removed.
+    return { ok: true, data: { total, active, pending: 0, closed } };
+  });
 }
 
 // ─── deleteCase ──────────────────────────────────────────────────────────────
