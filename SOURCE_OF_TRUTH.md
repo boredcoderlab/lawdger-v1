@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-10
+**Last updated:** 2026-06-11 (commit `9a5ee34`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -79,7 +79,7 @@ missing/malformed values.
   `proxy.ts` so middleware works on Edge Runtime.
 - `src/proxy.ts` — Next.js 16 middleware entry point. **Not `middleware.ts`** —
   Next 16 auto-runs `proxy.ts` and silently ignores `middleware.ts`.
-- `src/lib/session.ts` — `getServerUser()` helper, redirects to `/login` if unauth.
+- `src/lib/session.ts` — `getServerUser()`, `getServerScopedPrisma()`, `withServerUserContext()`. Redirects to `/login` if unauth.
 
 ### Route protection model
 
@@ -103,7 +103,7 @@ MUST call `auth()` in its handler. There is no automatic protection.
 
 | Table | RLS | Policy count | Notes |
 |-------|-----|--------------|-------|
-| `User` | ✅ | 0 (default deny) | Prisma service role bypasses |
+| `User` | ✅ | 0 (default deny) | postgres superuser bypasses RLS |
 | `_prisma_migrations` | ✅ | 0 (default deny) | Infra table |
 | `Case` | ✅ | 1 (`Case_isolation`) | userId scoped |
 | `Note` | ✅ | 1 (`Note_isolation`) | userId scoped |
@@ -113,6 +113,16 @@ MUST call `auth()` in its handler. There is no automatic protection.
 | `Document` | ✅ | 1 (`Document_isolation`) | userId scoped |
 
 Verified by `npm run smoke:rls`.
+
+### Current Runtime Isolation Posture
+
+> **Warning:** RLS is structurally present but not enforced at runtime. Known design gap — remediation sequenced to Phase 3.0.1.
+
+- 8 tables have RLS **enabled**; none are **FORCED**.
+- `lawdger_app` Postgres role does **not exist** in any migration — referenced in comments but never created.
+- `DATABASE_URL` connects as `postgres` superuser, which bypasses all RLS policies by default.
+- Actual isolation today: app-layer `where: { userId }` filters in `caseActions.ts` (and migrated siblings).
+- Full DB-level enforcement (FORCE RLS + `lawdger_app` role + `DATABASE_URL` repoint) deferred to **Phase 3.0.1**.
 
 ### RLS pattern — why session variables, not `auth.uid()`
 
@@ -125,6 +135,36 @@ USING (current_setting('app.current_user_id', true)::text = "userId"::text)
 
 The scoped Prisma client sets `SET LOCAL app.current_user_id = '<userId>'`
 before each user-scoped query.
+
+### Scoped Prisma Infrastructure
+
+`src/lib/prisma-rls.ts` exports two patterns:
+
+| Export | Use case |
+|--------|----------|
+| `getPrismaForUser(userId)` | Single-query paths — wraps each op in `$transaction` to set the GUC |
+| `withUserContext(userId, async (tx) => {...})` | Multi-query paths — sets GUC once; all callback queries share the same `tx` |
+
+`src/lib/session.ts` re-exports server-layer wrappers pre-seeded with session userId:
+- `getServerScopedPrisma()` — `getPrismaForUser` seeded from session
+- `withServerUserContext(async (tx) => {...})` — `withUserContext` seeded from session
+
+**BAN (documented in `prisma-rls.ts` header — both deadlock on `connection_limit=1`):**
+- No `$transaction([...])` array form against scoped clients
+- No `Promise.all([scopedOp, scopedOp])` against scoped clients
+
+### Action File Migration State
+
+| File | Status | Notes |
+|------|--------|-------|
+| `src/actions/caseActions.ts` | ✅ Migrated | Zod, scoped Prisma, `where: { userId }`, `Result<T>` envelope |
+| `src/actions/noteActions.ts` | ✅ Migrated | New in 3.2 — split from caseActions |
+| `src/actions/taskActions.ts` | ⚠️ Partial | Case-task helpers scoped; own task ops still use bare `prisma` |
+| `src/actions/calendarActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
+| `src/actions/dashboardActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
+| `src/actions/financeActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
+| `src/actions/settingsActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
+| `src/auth.ts` + signup actions | ⏭️ Pending | Bare `prisma` — auth-specific RLS policy design needed; Phase 3.2.5 |
 
 ### Case model — enums and key fields
 
@@ -170,6 +210,10 @@ This runs in order:
 3. `smoke:rls` — `scripts/check-rls.ts`, RLS posture matches §6
 
 Any failure blocks the merge.
+
+> **Smoke verifies policy existence only — not runtime enforcement.** `smoke:rls` confirms the 8 policies are present; it does not verify they fire at runtime (the `postgres` superuser connection bypasses them). Known blindspot, documented for Phase 3.0.1 remediation.
+
+`scripts/verify-isolation.ts`, `scripts/verify-phase32-rls.ts`, and `scripts/verify-with-user-context.ts` currently print "DEFERRED" and exit 0. Re-enabled in Phase 3.2.5 / 3.0.1.
 
 ---
 
@@ -217,6 +261,10 @@ Every Claude Code prompt for Lawdger must include:
 - Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — 109 commits
   behind main. Cleanup pending.
 - Dead `claude/*` branches (5× at SHA `3374d3d`). Prune pending.
+- `lawdger_app` Postgres role never created. Runtime `DATABASE_URL` connects as `postgres` superuser — RLS not enforced at DB level. Remediation: Phase 3.0.1.
+- 5 sibling action files (`calendarActions`, `dashboardActions`, `financeActions`, `settingsActions`, `auth.ts` + signup) still use bare `prisma`. Migration target: Phase 3.2.5.
+- `connection_limit` in `DATABASE_URL` bumped from `1` → `5` in Phase 3.2.1. `.env.example` reflects this.
+- `scripts/verify-*.ts` are deferred stubs (print "DEFERRED", exit 0). Re-enable in Phase 3.2.5 / 3.0.1.
 
 ---
 
@@ -240,3 +288,16 @@ Every Claude Code prompt for Lawdger must include:
 | Business Strategy | Siddharth Jain |
 | AI Engineer | Chirag Chetnani |
 | Backend Lead | Pratham Gyanani |
+
+---
+
+## 13. Phase Roadmap
+
+| Phase | Status | Summary |
+|-------|--------|---------|
+| 3.1 | ✅ Done | Schema cleanup — enums, caseNumber, drop legacy fields |
+| 3.2 | ✅ Done | Server actions reconciliation — Zod, Result envelope, caseActions migrated |
+| 3.2.1 | ✅ Done | Scoped Prisma multi-query pattern (`withUserContext`, `connection_limit=5`) |
+| 3.2.5 | ⏭️ Next | Scoped-client migration for 5 sibling action files + auth path |
+| 3.0.1 | ⏸️ Deferred | `lawdger_app` role + FORCE RLS + `DATABASE_URL` repoint (true DB enforcement) |
+| 3.3+ | ⏸️ Deferred | Cases UI cleanup, New Matter dialog, CaseDetail real data |
