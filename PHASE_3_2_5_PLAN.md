@@ -1,0 +1,597 @@
+# Phase 3.2.5 — Scoped-Client Migration Plan
+
+## Status
+
+- **Authored:** 2026-06-11
+- **Based on commit:** `38df58a` (`docs: refresh SOURCE_OF_TRUTH.md to post-3.2.1 state`)
+- **Author:** Claude (audit) + Sahil (review + decisions)
+- **Status:** Draft for CHECKPOINT 3 review. No source files touched. Sanitation
+  deletions queued as Step 1.5 — not yet executed.
+
+## Goal
+
+Migrate every bare-prisma runtime reader to the scoped Prisma patterns
+established in Phase 3.2 + 3.2.1 (`caseActions.ts`, `withServerUserContext`),
+so Phase 3.0.1 can safely repoint `DATABASE_URL` at a NOBYPASSRLS role
+(`lawdger_app`) and enforce tenant isolation at the database. Until 3.2.5
+ships, every code path that runs as a BYPASSRLS role is the only thing
+preventing cross-tenant data leakage; 3.2.5 is the precondition that lets
+the database become the primary guarantee.
+
+3.2.5 is a plumbing phase. The architecture (scoped client, `withUserContext`
+multi-query callback, `Result<T>` envelope) was set in 3.2 and 3.2.1. This
+phase wires the remaining sibling action files into it, and resolves the
+one architectural fork that 3.2 deferred: how the User table participates
+in RLS without breaking auth.
+
+## Out of Scope (explicit)
+
+- DB-level RLS enforcement, `FORCE ROW LEVEL SECURITY`, and `lawdger_app`
+  role creation — Phase 3.0.1.
+- `DATABASE_URL` repoint to `lawdger_app` — Phase 3.0.1.
+- Full 3.2 contract (Zod + `Result<T>`) uplift for the four chat-consumed
+  legacy action files (`taskActions`, `calendarActions`, `financeActions`,
+  `dashboardActions`) — parked as **Phase 3.2.6** (post-3.0.1 quality sweep,
+  no safety urgency once RLS is real).
+- Atomicity uplift inside `caseActions.ts` writes — later 3.2.x.
+- UI changes — 3.3+.
+- Prisma 5 → 7 upgrade — separate post-Phase-3 PR.
+- The voice pipeline rebuild — Phase 5 (the moat).
+- Deletion of `requireUserId.ts` — deferred until the last legacy caller in
+  3.2.5b migrates; tracked in Discovered Debt.
+
+## Sub-phase Sequencing
+
+| Step | Work | Branch | Migration applied? |
+|---|---|---|---|
+| **1** | This plan doc → `main` | direct to main | No |
+| **1.5** | Sanitation deletions (mock voice route + duplicate signup REST handler) → `main` | direct to main | No |
+| **3.2.5a** | Auth path TS edits + SECURITY DEFINER RPCs + User-table policies | feature branch + PR | **Yes — new Prisma migration** |
+| **3.2.5b** | Five sibling action files migrated (settingsActions full contract; the other four minimal scoped-only swap) | one or more feature branches + PR(s) | No |
+| **3.2.5c** | Document verify-script state; optionally author `verify-phase32x-sibling-actions.ts` | feature branch + PR | No |
+
+Manual smoke runs after each sub-phase merge. No automated tests added in
+3.2.5 — the smoke checklist (§ Manual Smoke Checklist) is the gate.
+
+### Step 1.5 — Pre-3.2.5a sanitation commit
+
+Two file deletions, no edits. Commit message:
+
+```
+chore: delete mock voice route + duplicate signup endpoint
+```
+
+Files removed:
+
+1. `src/app/api/voice/process/route.ts` — instantiates its own `PrismaClient`
+   (bypasses singleton), uses hardcoded `mockUserId = "user-123"`, performs
+   `prisma.case.findFirst()` with NO `where` clause (would return any user's
+   case under BYPASSRLS). Mock code with no real consumer. Phase 5 voice
+   pipeline rebuilds from scratch with Gemini integration anyway. Leaving
+   this route in place is a 3.0.1 landmine: it has no session, no GUC, and
+   would fail under NOBYPASSRLS without warning the operator that it once
+   worked.
+2. `src/app/api/auth/signup/route.ts` — duplicate signup implementation.
+   `src/app/signup/actions.ts` is the canonical server action used by the
+   signup UI. The REST route has no live caller per grep. Removing it
+   shrinks the auth surface that 3.2.5a must migrate from two files to one.
+
+After Step 1.5: zero `new PrismaClient()` calls remain in `src/` outside
+`src/lib/prisma.ts` (the singleton) and `scripts/` (verify scripts).
+
+### Why the SQL migration lands in 3.2.5a (not 3.0.1)
+
+The original 3.2.5 framing said "no migrations." This is the one decision
+that breaks that rule. Justification:
+
+`src/auth.ts` cannot switch from `prisma.user.findUnique({where:{email}})`
+to `auth_find_user_by_email(...)` until that function exists in the
+database. If we apply the policies + RPCs in 3.0.1, then 3.0.1 must also
+edit auth.ts — but 3.0.1's whole job is the `DATABASE_URL` repoint, which
+breaks auth.ts the moment it runs against a NOBYPASSRLS role with no RPCs
+present. The two artefacts (the SQL + the auth.ts edit) must land in the
+same merge.
+
+Compromise: SQL is **drafted in this plan doc** (§ User-row RLS Policy
+Decision) and **applied** in the 3.2.5a PR alongside the auth.ts edits.
+Step 1 (this commit) still touches zero source files.
+
+## Per-File Migration Plan
+
+### `src/actions/settingsActions.ts` — **FULL 3.2 CONTRACT**
+
+Self-contained: no chat consumer, no external call sites outside
+`settings/page.tsx` (which only calls `getFullProfile`). Adopting the full
+contract here costs nothing in ripple.
+
+| Fn | Pattern | Zod schema | `where:{userId}` placement | Return |
+|---|---|---|---|---|
+| `getFullProfile()` | `getServerScopedPrisma` | none (no input) | `where:{id: user.id}` on read | `Result<{ name, email, preferences } \| null>` |
+| `updateProfile(_prev, formData)` | `withServerUserContext` | `updateProfileSchema` (name, barNumber, firmName, officeAddress) | `where:{id: user.id}` on read prefs + on update | `Result<SettingsState>` — preserves the FormData-state contract |
+| `changePassword(_prev, formData)` | `withServerUserContext` | `changePasswordSchema` (currentPassword, newPassword min 8, confirmPassword equal) | `where:{id: user.id}` on read + update | `Result<SettingsState>` |
+| `updateWorkspacePreferences(_prev, formData)` | `withServerUserContext` | `workspacePreferencesSchema` (jurisdiction, voiceLanguage, autoSummarise) | `where:{id: user.id}` on read + update | `Result<SettingsState>` |
+| `updateNotificationPreferences(_prev, formData)` | `withServerUserContext` | `notificationPreferencesSchema` (3 booleans) | `where:{id: user.id}` on read + update | `Result<SettingsState>` |
+
+Notes:
+
+- All five functions operate on the **User** table. They only work under
+  3.0.1 if the owner-keyed `User_self_select` and `User_self_update`
+  policies (§ User-row RLS Policy Decision) are in place. 3.2.5a applies
+  those policies; settingsActions migrates in 3.2.5b on top of them.
+- The current `SettingsState = { success?: string; error?: string }`
+  return shape is retained, wrapped in `Result<SettingsState>`. The page
+  (`settings/page.tsx`) only consumes `getFullProfile`, so wrapping the
+  four formData handlers in `Result<T>` affects the `SettingsClient`
+  component, not the page. Migration includes minor `SettingsClient`
+  edits to unwrap.
+- Smoke surface: load `/settings`, edit name, change password, toggle
+  notifications, edit workspace prefs. All four formData paths must
+  round-trip successfully.
+
+### `src/actions/financeActions.ts` — **MINIMAL SCOPED-ONLY SWAP**
+
+Has a chat consumer (`api/chat/route.ts`). Preserve current raw-return +
+throw-on-error contract to avoid 3 chat call-site rewrites. Full contract
+uplift parked to **Phase 3.2.6**.
+
+| Fn | Pattern | Migration |
+|---|---|---|
+| `assertCaseAccess` (private) | folds into `withServerUserContext` callback inside `createPayment` | helper retires |
+| `getFinancesData()` | `getServerScopedPrisma` | swap `prisma` → `db`; raw return preserved |
+| `updateCaseAgreedFee(caseId, agreedFee)` | `getServerScopedPrisma` | `where:{id: caseId, userId}` preserved; throw on `count === 0` preserved |
+| `createPayment(data)` | `withServerUserContext` | one tx for the case-ownership check + payment insert; `where:{userId}` on both |
+| `deletePayment(id)` | `getServerScopedPrisma` | swap + preserve `where:{id, userId}` and throw on `count === 0` |
+
+Smoke surface: load `/finances`, add a payment to a case, edit a case's
+agreed fee, delete a payment.
+
+Risk: low. `createPayment` becoming a tx changes the semantics of partial
+failure (now atomic) — strictly an improvement.
+
+### `src/actions/calendarActions.ts` — **MINIMAL SCOPED-ONLY SWAP**
+
+Has a chat consumer. Same minimal-swap rationale.
+
+| Fn | Pattern | Migration |
+|---|---|---|
+| `getCalendarEvents()` | `getServerScopedPrisma` | swap, preserve raw return |
+| `createCalendarEvent(data)` | `withServerUserContext` | one tx: case-ownership check + event create |
+| `updateCalendarEvent(id, data)` | `getServerScopedPrisma` | swap, preserve throw on `count === 0` |
+| `deleteCalendarEvent(id)` | `getServerScopedPrisma` | swap, preserve throw |
+| `getCasesForSelect()` | `getServerScopedPrisma` | swap |
+
+Smoke surface: load `/calendar`, add a hearing, edit one, delete one. The
+page's `Promise.all([getCalendarEvents(), getCasesForSelect(),
+getTasksWithDueDate()])` is **safe and stays as-is** — these are three
+separate server actions, each opens its own connection and its own scoped
+context per call. This is not a scoped-client array pattern.
+
+### `src/actions/taskActions.ts` — **MINIMAL SCOPED-ONLY SWAP (LEGACY HALF ONLY)**
+
+Mixed contract module. The three `*CaseTask` functions added in 3.2 are
+already compliant — no changes. The seven legacy functions migrate to
+scoped client with current return contracts preserved.
+
+| Fn | Pattern | Migration |
+|---|---|---|
+| `getTasks()` | `getServerScopedPrisma` | swap, preserve raw return |
+| `createTask(data)` | `withServerUserContext` | one tx for the optional case-ownership check + task create |
+| `updateTask(id, data)` | `withServerUserContext` | one tx for the optional case-ownership check + updateMany |
+| `updateTaskStatus(id, status)` | `getServerScopedPrisma` | swap, preserve throw on `count === 0` |
+| `updateTaskAssignee(id, assignee)` | `getServerScopedPrisma` | swap, preserve throw |
+| `getTasksWithDueDate()` | `getServerScopedPrisma` | swap |
+| `deleteTask(id)` | `getServerScopedPrisma` | swap, preserve throw |
+| `createCaseTask` / `toggleCaseTaskStatus` / `deleteCaseTask` | — | **no change, already compliant** |
+
+After migration, the bare `prisma` import at line 20 is removed. The
+`requireUserId` import is the next-to-last bare-prisma footprint in the
+file; once every other legacy caller migrates (see other files in 3.2.5b),
+`requireUserId.ts` can be deleted in a follow-up — tracked in Discovered
+Debt.
+
+Smoke surface: load `/tasks`, create / edit / complete / assign / delete a
+task both at `/tasks` and from a case detail page.
+
+### `src/actions/dashboardActions.ts` — **MINIMAL SCOPED-ONLY SWAP + STRUCTURAL CHANGE**
+
+Single function `getDashboardData()`. Current implementation: 6 parallel
+reads via `Promise.all` on bare prisma. Forbidden under scoped clients per
+the BAN documented in `src/lib/prisma-rls.ts:18-26`.
+
+Migration target: one `withServerUserContext` callback containing **six
+sequential awaits** on `tx`. Six round-trips inside one interactive
+transaction. Performance impact is real but acceptable; the alternative
+(`Promise.all` on `tx`) would deadlock against PgBouncer-pooled
+`connection_limit` per the `caseActions.ts:331` precedent.
+
+```ts
+export async function getDashboardData() {
+  const today = new Date();
+  return withServerUserContext(async (tx) => {
+    const todayEvents     = await tx.calendarEvent.findMany({ /* … */ });
+    const upcomingEvents  = await tx.calendarEvent.findMany({ /* … */ });
+    const pendingTasks    = await tx.task.findMany({ /* …, take: 20 */ });
+    const allCases        = await tx.case.findMany({ /* … */ });
+    const totalCases      = await tx.case.count({ /* … */ });
+    const totalTasks      = await tx.task.count({ /* … */ });
+    return { todayEvents, upcomingEvents, pendingTasks, allCases, totalCases, totalTasks };
+  });
+}
+```
+
+Each query keeps its `where: { userId: user.id }` filter as defence-in-depth.
+
+**Dashboard-page consumer collapse:** `src/app/(lawdger)/dashboard/page.tsx`
+currently runs its own 6-query bare-prisma `Promise.all` (L20-46). That
+entire block is deleted. The page becomes:
+
+```tsx
+const user = await getServerUser();
+const data = await getDashboardData();
+// derive greeting/summaryParts from data + new Date()
+return <DashboardClient userName={user.name ?? "Advocate"} {...data} />;
+```
+
+The page-level shape is unified to **`pendingTasks: take 20`** (page's
+current value, preserves UX). The chat tool consumer
+(`api/chat/route.ts:345`) just stringifies the result; it does not depend
+on the exact `take` count.
+
+Smoke surface: load `/dashboard`, verify today's hearings / upcoming
+hearings / pending tasks (up to 20) / cases list / counts all render
+identical to pre-migration. Then verify the chat tool `get_dashboard`
+still returns sensible JSON when invoked.
+
+Risk: highest of the five files. Mitigations: (a) keep the six query
+bodies byte-identical to the page's current ones (modulo where:userId
+preservation); (b) migrate in its own sub-PR after the four siblings
+land; (c) hold the merge until the smoke surface above passes manually.
+
+## Auth Path Migration (3.2.5a)
+
+### Files
+
+| File | Current ops | Migration approach |
+|---|---|---|
+| `src/auth.ts` | `prisma.user.findUnique({ where: { email } })` (L43) inside `authorize()` | Replace with `prisma.$queryRaw\`SELECT * FROM auth_find_user_by_email(${email})\`` and type the result. Bare `prisma` import remains because the call site is pre-session — no `userId`, no scoped client. |
+| `src/app/signup/actions.ts` | `findUnique({where:{email}})` (L32) + `create({data:{...}})` (L43) | Replace `findUnique` with `auth_find_user_by_email` RPC; replace `create` with `auth_create_user(p_name, p_email, p_password_hash)` RPC. Both via `$queryRaw`. P2002 catch block becomes a check on the RPC's `RAISE EXCEPTION` for the unique-email violation (or just trust the pre-insert duplicate check — sufficient with `UNIQUE` constraint). |
+| `src/app/api/auth/signup/route.ts` | — | **Deleted in Step 1.5.** Not migrated. |
+
+### User-row RLS Policy Decision
+
+**Chosen: Option C — SECURITY DEFINER RPCs for pre-session ops + owner-keyed
+RLS policies on User for post-session settings ops.**
+
+#### Justification (Indian legal-data posture)
+
+The User table holds advocate credentials and hashed passwords. Under the
+Bar Council's confidentiality expectations and the data-protection
+posture this build is moving toward, the goal is:
+
+1. The runtime role (`lawdger_app`) should not be able to read arbitrary
+   user rows. Only the row matching the authenticated session.
+2. The auth boundary must function pre-session — credential validation
+   and signup happen before any GUC can be set.
+3. The lifetime narrow-permission surface that breaks (1) must be
+   auditable in a few lines of SQL.
+
+Option C satisfies all three: `lawdger_app` itself only has owner-keyed
+RLS visibility into User, and the only path that touches arbitrary rows
+is two `SECURITY DEFINER` functions whose return types are narrowed and
+whose `EXECUTE` is `GRANT`ed only to `lawdger_app`. The audit surface is
+exactly two function bodies in version control.
+
+#### Tradeoffs of unchosen options
+
+| Option | Why rejected |
+|---|---|
+| **A** — single permissive SELECT policy with column-level grants | Postgres composes per-role SELECT policies with `OR`. A permissive `USING (true)` policy applied to `lawdger_app` cannot coexist with an owner-keyed `USING (id = current_setting(...))` policy on the same role without collapsing into "any row". Splitting by role degenerates into Option D. Plus column-grant maintenance per schema change. |
+| **B** — separate `auth_email_lookup` table mapping email → userId, public-readable | Adds schema, sync burden, doesn't solve the signup `INSERT` problem cleanly (still need a write path that bypasses RLS). And the lookup table itself becomes a partial leak surface. |
+| **D** — two roles (`lawdger_app` NOBYPASSRLS + `lawdger_auth` BYPASSRLS scoped to User) | Operational complexity: two connection pools, two `DATABASE_URL`s in `.env.local`, two Prisma clients to wire up, two roles to keep in sync as the User schema evolves. A solo-founder build that already pays a Prisma-client extension tax does not need a second connection pool. |
+
+#### Draft migration SQL (NOT TO BE APPLIED IN STEP 1 — APPLIED IN 3.2.5a)
+
+Migration name suggestion: `phase_3_2_5a_user_rls_and_auth_rpcs`. Author
+must verify the User-table owner before running `ALTER FUNCTION ... OWNER
+TO ...`; on a Supabase project the table owner is typically `postgres` but
+this should be confirmed with `SELECT tableowner FROM pg_tables WHERE
+tablename = 'User';`.
+
+```sql
+-- ============================================================================
+-- Phase 3.2.5a — User-table RLS policies + SECURITY DEFINER auth RPCs
+--
+-- Enables lawdger_app (NOBYPASSRLS, repointed in 3.0.1) to:
+--   1. Read/update its own User row via owner-keyed RLS using
+--      app.current_user_id (set by getPrismaForUser / withUserContext).
+--   2. Look up users by email pre-session via SECURITY DEFINER RPC.
+--   3. Create users at signup pre-session via SECURITY DEFINER RPC.
+--
+-- The RPCs are owned by the User-table owner (typically `postgres`) and
+-- run with that role's privileges, bypassing RLS for the narrow,
+-- auditable operations they perform. EXECUTE is granted only to
+-- lawdger_app — no PUBLIC access.
+-- ============================================================================
+
+-- ── 1. Owner-keyed policies for post-session settings ops ────────────────────
+
+CREATE POLICY "User_self_select" ON "User"
+  FOR SELECT
+  USING (id = current_setting('app.current_user_id', true));
+
+CREATE POLICY "User_self_update" ON "User"
+  FOR UPDATE
+  USING (id = current_setting('app.current_user_id', true))
+  WITH CHECK (id = current_setting('app.current_user_id', true));
+
+-- Notes:
+--   • current_setting(..., true) returns NULL instead of raising when the
+--     GUC is unset (e.g. pre-session). NULL = userId is impossible →
+--     policy denies, which is what we want.
+--   • No SELECT policy on User for the auth/signup path here — that path
+--     uses the RPCs below, which run as SECURITY DEFINER and bypass RLS.
+
+-- ── 2. RPC: pre-session lookup by email (auth.ts) ────────────────────────────
+
+CREATE OR REPLACE FUNCTION public.auth_find_user_by_email(p_email text)
+  RETURNS TABLE (
+    id       text,
+    email    text,
+    name     text,
+    password text
+  )
+  LANGUAGE sql
+  SECURITY DEFINER
+  SET search_path = public, pg_temp
+AS $$
+  SELECT u.id, u.email, u.name, u."password"
+  FROM "User" u
+  WHERE u.email = p_email
+  LIMIT 1;
+$$;
+
+REVOKE ALL ON FUNCTION public.auth_find_user_by_email(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.auth_find_user_by_email(text) TO lawdger_app;
+
+-- ── 3. RPC: pre-session signup INSERT (signup/actions.ts) ────────────────────
+
+CREATE OR REPLACE FUNCTION public.auth_create_user(
+  p_name          text,
+  p_email         text,
+  p_password_hash text
+)
+  RETURNS text  -- new user's id (uuid::text per schema.prisma User.id)
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public, pg_temp
+AS $$
+DECLARE
+  new_id text;
+BEGIN
+  IF p_email IS NULL OR p_email = '' THEN
+    RAISE EXCEPTION 'email required';
+  END IF;
+  IF p_password_hash IS NULL OR p_password_hash = '' THEN
+    RAISE EXCEPTION 'password_hash required';
+  END IF;
+
+  -- schema.prisma: User.id String @id @default(uuid()),
+  --                createdAt @default(now()), updatedAt @updatedAt.
+  -- Prisma generates uuid in app code, not as a column default — we must
+  -- generate it here. createdAt has a Postgres default; updatedAt does
+  -- not, so we set it explicitly.
+  INSERT INTO "User" (id, name, email, "password", "updatedAt")
+  VALUES (
+    gen_random_uuid()::text,
+    p_name,
+    p_email,
+    p_password_hash,
+    now()
+  )
+  RETURNING id INTO new_id;
+
+  RETURN new_id;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.auth_create_user(text, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.auth_create_user(text, text, text) TO lawdger_app;
+
+-- ── 4. SECURITY DEFINER ownership ────────────────────────────────────────────
+-- Both RPCs must be owned by the role that owns the User table, so the
+-- DEFINER context bypasses RLS. Confirm with:
+--   SELECT tableowner FROM pg_tables WHERE tablename = 'User';
+-- Default for Supabase is `postgres`. Adjust if your project differs.
+
+ALTER FUNCTION public.auth_find_user_by_email(text) OWNER TO postgres;
+ALTER FUNCTION public.auth_create_user(text, text, text) OWNER TO postgres;
+```
+
+**Phase that applies the migration:** 3.2.5a (alongside `auth.ts` and
+`signup/actions.ts` edits). NOT this commit. NOT 3.0.1.
+
+**Caveats the migration author must verify before running:**
+
+1. The `User` table owner per `pg_tables` matches the role used in the
+   final `ALTER FUNCTION ... OWNER TO ...` statement.
+2. The `lawdger_app` role exists (created in 3.0.1) OR the migration is
+   staged to run after 3.0.1 — currently it must run before, so either
+   3.2.5a creates a stub `lawdger_app` role just to receive the GRANTs,
+   or 3.0.1 must be re-sequenced. **Recommend: 3.2.5a creates the role**
+   with default privileges (`CREATE ROLE lawdger_app NOLOGIN;` plus
+   PASSWORD set in 3.0.1) so the GRANTs target a real principal.
+3. Prisma `migrate dev` / `migrate diff` cannot generate this migration
+   reliably. The shadow database used by those commands is broken by the
+   prior User-table + `_prisma_migrations` RLS migration — Prisma's
+   shadow-DB workflow does not preserve the RLS posture, so `migrate
+   diff` either errors or produces a drift-corrected diff that
+   re-disables policies. **Workaround:** author the SQL by hand into
+   `prisma/migrations/<timestamp>_phase_3_2_5a_user_rls_and_auth_rpcs/migration.sql`,
+   apply it manually — either via the Supabase SQL editor against the
+   project, or via `psql "$DIRECT_URL" -f migration.sql` — then reconcile
+   Prisma's applied-migration state with `npx dotenv -e .env.local --
+   npx prisma migrate resolve --applied phase_3_2_5a_user_rls_and_auth_rpcs`.
+   **Pre-flight:** dry-run the SQL against a Supabase preview branch
+   first to verify (a) no syntax errors, (b) all four statement groups
+   (role-stub, policies, RPCs, owner-alters) succeed in order, and (c)
+   a fresh login + signup against the preview branch still works.
+
+### Signup INSERT policy
+
+No CREATE POLICY needed for INSERT on User — the RPC handles it.
+`lawdger_app` is denied INSERT on User by default (no policy = deny), and
+the RPC bypasses that via SECURITY DEFINER. This is the intended posture:
+the only way to add a User row in production is the audited two-line RPC.
+
+## Page/Component Consumer Audit
+
+| Consumer | Bare prisma? | Action calls? | Action shape change? | Edit required in 3.2.5? |
+|---|---|---|---|---|
+| `src/app/(lawdger)/dashboard/page.tsx` | YES, L2 + L20-46 | NO | — | **YES.** Delete the 6-query Promise.all. Replace with `await getDashboardData()`. Pass result through to `DashboardClient`. Done in the 3.2.5b dashboard sub-PR. |
+| `src/app/(lawdger)/calendar/page.tsx` | NO | `getCalendarEvents` + `getCasesForSelect` + `getTasksWithDueDate` | None of those return-shapes change | No edit. |
+| `src/app/(lawdger)/cases/page.tsx` | NO | `listCases` + `getCaseCounts` | Already 3.2-compliant | No edit. |
+| `src/app/(lawdger)/cases/[id]/page.tsx` | NO | `getCaseWithChildren` | Already compliant | No edit. |
+| `src/app/(lawdger)/finances/page.tsx` | NO | `getFinancesData` | Minimal swap preserves raw return | No edit. |
+| `src/app/(lawdger)/settings/page.tsx` | NO | `getFullProfile` | **`Result<{...} \| null>` wrapper** | **YES.** Unwrap `r.ok ? r.data : null` and feed into `SettingsClient` as before. Small edit in the page + corresponding `Result<T>`-aware unwrap in `SettingsClient` for the four formData handlers. Done in the 3.2.5b settings sub-PR. |
+| `src/app/(lawdger)/tasks/page.tsx` | NO | NO (renders `TasksClient` only) | — | No edit. |
+| `src/app/(lawdger)/chat/page.tsx` | NO | NO | — | No edit. |
+| `src/app/(lawdger)/inbox/page.tsx` | NO | `getServerUser` only | — | No edit. |
+| `src/app/api/chat/route.ts` | NO (type imports only) | 16 action functions across 5 migrating files | Only `getDashboardData` shape changes (count: 6 → 6, plus `pendingTasks` take 10 → 20). All other legacy fns preserve their current return shape per the minimal-swap decision. | **MINOR.** No call-site rewrites needed — the chat tool just stringifies whatever the actions return. The `take: 20` increase is acceptable (LLM context impact negligible). Verify in 3.2.5b dashboard smoke. |
+| `src/components/SettingsClient.tsx` | NO (type imports only) | The four settings formData handlers | Becomes `Result<SettingsState>` | **YES.** Unwrap `r.ok ? r.data : { error: r.error }` in each `useActionState`-returned handler. Done in 3.2.5b settings sub-PR. |
+
+After Step 1.5 + 3.2.5a + 3.2.5b: only `src/lib/prisma.ts` (singleton)
+and `src/lib/prisma-rls.ts` (extension factory) import bare `prisma` in
+`src/`. `src/auth.ts` retains its import for the `$queryRaw` call into
+the RPC but no longer uses the model API.
+
+## Verify Scripts (3.2.5c)
+
+### Current state
+
+The handoff doc described these as "DEFERRED stub state" but they are
+**fully implemented**. They are guarded by a runtime-role warning rather
+than a precondition abort, so they will produce false negatives if run
+under BYPASSRLS today (the deny-by-default checks expect zero rows under
+no-GUC, which is true for NOBYPASSRLS but not for BYPASSRLS).
+
+| Script | What it verifies | Run requirement |
+|---|---|---|
+| `scripts/check-rls.ts` | RLS posture per table (RLS enabled, policy count). Runs against any role. | Currently green. **No 3.2.5 change.** Add `User` policy-count expectation update **after** the 3.2.5a migration applies (User goes from `minPolicies: 0, exactRequired: true` → `minPolicies: 2, exactRequired: true`). Owned by the 3.2.5a PR, not 3.2.5c. |
+| `scripts/verify-isolation.ts` | Scoped(A) returns A only, scoped(B) returns B only, bare client returns 0 rows under no GUC, A cannot read B by id. | Run after 3.0.1 `DATABASE_URL` repoint. **No 3.2.5 change.** |
+| `scripts/verify-phase32-rls.ts` | 6 checks exercising `caseActions.ts` query shapes from a cross-tenant scoped client. | Run after 3.0.1 repoint. **No 3.2.5 change.** |
+| `scripts/verify-with-user-context.ts` | 4 checks proving GUC persists across queries inside `withUserContext` and that cross-tenant read/write is blocked. | Run after 3.0.1 repoint. **No 3.2.5 change.** |
+
+### Proposed addition
+
+`scripts/verify-phase32x-sibling-actions.ts` — optional new script that
+exercises each migrated sibling-action function under a scoped-client
+context, the same way `verify-phase32-rls.ts` exercises `caseActions.ts`.
+Skeleton:
+
+- `getDashboardData()` from `withUserContext(A)` → returns only A's rows.
+- `getCalendarEvents()` / `getCasesForSelect()` / `getTasksWithDueDate()`
+  scoped to A → return only A's rows.
+- `getFinancesData()` scoped to A → returns only A's cases + payments.
+- `getFullProfile()` scoped to A → returns A's profile only; under
+  `withUserContext(B)` returns B's, not A's.
+- `getTasks()` scoped to A → A only.
+
+Authored in 3.2.5c if time permits; otherwise deferred to a 3.0.1
+follow-up. Not blocking 3.2.5 completion.
+
+## Discovered Debt — Out of Scope
+
+| # | Item | Where | Action |
+|---|---|---|---|
+| 1 | Mock voice route with `new PrismaClient()` + hardcoded `mockUserId = "user-123"` + `case.findFirst()` with no `where` | `src/app/api/voice/process/route.ts` | **Resolved in Step 1.5 (delete).** Phase 5 rebuilds the voice pipeline from scratch. |
+| 2 | Duplicate signup implementation (REST route + server action) | `src/app/api/auth/signup/route.ts` vs `src/app/signup/actions.ts` | **Resolved in Step 1.5 (delete REST route).** |
+| 3 | Four chat-consumed legacy action files lack Zod + `Result<T>` envelope | `taskActions.ts` (7 legacy fns), `calendarActions.ts`, `financeActions.ts`, `dashboardActions.ts` | **Parked as Phase 3.2.6** — post-3.0.1 quality sweep. No safety urgency once RLS is real. |
+| 4 | `createCaseTask` issues 2 sequential scoped operations (`findFirst` + `create`) instead of using `withUserContext` for a single transaction | `taskActions.ts:160-194` | Tidy-up commit any time after 3.2.5. Inconsistent with the BAN doc's "multi-query → `withUserContext`" rule, but not a correctness bug — sequential scoped ops work, they just open two transactions where one would do. |
+| 5 | `updateTaskAssignee` and `deletePayment` have no callers per grep | `taskActions.ts:111`, `financeActions.ts:66` | Verify orphan status during 3.2.5b. If confirmed dead, delete in the migration commit; otherwise migrate as planned. |
+| 6 | Settings action handlers take raw `FormData` with minimal validation | `settingsActions.ts` L68/100/129/157 | **Resolved in 3.2.5b** — Zod added as part of full 3.2 contract uplift. |
+| 7 | `requireUserId.ts` will be unused once 3.2.5b lands | `src/actions/requireUserId.ts` | Delete in a follow-up commit immediately after 3.2.5b merges. Tracked here, not done in 3.2.5b itself, to keep that PR scoped to the prisma migration. |
+| 8 | Dashboard query duplicated across page and action (resolved by unification in 3.2.5b) | `dashboard/page.tsx:20-46` vs `dashboardActions.ts:18-43` | **Resolved in 3.2.5b dashboard sub-PR.** |
+
+## Risk Register (3.2.5-specific)
+
+| Risk | Likelihood | Mitigation |
+|---|---|---|
+| `dashboardActions` six-sequential-await pattern is meaningfully slower than current Promise.all | Medium | Inside one interactive transaction, the per-query overhead is ~1 RTT each. Total expected ~30-80ms over an unloaded local DB. If real users notice (3.3+ telemetry), revisit with raw `$queryRaw` joining queries, but not in 3.2.5. |
+| User-table policy denies a legitimate post-session read because the GUC propagation pattern misses settings ops | Medium | Settings actions adopt `getServerScopedPrisma` / `withServerUserContext` — same plumbing proven by case/note/task actions. Smoke surface in 3.2.5b verifies every settings code path. |
+| SECURITY DEFINER RPC owner mismatch — function created by a role that does not own User, so DEFINER context still hits RLS | Medium | Migration includes explicit `ALTER FUNCTION ... OWNER TO postgres;`. Caveat called out for the migration author. Smoke surface in 3.2.5a: log in, sign up a new account, log out, log back in. |
+| `lawdger_app` role does not yet exist when 3.2.5a migration runs (it's created in 3.0.1) | High | **3.2.5a creates the role with `NOLOGIN`** as a stub. 3.0.1 adds PASSWORD + the actual `DATABASE_URL` repoint. Documented above. |
+| 3.2.5a migration must be rolled back (e.g. owner-keyed User policies break login or settings in staging) | Medium | Rollback order is strict: (1) `DROP POLICY "User_self_select" ON "User";` and `DROP POLICY "User_self_update" ON "User";` (2) `DROP FUNCTION public.auth_find_user_by_email(text);` and `DROP FUNCTION public.auth_create_user(text, text, text);` (3) `DROP ROLE lawdger_app;` only if no other migration has GRANTed to it yet — otherwise leave the role and just revoke the EXECUTE grants. Then `npx dotenv -e .env.local -- npx prisma migrate resolve --rolled-back phase_3_2_5a_user_rls_and_auth_rpcs` as the backstop to clear Prisma's applied-migration state. Document this drop-order in the migration file as a `-- ROLLBACK:` comment block at the top, so the next on-call doesn't have to derive it. |
+| Chat consumer behavior shifts because `getDashboardData` `pendingTasks` count moves from 10 → 20 | Low | Result is JSON-stringified into a tool-result message. LLM consumes a longer string; context impact negligible. No client-facing tool spec change. |
+| `SettingsClient` consumer of the four formData handlers breaks because of `Result<T>` wrapping | Medium | Migrated in the same 3.2.5b settings sub-PR as the actions. Smoke surface: edit name, change password, toggle notifications, edit workspace prefs. |
+| `auth.ts` $queryRaw result is not typed correctly, causing silent auth bypass or false rejection | Medium | Explicit return type annotation on the $queryRaw call. Smoke surface in 3.2.5a includes login with a known-good account, a known-bad password, and a wrong email — all three paths must behave as today. |
+| Duplicate-email signup race: two concurrent signups both pass the `auth_find_user_by_email` check then both call `auth_create_user`, second hits UNIQUE constraint | Low | `User.email` is `@unique` in schema.prisma — DB-level. The RPC's `INSERT` will raise. `signup/actions.ts` catches `Prisma.PrismaClientKnownRequestError` P2002 today; under the RPC path, catch the equivalent error code from `$queryRaw`. Documented in the 3.2.5a TS edits. |
+
+## Manual Smoke Checklist
+
+### After Step 1.5 sanitation merge
+
+- Login still works.
+- Signup still works (UI calls the server action, not the deleted REST
+  route).
+- `/dashboard`, `/cases`, `/calendar`, `/tasks`, `/finances`, `/settings`
+  all load without errors.
+
+### After 3.2.5a merge
+
+- Login with a known-good account → redirects to dashboard.
+- Login with a wrong password → rejected.
+- Login with an unknown email → rejected.
+- Signup with a new email → creates account, redirects to dashboard,
+  next login works.
+- Signup with an existing email → "An account with this email already
+  exists." error path.
+- `npx dotenv -e .env.local -- npx tsx scripts/check-rls.ts` → green.
+  Expected `User` posture: RLS enabled, policy count = 2 (the two new
+  owner-keyed policies).
+- (Optional, if local Postgres is repointed to `lawdger_app` for a spot
+  check) `verify-isolation.ts`, `verify-phase32-rls.ts`,
+  `verify-with-user-context.ts` all green.
+
+### After 3.2.5b sibling-actions merge
+
+Per-file smoke surface:
+
+- **settingsActions:** `/settings` loads with current profile. Edit name
+  → saves and shows success. Change password (correct current) → saves.
+  Change password (wrong current) → rejected with the right error
+  message. Toggle each notification setting → saves. Edit workspace
+  preferences → saves.
+- **financeActions:** `/finances` loads with cases + payments. Edit a
+  case's agreed fee → saves. Add a payment → appears. Delete a payment →
+  removed.
+- **calendarActions:** `/calendar` loads with events + cases list + tasks
+  with due dates. Add a hearing for an existing case → appears. Edit it
+  → updates. Delete it → removed.
+- **taskActions:** `/tasks` loads. Create a task (no case) → appears.
+  Create a task (with case) → appears, linked. Edit description → saves.
+  Edit due date → saves. Toggle status → updates. Delete → removed.
+  Verify the same flows from a case-detail page (`/cases/[id]`) — those
+  use the already-compliant `*CaseTask` functions.
+- **dashboardActions:** `/dashboard` loads. Verify today's hearings,
+  upcoming hearings, pending tasks (count up to 20), all cases list,
+  total cases count, total pending tasks count — all match
+  pre-migration. From `/chat`, invoke a prompt that triggers
+  `get_dashboard` (e.g. "what's on my plate today?") and verify the
+  response includes today's events + pending tasks.
+
+### After 3.2.5c merge (if `verify-phase32x-sibling-actions.ts` lands)
+
+- Script runs end-to-end with green output against the local DB seeded
+  with userA + userB fixtures.
+
+## Estimated CC Sessions
+
+| Phase | Sessions |
+|---|---|
+| Step 1 (this plan doc) | 1 (current) |
+| Step 1.5 (sanitation) | 1 |
+| 3.2.5a (auth + SQL migration + RPCs) | 1 |
+| 3.2.5b (5 sibling action files, recommended split into 2–3 sessions) | 2–3 |
+| 3.2.5c (verify-script doc + optional new script) | 1 |
+| Final smoke + merge | 1 |
+| **Total** | **7–8 sessions** |
