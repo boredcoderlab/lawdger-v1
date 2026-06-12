@@ -18,7 +18,10 @@ const EXPECTED: Record<
   string,
   { rls: true; minPolicies: number; exactRequired: boolean }
 > = {
-  User: { rls: true, minPolicies: 0, exactRequired: true },
+  // User: owner-keyed SELECT + UPDATE policies added by
+  // 20260611142223_phase_3_2_5a_user_rls_and_auth_rpcs.
+  // Auth pre-session path goes through SECURITY DEFINER RPCs.
+  User: { rls: true, minPolicies: 2, exactRequired: true },
   _prisma_migrations: { rls: true, minPolicies: 0, exactRequired: true },
   Case: { rls: true, minPolicies: 1, exactRequired: false },
   Note: { rls: true, minPolicies: 1, exactRequired: false },
