@@ -215,7 +215,7 @@ Any failure blocks the merge.
 
 > **Smoke verifies policy existence only — not runtime enforcement.** `smoke:rls` confirms the 8 policies are present; it does not verify they fire at runtime (the `postgres` superuser connection bypasses them). Known blindspot, documented for Phase 3.0.1 remediation.
 
-`scripts/verify-isolation.ts`, `scripts/verify-phase32-rls.ts`, and `scripts/verify-with-user-context.ts` currently print "DEFERRED" and exit 0. Re-enabled in Phase 3.2.5 / 3.0.1.
+The three `scripts/verify-*.ts` files (`verify-isolation.ts`, `verify-phase32-rls.ts`, `verify-with-user-context.ts`) are **fully implemented**, not stubs. They are intentionally unwired from `npm run smoke` because they require the runtime connection to be `lawdger_app` (NOBYPASSRLS) to yield meaningful results. Under the current `postgres` superuser `DATABASE_URL`, the default-deny bare-client checks will produce misleading results (superuser bypasses RLS). They become runnable post-3.0.1 when `DATABASE_URL` is repointed.
 
 ---
 
@@ -265,13 +265,13 @@ Every Claude Code prompt for Lawdger must include:
 - `settingsActions.changePassword` retains legacy contract (`requireUserId` + base `prisma` + thrown errors / `PasswordState` shape). Migration to full 3.2 `Result<T>` contract + `auth_update_password` SECURITY DEFINER RPC sequenced to **Phase 3.0.1** (depends on auth-role layer).
 - `taskActions` legacy half — own task ops still on bare `prisma`. Full contract uplift sequenced to **Phase 3.2.6** (post-3.0.1).
 - Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Full 3.2 contract sequenced to **Phase 3.2.6**.
-- `scripts/verify-*.ts` are deferred stubs (print "DEFERRED", exit 0). Re-enable in **Phase 3.2.5c / 3.0.1**.
+- **Verify scripts wiring (post-3.0.1):** `scripts/verify-isolation.ts`, `scripts/verify-phase32-rls.ts`, `scripts/verify-with-user-context.ts` are fully implemented but not in the smoke chain. Wire into `npm run smoke:rls-runtime` (or similar) once `DATABASE_URL` is repointed to `lawdger_app` in 3.0.1.
 - `connection_limit` in `DATABASE_URL` bumped from `1` → `5` in Phase 3.2.1. `.env.example` reflects this. Not debt per se — sequenced expansion as enforced-RLS lands.
 - `next-pwa` installed but unconfigured. Decision deferred to platform phase.
 
 ### Smaller debt — log + opportunistic
 
-- **🚨 User-table queries require explicit `where: { id: session.id }` defence-in-depth — load-bearing until 3.0.1 FORCE RLS lands.** Until then, every scoped Prisma query against the User table (read AND write) MUST include explicit `where: { id: session.id }`. RLS policies on User are structural only at runtime: `relforcerowsecurity = false` + `DATABASE_URL` connects as `postgres` superuser, so the owner bypasses the `User_self_select` / `User_self_update` policies. A `findFirst()` with no where returns an arbitrary user; an `updateMany()` with no where mutates every row. Surfaced during 3.2.5b-ii smoke when an initial `getFullProfile()` returned the wrong user's profile; root-caused before commit. `smoke:rls` does not catch this — it only verifies policy existence. Audit task tracked under §13 phase 3.2.5c.
+- **User-table where-clause requirement** (3.2.5b-ii smoke discovery — **audit completed in 3.2.5c, clean**): 9 call sites against `prisma.user.*` exist in `src/`, all in `settingsActions.ts`, all carry explicit `where: { id }` on reads and writes. Auth path (`auth.ts`, `signup/actions.ts`) routes through SECURITY DEFINER RPCs (no model API surface). Defence-in-depth holds until 3.0.1 FORCE RLS lands. **Going-forward rule:** every new scoped query against User MUST include explicit `where: { id }` until 3.0.1.
 - **Chat route module-load 500.** `src/app/api/chat/route.ts` 500s at import time with `"use server" file can only export async functions, found object` — caused by the `type NoteCategory` re-export from `noteActions.ts`. Reproduces on `main` (verified during 3.2.5b-i smoke). Likely Turbopack/Next 16 mis-handling type-only re-exports from `"use server"` files. **Likely fix:** move `NoteCategory` type to a non-`"use server"` file (e.g. `src/actions/noteActions.types.ts`) and re-import. Dedicated session.
 - **`prisma/seed.ts` upsert with `update: {}`.** On re-seed, existing users' password (and any other field) never refreshes. Stale hashes block dev login after auth-shape changes. **One-line fix:** change `update: {}` to `update: { password, name }`. Trivial separate PR.
 - Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — 109 commits behind main. Cleanup pending.
@@ -312,7 +312,7 @@ Every Claude Code prompt for Lawdger must include:
 | 3.2.5a | ✅ Done | Auth-path RLS RPCs (`auth_find_user_by_email`, `auth_create_user`) + User owner-keyed policies + `lawdger_app` NOLOGIN stub |
 | 3.2.5b-i | ✅ Done | Minimal scoped-Prisma swap for `calendarActions`, `dashboardActions`, `financeActions` + collapse of duplicate 6-query block from `dashboard/page.tsx` (action becomes canonical). No contract uplift. |
 | 3.2.5b-ii | ✅ Done | `settingsActions` full 3.2 contract (Zod + Result + scoped) for 4 of 5 functions; `SettingsClient` rewired to unwrap Result via `useActionState<ActionState, FormData>`. `changePassword` retained on legacy contract (deferred to 3.0.1). |
-| 3.2.5c | ⏭️ Next | Re-enable `scripts/verify-*.ts` stubs; final doc pass before 3.0.1; **audit all scoped queries against the User table across the codebase — confirm explicit `where: { id: session.id }` on every read AND write before FORCE RLS** (load-bearing per §10 Smaller debt — surfaced 3.2.5b-ii) |
+| 3.2.5c | ✅ Done | Doc pass: corrected SOT §7/§10 stale "DEFERRED stubs" claim (scripts are fully implemented, unwired pending 3.0.1); User-table where-clause audit (clean, 9/9 call sites carry `where:{id}`); `PHASE_3_2_5_PLAN.md` archived. |
 | 3.2.6 | ⏸️ Sequenced | Full contract uplift (Zod + Result) for `calendarActions` / `dashboardActions` / `financeActions` + `taskActions` legacy half. Sequenced **after** 3.0.1. |
 | 3.0.1 | ⏸️ Sequenced | `lawdger_app` PASSWORD + table GRANTs + FORCE RLS + `DATABASE_URL` repoint (true DB enforcement) + `auth_update_password` RPC to unblock `settingsActions.changePassword` migration |
 | 3.3+ | ⏸️ Deferred | Cases UI cleanup, New Matter dialog, CaseDetail real data |
