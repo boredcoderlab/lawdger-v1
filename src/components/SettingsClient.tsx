@@ -2,28 +2,41 @@
 
 import { useActionState, useState } from "react";
 import {
-  User, Lock, Sliders, Bell, Check, AlertCircle, Shield, Settings, Mail, MapPin, Scale, MonitorPlay, Zap
+  User, Lock, Bell, Check, AlertCircle, Shield, Settings, Zap
 } from "lucide-react";
 import {
-  updateProfile, changePassword, updateWorkspacePreferences,
-  updateNotificationPreferences, type SettingsState, type Preferences,
+  updateProfile,
+  changePassword,
+  updateWorkspacePreferences,
+  updateNotificationPreferences,
+  type ActionState,
+  type PasswordState,
+  type Preferences,
 } from "@/actions/settingsActions";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
 // ── Shared UI ─────────────────────────────────────────────────────────────────
 
-function StatusBanner({ state }: { state: SettingsState }) {
-  if (!state.success && !state.error) return null;
+type BannerShape = { success?: string; error?: string };
+
+function bannerFromResult(state: ActionState): BannerShape {
+  if (!state) return {};
+  if (state.ok) return { success: state.data.message };
+  return { error: state.error };
+}
+
+function StatusBanner({ banner }: { banner: BannerShape }) {
+  if (!banner.success && !banner.error) return null;
   return (
     <div className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm border ${
-      state.success
+      banner.success
         ? "bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400"
         : "bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400"
     } mb-6`}>
-      {state.success
+      {banner.success
         ? <Check className="h-4 w-4 shrink-0" />
         : <AlertCircle className="h-4 w-4 shrink-0" />}
-      <span className="font-medium">{state.success ?? state.error}</span>
+      <span className="font-medium">{banner.success ?? banner.error}</span>
     </div>
   );
 }
@@ -159,10 +172,14 @@ export default function SettingsClient({
   const [taskDueReminders, setTaskDueReminders] = useState(preferences.notifications.taskDueReminders);
   const [weeklySummary, setWeeklySummary] = useState(preferences.notifications.weeklySummary);
 
-  const [profileState, profileAction, profilePending] = useActionState<SettingsState, FormData>(updateProfile, {});
-  const [pwState, pwAction, pwPending] = useActionState<SettingsState, FormData>(changePassword, {});
-  const [wsState, wsAction, wsPending] = useActionState<SettingsState, FormData>(updateWorkspacePreferences, {});
-  const [notifState, notifAction, notifPending] = useActionState<SettingsState, FormData>(updateNotificationPreferences, {});
+  const [profileState, profileAction, profilePending] =
+    useActionState<ActionState, FormData>(updateProfile, null);
+  const [pwState, pwAction, pwPending] =
+    useActionState<PasswordState, FormData>(changePassword, {});
+  const [wsState, wsAction, wsPending] =
+    useActionState<ActionState, FormData>(updateWorkspacePreferences, null);
+  const [notifState, notifAction, notifPending] =
+    useActionState<ActionState, FormData>(updateNotificationPreferences, null);
 
   return (
     <PageLayout
@@ -238,7 +255,7 @@ export default function SettingsClient({
           <div className={activeTab === "account" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
             <Card title="Professional Profile" icon={User}>
               <form action={profileAction} className="space-y-6">
-                <StatusBanner state={profileState} />
+                <StatusBanner banner={bannerFromResult(profileState)} />
                 <div className="grid grid-cols-2 gap-6">
                   <Field label="Full Name" name="name" defaultValue={name ?? ""} placeholder="Adv. Your Name" />
                   <Field label="Bar Registration No." name="barNumber" defaultValue={preferences.barNumber} placeholder="e.g. D/1425/2012" />
@@ -268,7 +285,7 @@ export default function SettingsClient({
           <div className={activeTab === "security" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
             <Card title="Access Credentials" icon={Lock}>
               <form action={pwAction} className="space-y-6">
-                <StatusBanner state={pwState} />
+                <StatusBanner banner={pwState} />
                 <Field label="Current Password" name="currentPassword" type="password" placeholder="Enter current password" />
                 <Field label="New Password" name="newPassword" type="password" placeholder="At least 8 characters" />
                 <Field label="Confirm New Password" name="confirmPassword" type="password" placeholder="Repeat new password" />
@@ -281,7 +298,7 @@ export default function SettingsClient({
           <div className={activeTab === "ai-workspace" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
             <Card title="Brain Configuration" icon={Zap}>
               <form action={wsAction} className="space-y-6">
-                <StatusBanner state={wsState} />
+                <StatusBanner banner={bannerFromResult(wsState)} />
                 <SelectField
                   label="Primary Jurisdiction"
                   name="jurisdiction"
@@ -321,7 +338,7 @@ export default function SettingsClient({
           <div className={activeTab === "notifications" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
             <Card title="Notification Matrix" icon={Bell}>
               <form action={notifAction} className="space-y-6">
-                <StatusBanner state={notifState} />
+                <StatusBanner banner={bannerFromResult(notifState)} />
                 <Toggle
                   name="hearingReminders"
                   checked={hearingReminders}
