@@ -9,7 +9,7 @@
 ## Goal
 Move the Lawdger app from structural-only RLS (postgres superuser bypasses every policy) to runtime-enforced RLS by:
 1. Hardening the `lawdger_app` role (PASSWORD + table GRANTs + NOBYPASSRLS verified).
-2. Applying `FORCE ROW LEVEL SECURITY` on all 8 protected tables.
+2. Applying `FORCE ROW LEVEL SECURITY` on all 7 protected tables.
 3. Repointing the runtime `DATABASE_URL` from `postgres` to `lawdger_app`.
 4. Authoring `auth_update_password` SECURITY DEFINER RPC.
 5. Migrating `changePassword` from legacy contract to full 3.2 contract + RPC call.
@@ -36,7 +36,7 @@ After this phase, the pitch-deck "End-to-End Encrypted, Legal Grade" posture acq
 ## Sub-phase Sequencing
 | Sub-PR | Scope | Hits prod? | Reversible? |
 |---|---|---|---|
-| 3.0.1a | `lawdger_app` PASSWORD + table GRANTs + `ALTER ROLE … NOBYPASSRLS` re-assertion + FORCE RLS on 8 tables | Yes (DB migration) | Yes (drop GRANTs, unset PASSWORD, unset FORCE — app still on `postgres`) |
+| 3.0.1a | `lawdger_app` PASSWORD + table GRANTs + `ALTER ROLE … NOBYPASSRLS` re-assertion + FORCE RLS on 7 tables | Yes (DB migration) | Yes (drop GRANTs, unset PASSWORD, unset FORCE — app still on `postgres`) |
 | 3.0.1b | `auth_update_password` RPC migration | Yes (DB migration) | Yes (DROP FUNCTION) |
 | 3.0.1c | `changePassword` server action: legacy → full 3.2 contract + RPC call; `SettingsClient.tsx` password form: legacy `PasswordState` → `Result<T>` unwrap | No (TS only) | Yes (git revert) |
 | 3.0.1d | `DATABASE_URL` repoint to `lawdger_app` (local `.env.local` + Vercel env) + `smoke:rls-runtime` wired into `npm run smoke` | Yes (env swap) | Yes but **app-affecting** (see §Rollback) |
@@ -98,7 +98,7 @@ GRANT EXECUTE ON FUNCTION auth_update_password(text, text) TO postgres;
    - `GRANT USAGE ON SCHEMA public TO lawdger_app;`
    - `GRANT SELECT, INSERT, UPDATE, DELETE ON "User", "Case", "Note", "Task", "CalendarEvent", "Payment", "Document" TO lawdger_app;` — 7 app tables (`_prisma_migrations` stays postgres-only)
    - `GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO lawdger_app;` — if any cuid/serial; review actual schema first
-3. `ALTER TABLE … FORCE ROW LEVEL SECURITY;` on all 8 protected tables (7 app tables + User).
+3. `ALTER TABLE … FORCE ROW LEVEL SECURITY;` on all 7 protected tables (User + 6 app tables).
 4. Verification block (DO block, raises NOTICE on each table's `relforcerowsecurity`).
 
 **Post-apply manual step (mandatory, documented in PR body):**
@@ -216,7 +216,7 @@ Revert `.env.local`. No production impact. Diagnose and re-attempt.
 | `npm run smoke` (tsc+prisma+check-rls posture) | green | green | green | green | green |
 | `lawdger_app` has LOGIN+PASSWORD | no | yes | yes | yes | yes |
 | `lawdger_app` has table GRANTs | no | yes | yes | yes | yes |
-| 8 tables FORCED RLS | no | yes | yes | yes | yes |
+| 7 tables FORCED RLS | no | yes | yes | yes | yes |
 | `auth_update_password` exists | no | no | yes | yes | yes |
 | `changePassword` on 3.2 contract | no | no | no | yes | yes |
 | Runtime DB connection as `lawdger_app` | no | no | no | no | yes |
@@ -232,7 +232,7 @@ Revert `.env.local`. No production impact. Diagnose and re-attempt.
 ## Risk Register
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Forgotten table in GRANTs → app errors post-repoint | Med | High | Verification block in 3.0.1a migration enumerates all 8 tables; manual smoke against every page before 3.0.1d swap |
+| Forgotten table in GRANTs → app errors post-repoint | Med | High | Verification block in 3.0.1a migration enumerates all 7 tables; manual smoke against every page before 3.0.1d swap |
 | `lawdger_app` password ends up committed | Low | Critical | Temp placeholder in migration + manual ALTER + secret only in `.env.local` and Vercel; gitleaks pre-commit if available |
 | Supabase event trigger flips NOBYPASSRLS during deploy | Med | Critical | Idempotent ALTER assertion in 3.0.1a (3.2.5a precedent); verification block re-checks `rolbypassrls` after ALTER |
 | `bcrypt.hash` cost mismatch between signup (cost 12) and password change | Low | Low | Explicit cost 12 in `changePassword`, matching `src/app/signup/actions.ts`; documented in PR body |
