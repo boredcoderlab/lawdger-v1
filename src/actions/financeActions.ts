@@ -1,35 +1,27 @@
 "use server";
 
 import { requireUserId } from "@/actions/requireUserId";
-import { prisma } from "@/lib/prisma";
+import {
+  getServerScopedPrisma,
+  withServerUserContext,
+} from "@/lib/session";
 import { revalidatePath } from "next/cache";
-
-async function assertCaseAccess(caseId: string, userId: string) {
-  const caseItem = await prisma.case.findFirst({
-    where: { id: caseId, userId },
-    select: { id: true },
-  });
-
-  if (!caseItem) {
-    throw new Error("Unauthorized");
-  }
-}
 
 export async function getFinancesData() {
   const userId = await requireUserId();
-
-  const cases = await prisma.case.findMany({
+  const scoped = await getServerScopedPrisma();
+  return scoped.case.findMany({
     where: { userId },
     include: { payments: true },
     orderBy: { createdAt: "desc" },
   });
-
-  return cases;
 }
 
 export async function updateCaseAgreedFee(caseId: string, agreedFee: number) {
   const userId = await requireUserId();
-  const result = await prisma.case.updateMany({
+  const scoped = await getServerScopedPrisma();
+
+  const result = await scoped.case.updateMany({
     where: { id: caseId, userId },
     data: { agreedFee },
   });
@@ -49,23 +41,35 @@ export async function createPayment(data: {
 }) {
   const userId = await requireUserId();
 
-  await assertCaseAccess(data.caseId, userId);
+  await withServerUserContext(async (tx) => {
+    const caseItem = await tx.case.findFirst({
+      where: { id: data.caseId, userId },
+      select: { id: true },
+    });
 
-  await prisma.payment.create({
-    data: {
-      userId,
-      caseId: data.caseId,
-      amount: data.amount,
-      status: data.status ?? "paid",
-      dueDate: data.dueDate ?? null,
-    },
+    if (!caseItem) {
+      throw new Error("Unauthorized");
+    }
+
+    await tx.payment.create({
+      data: {
+        userId,
+        caseId: data.caseId,
+        amount: data.amount,
+        status: data.status ?? "paid",
+        dueDate: data.dueDate ?? null,
+      },
+    });
   });
+
   revalidatePath("/finances");
 }
 
 export async function deletePayment(id: string) {
   const userId = await requireUserId();
-  const result = await prisma.payment.deleteMany({ where: { id, userId } });
+  const scoped = await getServerScopedPrisma();
+
+  const result = await scoped.payment.deleteMany({ where: { id, userId } });
 
   if (!result.count) {
     throw new Error("Unauthorized");
