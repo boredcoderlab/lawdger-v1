@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-11 (commit `9a5ee34`)
+**Last updated:** 2026-06-11 (post-3.2.5a, see migration history below)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -103,7 +103,7 @@ MUST call `auth()` in its handler. There is no automatic protection.
 
 | Table | RLS | Policy count | Notes |
 |-------|-----|--------------|-------|
-| `User` | ✅ | 0 (default deny) | postgres superuser bypasses RLS |
+| `User` | ✅ | 2 (`User_self_select`, `User_self_update`) | Owner-keyed via `current_setting('app.current_user_id', true)`; postgres superuser still bypasses (until 3.0.1). Auth pre-session path uses `auth_find_user_by_email` / `auth_create_user` SECURITY DEFINER RPCs. |
 | `_prisma_migrations` | ✅ | 0 (default deny) | Infra table |
 | `Case` | ✅ | 1 (`Case_isolation`) | userId scoped |
 | `Note` | ✅ | 1 (`Note_isolation`) | userId scoped |
@@ -119,10 +119,11 @@ Verified by `npm run smoke:rls`.
 > **Warning:** RLS is structurally present but not enforced at runtime. Known design gap — remediation sequenced to Phase 3.0.1.
 
 - 8 tables have RLS **enabled**; none are **FORCED**.
-- `lawdger_app` Postgres role does **not exist** in any migration — referenced in comments but never created.
-- `DATABASE_URL` connects as `postgres` superuser, which bypasses all RLS policies by default.
+- `lawdger_app` Postgres role exists as a **NOLOGIN NOBYPASSRLS stub** (created in 3.2.5a). Cannot authenticate yet — password + table GRANTs + `DATABASE_URL` repoint all in 3.0.1.
+- `DATABASE_URL` still connects as `postgres` superuser, which bypasses all RLS policies by default.
 - Actual isolation today: app-layer `where: { userId }` filters in `caseActions.ts` (and migrated siblings).
-- Full DB-level enforcement (FORCE RLS + `lawdger_app` role + `DATABASE_URL` repoint) deferred to **Phase 3.0.1**.
+- Auth pre-session path (`auth.ts`, `signup/actions.ts`) now routes through SECURITY DEFINER RPCs (`auth_find_user_by_email`, `auth_create_user`) — the narrow, audited surface that 3.0.1's `lawdger_app` role will use once it has EXECUTE-only privileges on these functions and no direct User-table access.
+- Full DB-level enforcement (FORCE RLS + `lawdger_app` password + GRANTs + `DATABASE_URL` repoint) deferred to **Phase 3.0.1**.
 
 ### RLS pattern — why session variables, not `auth.uid()`
 
@@ -164,7 +165,7 @@ before each user-scoped query.
 | `src/actions/dashboardActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
 | `src/actions/financeActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
 | `src/actions/settingsActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
-| `src/auth.ts` + signup actions | ⏭️ Pending | Bare `prisma` — auth-specific RLS policy design needed; Phase 3.2.5 |
+| `src/auth.ts` + signup actions | ✅ Migrated (3.2.5a) | Now use `prisma.$queryRaw` → `auth_find_user_by_email` / `auth_create_user` SECURITY DEFINER RPCs. Bare `prisma` import retained for the raw-query call site only. |
 
 ### Case model — enums and key fields
 
@@ -193,6 +194,7 @@ before each user-scoped query.
 | `20260527051415_add_documents_litigation_rls` | 2026-05-27 | Document model, Indian litigation fields on Case, RLS on 6 matter tables |
 | `20260609030200_enable_rls_user_and_migrations` | 2026-06-09 | RLS on User + _prisma_migrations (default deny) |
 | `20260609113647_phase_3_1_schema_cleanup` | 2026-06-09 | `CaseStatus` enum (ACTIVE \| CLOSED), `MatterType` enum (LITIGATION \| ADVISORY \| PRE_LITIGATION), `caseNumber` field; drop legacy string fields (courtName, forum, matterId) |
+| `20260611142223_phase_3_2_5a_user_rls_and_auth_rpcs` | 2026-06-11 | `lawdger_app` NOLOGIN NOBYPASSRLS stub role; User owner-keyed SELECT + UPDATE policies (NULLIF-guarded GUC); `auth_find_user_by_email` + `auth_create_user` SECURITY DEFINER RPCs (EXECUTE granted to `lawdger_app` + `postgres`). Hand-authored — shadow DB workaround. |
 
 ---
 
@@ -261,8 +263,8 @@ Every Claude Code prompt for Lawdger must include:
 - Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — 109 commits
   behind main. Cleanup pending.
 - Dead `claude/*` branches (5× at SHA `3374d3d`). Prune pending.
-- `lawdger_app` Postgres role never created. Runtime `DATABASE_URL` connects as `postgres` superuser — RLS not enforced at DB level. Remediation: Phase 3.0.1.
-- 5 sibling action files (`calendarActions`, `dashboardActions`, `financeActions`, `settingsActions`, `auth.ts` + signup) still use bare `prisma`. Migration target: Phase 3.2.5.
+- `lawdger_app` Postgres role now exists (3.2.5a) but only as NOLOGIN stub — no password, no table GRANTs. Runtime `DATABASE_URL` still connects as `postgres` superuser. Full enforcement (password + GRANTs + URL repoint + FORCE RLS): Phase 3.0.1.
+- 4 sibling action files (`calendarActions`, `dashboardActions`, `financeActions`, `settingsActions`) still use bare `prisma`. Migration target: Phase 3.2.5b. (`auth.ts` + signup done in 3.2.5a.)
 - `connection_limit` in `DATABASE_URL` bumped from `1` → `5` in Phase 3.2.1. `.env.example` reflects this.
 - `scripts/verify-*.ts` are deferred stubs (print "DEFERRED", exit 0). Re-enable in Phase 3.2.5 / 3.0.1.
 
@@ -298,6 +300,8 @@ Every Claude Code prompt for Lawdger must include:
 | 3.1 | ✅ Done | Schema cleanup — enums, caseNumber, drop legacy fields |
 | 3.2 | ✅ Done | Server actions reconciliation — Zod, Result envelope, caseActions migrated |
 | 3.2.1 | ✅ Done | Scoped Prisma multi-query pattern (`withUserContext`, `connection_limit=5`) |
-| 3.2.5 | ⏭️ Next | Scoped-client migration for 5 sibling action files + auth path |
-| 3.0.1 | ⏸️ Deferred | `lawdger_app` role + FORCE RLS + `DATABASE_URL` repoint (true DB enforcement) |
+| 3.2.5a | ✅ Done | Auth-path RLS RPCs (`auth_find_user_by_email`, `auth_create_user`) + User owner-keyed policies + `lawdger_app` NOLOGIN stub |
+| 3.2.5b | ⏭️ Next | Scoped-client migration for 4 remaining sibling action files (`calendarActions`, `dashboardActions`, `financeActions`, `settingsActions`) |
+| 3.2.5c | ⏭️ Pending | Re-enable `scripts/verify-*.ts` stubs |
+| 3.0.1 | ⏸️ Deferred | `lawdger_app` password + table GRANTs + FORCE RLS + `DATABASE_URL` repoint (true DB enforcement) |
 | 3.3+ | ⏸️ Deferred | Cases UI cleanup, New Matter dialog, CaseDetail real data |
