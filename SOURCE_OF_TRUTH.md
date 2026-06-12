@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-11 (post-3.2.5a, see migration history below)
+**Last updated:** 2026-06-12 (post-3.2.5b-ii, see migration history below)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -160,11 +160,11 @@ before each user-scoped query.
 |------|--------|-------|
 | `src/actions/caseActions.ts` | ✅ Migrated | Zod, scoped Prisma, `where: { userId }`, `Result<T>` envelope |
 | `src/actions/noteActions.ts` | ✅ Migrated | New in 3.2 — split from caseActions |
-| `src/actions/taskActions.ts` | ⚠️ Partial | Case-task helpers scoped; own task ops still use bare `prisma` |
-| `src/actions/calendarActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
-| `src/actions/dashboardActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
-| `src/actions/financeActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
-| `src/actions/settingsActions.ts` | ⏭️ Pending | Bare `prisma` — target of Phase 3.2.5 |
+| `src/actions/taskActions.ts` | ⚠️ Partial | Case-task helpers scoped; own task ops still use bare `prisma`. Full contract uplift sequenced to **3.2.6**. |
+| `src/actions/calendarActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped patterns. **No Zod/Result yet** — contract uplift sequenced to 3.2.6. `where: { userId }` retained as defence-in-depth. |
+| `src/actions/dashboardActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` + 6-query `Promise.all` → single `withServerUserContext` interactive tx with sequential awaits. Page-level duplicate queries collapsed; `dashboard/page.tsx` now thin consumer of `getDashboardData()`. Contract uplift sequenced to 3.2.6. |
+| `src/actions/financeActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped; `assertCaseAccess` helper inlined into `createPayment`'s `withServerUserContext` tx. Contract uplift sequenced to 3.2.6. |
+| `src/actions/settingsActions.ts` | ✅ Full contract (3.2.5b-ii) | Zod schemas + `Result<T>` envelope + scoped Prisma for `getFullProfile`, `updateProfile`, `updateWorkspacePreferences`, `updateNotificationPreferences`. `changePassword` retains legacy contract (`requireUserId` + base `prisma` + thrown errors / `PasswordState` shape) pending 3.0.1's auth-role layer + `auth_update_password` RPC. |
 | `src/auth.ts` + signup actions | ✅ Migrated (3.2.5a) | Now use `prisma.$queryRaw` → `auth_find_user_by_email` / `auth_create_user` SECURITY DEFINER RPCs. Bare `prisma` import retained for the raw-query call site only. |
 
 ### Case model — enums and key fields
@@ -259,14 +259,23 @@ Every Claude Code prompt for Lawdger must include:
 
 ## 10. Known Tech Debt
 
+### Larger debt (sequenced)
+
+- `lawdger_app` Postgres role exists (3.2.5a) but only as NOLOGIN stub — no password, no table GRANTs. Runtime `DATABASE_URL` still connects as `postgres` superuser. Full enforcement (password + GRANTs + URL repoint + FORCE RLS): **Phase 3.0.1**.
+- `settingsActions.changePassword` retains legacy contract (`requireUserId` + base `prisma` + thrown errors / `PasswordState` shape). Migration to full 3.2 `Result<T>` contract + `auth_update_password` SECURITY DEFINER RPC sequenced to **Phase 3.0.1** (depends on auth-role layer).
+- `taskActions` legacy half — own task ops still on bare `prisma`. Full contract uplift sequenced to **Phase 3.2.6** (post-3.0.1).
+- Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Full 3.2 contract sequenced to **Phase 3.2.6**.
+- `scripts/verify-*.ts` are deferred stubs (print "DEFERRED", exit 0). Re-enable in **Phase 3.2.5c / 3.0.1**.
+- `connection_limit` in `DATABASE_URL` bumped from `1` → `5` in Phase 3.2.1. `.env.example` reflects this. Not debt per se — sequenced expansion as enforced-RLS lands.
 - `next-pwa` installed but unconfigured. Decision deferred to platform phase.
-- Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — 109 commits
-  behind main. Cleanup pending.
+
+### Smaller debt — log + opportunistic
+
+- **🚨 User-table queries require explicit `where: { id: session.id }` defence-in-depth — load-bearing until 3.0.1 FORCE RLS lands.** Until then, every scoped Prisma query against the User table (read AND write) MUST include explicit `where: { id: session.id }`. RLS policies on User are structural only at runtime: `relforcerowsecurity = false` + `DATABASE_URL` connects as `postgres` superuser, so the owner bypasses the `User_self_select` / `User_self_update` policies. A `findFirst()` with no where returns an arbitrary user; an `updateMany()` with no where mutates every row. Surfaced during 3.2.5b-ii smoke when an initial `getFullProfile()` returned the wrong user's profile; root-caused before commit. `smoke:rls` does not catch this — it only verifies policy existence. Audit task tracked under §13 phase 3.2.5c.
+- **Chat route module-load 500.** `src/app/api/chat/route.ts` 500s at import time with `"use server" file can only export async functions, found object` — caused by the `type NoteCategory` re-export from `noteActions.ts`. Reproduces on `main` (verified during 3.2.5b-i smoke). Likely Turbopack/Next 16 mis-handling type-only re-exports from `"use server"` files. **Likely fix:** move `NoteCategory` type to a non-`"use server"` file (e.g. `src/actions/noteActions.types.ts`) and re-import. Dedicated session.
+- **`prisma/seed.ts` upsert with `update: {}`.** On re-seed, existing users' password (and any other field) never refreshes. Stale hashes block dev login after auth-shape changes. **One-line fix:** change `update: {}` to `update: { password, name }`. Trivial separate PR.
+- Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — 109 commits behind main. Cleanup pending.
 - Dead `claude/*` branches (5× at SHA `3374d3d`). Prune pending.
-- `lawdger_app` Postgres role now exists (3.2.5a) but only as NOLOGIN stub — no password, no table GRANTs. Runtime `DATABASE_URL` still connects as `postgres` superuser. Full enforcement (password + GRANTs + URL repoint + FORCE RLS): Phase 3.0.1.
-- 4 sibling action files (`calendarActions`, `dashboardActions`, `financeActions`, `settingsActions`) still use bare `prisma`. Migration target: Phase 3.2.5b. (`auth.ts` + signup done in 3.2.5a.)
-- `connection_limit` in `DATABASE_URL` bumped from `1` → `5` in Phase 3.2.1. `.env.example` reflects this.
-- `scripts/verify-*.ts` are deferred stubs (print "DEFERRED", exit 0). Re-enable in Phase 3.2.5 / 3.0.1.
 
 ---
 
@@ -301,7 +310,9 @@ Every Claude Code prompt for Lawdger must include:
 | 3.2 | ✅ Done | Server actions reconciliation — Zod, Result envelope, caseActions migrated |
 | 3.2.1 | ✅ Done | Scoped Prisma multi-query pattern (`withUserContext`, `connection_limit=5`) |
 | 3.2.5a | ✅ Done | Auth-path RLS RPCs (`auth_find_user_by_email`, `auth_create_user`) + User owner-keyed policies + `lawdger_app` NOLOGIN stub |
-| 3.2.5b | ⏭️ Next | Scoped-client migration for 4 remaining sibling action files (`calendarActions`, `dashboardActions`, `financeActions`, `settingsActions`) |
-| 3.2.5c | ⏭️ Pending | Re-enable `scripts/verify-*.ts` stubs |
-| 3.0.1 | ⏸️ Deferred | `lawdger_app` password + table GRANTs + FORCE RLS + `DATABASE_URL` repoint (true DB enforcement) |
+| 3.2.5b-i | ✅ Done | Minimal scoped-Prisma swap for `calendarActions`, `dashboardActions`, `financeActions` + collapse of duplicate 6-query block from `dashboard/page.tsx` (action becomes canonical). No contract uplift. |
+| 3.2.5b-ii | ✅ Done | `settingsActions` full 3.2 contract (Zod + Result + scoped) for 4 of 5 functions; `SettingsClient` rewired to unwrap Result via `useActionState<ActionState, FormData>`. `changePassword` retained on legacy contract (deferred to 3.0.1). |
+| 3.2.5c | ⏭️ Next | Re-enable `scripts/verify-*.ts` stubs; final doc pass before 3.0.1; **audit all scoped queries against the User table across the codebase — confirm explicit `where: { id: session.id }` on every read AND write before FORCE RLS** (load-bearing per §10 Smaller debt — surfaced 3.2.5b-ii) |
+| 3.2.6 | ⏸️ Sequenced | Full contract uplift (Zod + Result) for `calendarActions` / `dashboardActions` / `financeActions` + `taskActions` legacy half. Sequenced **after** 3.0.1. |
+| 3.0.1 | ⏸️ Sequenced | `lawdger_app` PASSWORD + table GRANTs + FORCE RLS + `DATABASE_URL` repoint (true DB enforcement) + `auth_update_password` RPC to unblock `settingsActions.changePassword` migration |
 | 3.3+ | ⏸️ Deferred | Cases UI cleanup, New Matter dialog, CaseDetail real data |
