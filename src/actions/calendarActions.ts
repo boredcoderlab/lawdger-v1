@@ -1,12 +1,16 @@
 "use server";
 
 import { requireUserId } from "@/actions/requireUserId";
-import { prisma } from "@/lib/prisma";
+import {
+  getServerScopedPrisma,
+  withServerUserContext,
+} from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 export async function getCalendarEvents() {
   const userId = await requireUserId();
-  return prisma.calendarEvent.findMany({
+  const scoped = await getServerScopedPrisma();
+  return scoped.calendarEvent.findMany({
     where: { userId },
     include: { case: true },
     orderBy: { hearingDate: "asc" },
@@ -21,23 +25,25 @@ export async function createCalendarEvent(data: {
 }) {
   const userId = await requireUserId();
 
-  const caseItem = await prisma.case.findFirst({
-    where: { id: data.caseId, userId },
-    select: { id: true },
-  });
+  await withServerUserContext(async (tx) => {
+    const caseItem = await tx.case.findFirst({
+      where: { id: data.caseId, userId },
+      select: { id: true },
+    });
 
-  if (!caseItem) {
-    throw new Error("Unauthorized");
-  }
+    if (!caseItem) {
+      throw new Error("Unauthorized");
+    }
 
-  await prisma.calendarEvent.create({
-    data: {
-      userId,
-      caseId: data.caseId,
-      title: data.title,
-      hearingDate: data.hearingDate,
-      description: data.description ?? null,
-    },
+    await tx.calendarEvent.create({
+      data: {
+        userId,
+        caseId: data.caseId,
+        title: data.title,
+        hearingDate: data.hearingDate,
+        description: data.description ?? null,
+      },
+    });
   });
 
   revalidatePath("/calendar");
@@ -49,8 +55,9 @@ export async function updateCalendarEvent(
   data: { title?: string; hearingDate?: Date; description?: string }
 ) {
   const userId = await requireUserId();
+  const scoped = await getServerScopedPrisma();
 
-  const result = await prisma.calendarEvent.updateMany({
+  const result = await scoped.calendarEvent.updateMany({
     where: { id, userId },
     data: {
       ...(data.title && { title: data.title }),
@@ -69,7 +76,9 @@ export async function updateCalendarEvent(
 
 export async function deleteCalendarEvent(id: string) {
   const userId = await requireUserId();
-  const result = await prisma.calendarEvent.deleteMany({ where: { id, userId } });
+  const scoped = await getServerScopedPrisma();
+
+  const result = await scoped.calendarEvent.deleteMany({ where: { id, userId } });
 
   if (!result.count) {
     throw new Error("Unauthorized");
@@ -81,7 +90,8 @@ export async function deleteCalendarEvent(id: string) {
 
 export async function getCasesForSelect() {
   const userId = await requireUserId();
-  return prisma.case.findMany({
+  const scoped = await getServerScopedPrisma();
+  return scoped.case.findMany({
     where: { userId, status: "ACTIVE" },
     select: { id: true, title: true },
     orderBy: { title: "asc" },
