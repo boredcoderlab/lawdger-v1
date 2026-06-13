@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-12 (post-3.2.5b-ii, see migration history below)
+**Last updated:** 2026-06-13 (post-3.0.1a, see migration history below)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -101,29 +101,28 @@ MUST call `auth()` in its handler. There is no automatic protection.
 
 ### RLS posture
 
-| Table | RLS | Policy count | Notes |
-|-------|-----|--------------|-------|
-| `User` | ✅ | 2 (`User_self_select`, `User_self_update`) | Owner-keyed via `current_setting('app.current_user_id', true)`; postgres superuser still bypasses (until 3.0.1). Auth pre-session path uses `auth_find_user_by_email` / `auth_create_user` SECURITY DEFINER RPCs. |
-| `_prisma_migrations` | ✅ | 0 (default deny) | Infra table |
-| `Case` | ✅ | 1 (`Case_isolation`) | userId scoped |
-| `Note` | ✅ | 1 (`Note_isolation`) | userId scoped |
-| `Task` | ✅ | 1 (`Task_isolation`) | userId scoped |
-| `CalendarEvent` | ✅ | 1 (`CalendarEvent_isolation`) | userId scoped |
-| `Payment` | ✅ | 1 (`Payment_isolation`) | userId scoped |
-| `Document` | ✅ | 1 (`Document_isolation`) | userId scoped |
+| Table | RLS | FORCE | Policy count | Notes |
+|-------|-----|-------|--------------|-------|
+| `User` | ✅ | ✅ | 2 (`User_self_select`, `User_self_update`) | Owner-keyed via `current_setting('app.current_user_id', true)`. postgres BYPASSRLS attribute still bypasses until 3.0.1d repoint. Auth pre-session path uses `auth_find_user_by_email` / `auth_create_user` SECURITY DEFINER RPCs. |
+| `_prisma_migrations` | ✅ | ❌ | 0 (default deny) | Infra table — FORCE deliberately omitted; postgres BYPASSRLS covers migration runner; `lawdger_app` has no GRANTs on this table. |
+| `Case` | ✅ | ✅ | 1 (`Case_isolation`) | userId scoped |
+| `Note` | ✅ | ✅ | 1 (`Note_isolation`) | userId scoped |
+| `Task` | ✅ | ✅ | 1 (`Task_isolation`) | userId scoped |
+| `CalendarEvent` | ✅ | ✅ | 1 (`CalendarEvent_isolation`) | userId scoped |
+| `Payment` | ✅ | ✅ | 1 (`Payment_isolation`) | userId scoped |
+| `Document` | ✅ | ✅ | 1 (`Document_isolation`) | userId scoped |
 
 Verified by `npm run smoke:rls`.
 
 ### Current Runtime Isolation Posture
 
-> **Warning:** RLS is structurally present but not enforced at runtime. Known design gap — remediation sequenced to Phase 3.0.1.
+> **Note (post-3.0.1a):** FORCE RLS and `lawdger_app` hardening are complete at the DB layer. Runtime enforcement is still pending `DATABASE_URL` repoint (3.0.1d). `postgres` BYPASSRLS attribute still bypasses policies for the running app.
 
-- 8 tables have RLS **enabled**; none are **FORCED**.
-- `lawdger_app` Postgres role exists as a **NOLOGIN NOBYPASSRLS stub** (created in 3.2.5a). Cannot authenticate yet — password + table GRANTs + `DATABASE_URL` repoint all in 3.0.1.
-- `DATABASE_URL` still connects as `postgres` superuser, which bypasses all RLS policies by default.
-- Actual isolation today: app-layer `where: { userId }` filters in `caseActions.ts` (and migrated siblings).
-- Auth pre-session path (`auth.ts`, `signup/actions.ts`) now routes through SECURITY DEFINER RPCs (`auth_find_user_by_email`, `auth_create_user`) — the narrow, audited surface that 3.0.1's `lawdger_app` role will use once it has EXECUTE-only privileges on these functions and no direct User-table access.
-- Full DB-level enforcement (FORCE RLS + `lawdger_app` password + GRANTs + `DATABASE_URL` repoint) deferred to **Phase 3.0.1**.
+- 8 tables have RLS **ENABLED**; 7 app tables also have **FORCE ROW LEVEL SECURITY** (as of 3.0.1a). `_prisma_migrations` has ENABLED only.
+- `lawdger_app` is a **fully hardened LOGIN role** (3.0.1a): real password set, NOBYPASSRLS, SELECT/INSERT/UPDATE/DELETE GRANTs on all 7 app tables, subject to FORCE RLS.
+- `DATABASE_URL` still connects as `postgres` (BYPASSRLS attribute), so the running app bypasses all RLS policies. App-layer `where: { userId }` filters in server actions are the current isolation.
+- Auth pre-session path (`auth.ts`, `signup/actions.ts`) routes through SECURITY DEFINER RPCs (`auth_find_user_by_email`, `auth_create_user`).
+- Remaining enforcement steps: `DATABASE_URL` repoint to `lawdger_app` (**3.0.1d**) + `auth_update_password` RPC (**3.0.1e**).
 
 ### RLS pattern — why session variables, not `auth.uid()`
 
@@ -195,6 +194,7 @@ before each user-scoped query.
 | `20260609030200_enable_rls_user_and_migrations` | 2026-06-09 | RLS on User + _prisma_migrations (default deny) |
 | `20260609113647_phase_3_1_schema_cleanup` | 2026-06-09 | `CaseStatus` enum (ACTIVE \| CLOSED), `MatterType` enum (LITIGATION \| ADVISORY \| PRE_LITIGATION), `caseNumber` field; drop legacy string fields (courtName, forum, matterId) |
 | `20260611142223_phase_3_2_5a_user_rls_and_auth_rpcs` | 2026-06-11 | `lawdger_app` NOLOGIN NOBYPASSRLS stub role; User owner-keyed SELECT + UPDATE policies (NULLIF-guarded GUC); `auth_find_user_by_email` + `auth_create_user` SECURITY DEFINER RPCs (EXECUTE granted to `lawdger_app` + `postgres`). Hand-authored — shadow DB workaround. |
+| `20260612204242_phase_3_0_1a_lawdger_app_grants_and_force_rls` | 2026-06-13 | `lawdger_app` promoted LOGIN + real password (manual post-apply step); SELECT/INSERT/UPDATE/DELETE GRANTs on 7 app tables; FORCE ROW LEVEL SECURITY on same 7 tables; embedded DO-block verification (role attrs + FORCE state + GRANT presence). Hand-authored — `prisma migrate resolve --applied`. |
 
 ---
 
@@ -261,7 +261,7 @@ Every Claude Code prompt for Lawdger must include:
 
 ### Larger debt (sequenced)
 
-- `lawdger_app` Postgres role exists (3.2.5a) but only as NOLOGIN stub — no password, no table GRANTs. Runtime `DATABASE_URL` still connects as `postgres` superuser. Full enforcement (password + GRANTs + URL repoint + FORCE RLS): **Phase 3.0.1**.
+- `lawdger_app` has LOGIN + real password + per-table GRANTs + FORCE RLS on 7 tables (3.0.1a ✅). Runtime `DATABASE_URL` still connects as `postgres` (BYPASSRLS attribute — still bypasses policies). Remaining enforcement: `DATABASE_URL` repoint (**3.0.1d**) + `auth_update_password` RPC + `settingsActions.changePassword` migration (**3.0.1e**).
 - `settingsActions.changePassword` retains legacy contract (`requireUserId` + base `prisma` + thrown errors / `PasswordState` shape). Migration to full 3.2 `Result<T>` contract + `auth_update_password` SECURITY DEFINER RPC sequenced to **Phase 3.0.1** (depends on auth-role layer).
 - `taskActions` legacy half — own task ops still on bare `prisma`. Full contract uplift sequenced to **Phase 3.2.6** (post-3.0.1).
 - Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Full 3.2 contract sequenced to **Phase 3.2.6**.
@@ -314,5 +314,7 @@ Every Claude Code prompt for Lawdger must include:
 | 3.2.5b-ii | ✅ Done | `settingsActions` full 3.2 contract (Zod + Result + scoped) for 4 of 5 functions; `SettingsClient` rewired to unwrap Result via `useActionState<ActionState, FormData>`. `changePassword` retained on legacy contract (deferred to 3.0.1). |
 | 3.2.5c | ✅ Done | Doc pass: corrected SOT §7/§10 stale "DEFERRED stubs" claim (scripts are fully implemented, unwired pending 3.0.1); User-table where-clause audit (clean, 9/9 call sites carry `where:{id}`); `PHASE_3_2_5_PLAN.md` archived. |
 | 3.2.6 | ⏸️ Sequenced | Full contract uplift (Zod + Result) for `calendarActions` / `dashboardActions` / `financeActions` + `taskActions` legacy half. Sequenced **after** 3.0.1. |
-| 3.0.1 | ⏸️ Sequenced | `lawdger_app` PASSWORD + table GRANTs + FORCE RLS + `DATABASE_URL` repoint (true DB enforcement) + `auth_update_password` RPC to unblock `settingsActions.changePassword` migration |
+| 3.0.1a | ✅ Done | `lawdger_app` LOGIN + real password (manual post-apply) + SELECT/INSERT/UPDATE/DELETE GRANTs on 7 app tables + FORCE ROW LEVEL SECURITY on same 7 tables. DB layer hardened. |
+| 3.0.1d | ⏸️ Sequenced | `DATABASE_URL` repoint from `postgres` → `lawdger_app` (true runtime RLS enforcement). Gate: `lawdger_app` must authenticate cleanly under all app code paths. |
+| 3.0.1e | ⏸️ Sequenced | `auth_update_password` SECURITY DEFINER RPC + `settingsActions.changePassword` migration to full 3.2 contract. Depends on auth-role layer from 3.0.1d. |
 | 3.3+ | ⏸️ Deferred | Cases UI cleanup, New Matter dialog, CaseDetail real data |
