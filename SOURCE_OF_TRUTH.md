@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-13 (post-3.0.1a, see migration history below)
+**Last updated:** 2026-06-13 (post-3.0.1b, see migration history below)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -121,8 +121,8 @@ Verified by `npm run smoke:rls`.
 - 8 tables have RLS **ENABLED**; 7 app tables also have **FORCE ROW LEVEL SECURITY** (as of 3.0.1a). `_prisma_migrations` has ENABLED only.
 - `lawdger_app` is a **fully hardened LOGIN role** (3.0.1a): real password set, NOBYPASSRLS, SELECT/INSERT/UPDATE/DELETE GRANTs on all 7 app tables, subject to FORCE RLS.
 - `DATABASE_URL` still connects as `postgres` (BYPASSRLS attribute), so the running app bypasses all RLS policies. App-layer `where: { userId }` filters in server actions are the current isolation.
-- Auth pre-session path (`auth.ts`, `signup/actions.ts`) routes through SECURITY DEFINER RPCs (`auth_find_user_by_email`, `auth_create_user`).
-- Remaining enforcement steps: `DATABASE_URL` repoint to `lawdger_app` (**3.0.1d**) + `auth_update_password` RPC (**3.0.1e**).
+- Auth pre-session path (`auth.ts`, `signup/actions.ts`) routes through SECURITY DEFINER RPCs (`auth_find_user_by_email`, `auth_create_user`). `auth_update_password` RPC added (3.0.1b ✅) — consumed by `changePassword` once 3.0.1c lands.
+- Remaining enforcement steps: `settingsActions.changePassword` migration to `auth_update_password` RPC (**3.0.1c**) + `DATABASE_URL` repoint to `lawdger_app` (**3.0.1d**).
 
 ### RLS pattern — why session variables, not `auth.uid()`
 
@@ -195,6 +195,7 @@ before each user-scoped query.
 | `20260609113647_phase_3_1_schema_cleanup` | 2026-06-09 | `CaseStatus` enum (ACTIVE \| CLOSED), `MatterType` enum (LITIGATION \| ADVISORY \| PRE_LITIGATION), `caseNumber` field; drop legacy string fields (courtName, forum, matterId) |
 | `20260611142223_phase_3_2_5a_user_rls_and_auth_rpcs` | 2026-06-11 | `lawdger_app` NOLOGIN NOBYPASSRLS stub role; User owner-keyed SELECT + UPDATE policies (NULLIF-guarded GUC); `auth_find_user_by_email` + `auth_create_user` SECURITY DEFINER RPCs (EXECUTE granted to `lawdger_app` + `postgres`). Hand-authored — shadow DB workaround. |
 | `20260612204242_phase_3_0_1a_lawdger_app_grants_and_force_rls` | 2026-06-13 | `lawdger_app` promoted LOGIN + real password (manual post-apply step); SELECT/INSERT/UPDATE/DELETE GRANTs on 7 app tables; FORCE ROW LEVEL SECURITY on same 7 tables; embedded DO-block verification (role attrs + FORCE state + GRANT presence). Hand-authored — `prisma migrate resolve --applied`. |
+| `20260613085732_phase_3_0_1b_auth_update_password_rpc` | 2026-06-13 | `auth_update_password(p_email text, p_password text) RETURNS TABLE(id, email, updatedAt)` — third SECURITY DEFINER RPC completing the auth-path trio. plpgsql, `SET search_path = public, pg_temp`, OWNER postgres, EXECUTE granted to `lawdger_app` + `postgres`. DO-block verification embedded. Hand-authored. |
 
 ---
 
@@ -261,8 +262,8 @@ Every Claude Code prompt for Lawdger must include:
 
 ### Larger debt (sequenced)
 
-- `lawdger_app` has LOGIN + real password + per-table GRANTs + FORCE RLS on 7 tables (3.0.1a ✅). Runtime `DATABASE_URL` still connects as `postgres` (BYPASSRLS attribute — still bypasses policies). Remaining enforcement: `DATABASE_URL` repoint (**3.0.1d**) + `auth_update_password` RPC + `settingsActions.changePassword` migration (**3.0.1e**).
-- `settingsActions.changePassword` retains legacy contract (`requireUserId` + base `prisma` + thrown errors / `PasswordState` shape). Migration to full 3.2 `Result<T>` contract + `auth_update_password` SECURITY DEFINER RPC sequenced to **Phase 3.0.1** (depends on auth-role layer).
+- `lawdger_app` has LOGIN + real password + per-table GRANTs + FORCE RLS on 7 tables (3.0.1a ✅). `auth_update_password` SECURITY DEFINER RPC added (3.0.1b ✅). Runtime `DATABASE_URL` still connects as `postgres` (BYPASSRLS attribute — still bypasses policies). Remaining enforcement: `settingsActions.changePassword` migration to `auth_update_password` RPC (**3.0.1c**) + `DATABASE_URL` repoint (**3.0.1d**).
+- `settingsActions.changePassword` retains legacy contract (`requireUserId` + base `prisma` + thrown errors / `PasswordState` shape). Migration to full 3.2 `Result<T>` contract calling `auth_update_password` RPC sequenced to **3.0.1c**. RPC itself is live (3.0.1b ✅).
 - `taskActions` legacy half — own task ops still on bare `prisma`. Full contract uplift sequenced to **Phase 3.2.6** (post-3.0.1).
 - Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Full 3.2 contract sequenced to **Phase 3.2.6**.
 - **Verify scripts wiring (post-3.0.1):** `scripts/verify-isolation.ts`, `scripts/verify-phase32-rls.ts`, `scripts/verify-with-user-context.ts` are fully implemented but not in the smoke chain. Wire into `npm run smoke:rls-runtime` (or similar) once `DATABASE_URL` is repointed to `lawdger_app` in 3.0.1.
@@ -315,6 +316,7 @@ Every Claude Code prompt for Lawdger must include:
 | 3.2.5c | ✅ Done | Doc pass: corrected SOT §7/§10 stale "DEFERRED stubs" claim (scripts are fully implemented, unwired pending 3.0.1); User-table where-clause audit (clean, 9/9 call sites carry `where:{id}`); `PHASE_3_2_5_PLAN.md` archived. |
 | 3.2.6 | ⏸️ Sequenced | Full contract uplift (Zod + Result) for `calendarActions` / `dashboardActions` / `financeActions` + `taskActions` legacy half. Sequenced **after** 3.0.1. |
 | 3.0.1a | ✅ Done | `lawdger_app` LOGIN + real password (manual post-apply) + SELECT/INSERT/UPDATE/DELETE GRANTs on 7 app tables + FORCE ROW LEVEL SECURITY on same 7 tables. DB layer hardened. |
+| 3.0.1b | ✅ Done | `auth_update_password(p_email, p_password)` SECURITY DEFINER RPC — third auth-path RPC completing the trio. REVOKE/GRANT mirrors 3.2.5a. Reachable; consumed in 3.0.1c. |
+| 3.0.1c | ⏸️ Sequenced | `settingsActions.changePassword` migration to full 3.2 `Result<T>` contract + call `auth_update_password` RPC. Depends on 3.0.1b (RPC live ✅). |
 | 3.0.1d | ⏸️ Sequenced | `DATABASE_URL` repoint from `postgres` → `lawdger_app` (true runtime RLS enforcement). Gate: `lawdger_app` must authenticate cleanly under all app code paths. |
-| 3.0.1e | ⏸️ Sequenced | `auth_update_password` SECURITY DEFINER RPC + `settingsActions.changePassword` migration to full 3.2 contract. Depends on auth-role layer from 3.0.1d. |
 | 3.3+ | ⏸️ Deferred | Cases UI cleanup, New Matter dialog, CaseDetail real data |
