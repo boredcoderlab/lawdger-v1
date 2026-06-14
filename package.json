@@ -11,10 +11,11 @@
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "prisma": "dotenv -e .env.local -- prisma",
-    "smoke": "npm run smoke:tsc && npm run smoke:prisma && npm run smoke:rls",
+    "smoke": "npm run smoke:tsc && npm run smoke:prisma && npm run smoke:rls && npm run smoke:rls-runtime",
     "smoke:tsc": "tsc --noEmit",
     "smoke:prisma": "dotenv -e .env.local -- prisma validate",
-    "smoke:rls": "dotenv -e .env.local -- tsx scripts/check-rls.ts"
+    "smoke:rls": "dotenv -e .env.local -- tsx scripts/check-rls.ts",
+    "smoke:rls-runtime": "dotenv -e .env.local -- tsx scripts/check-rls-runtime.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
