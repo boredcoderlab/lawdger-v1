@@ -13,7 +13,6 @@
  * Also reports the runtime DB role — should be `lawdger_app` after repoint.
  */
 
-import { PrismaClient } from "@prisma/client"
 import { getPrismaForUser } from "../src/lib/prisma-rls"
 import { prisma as baseClient } from "../src/lib/prisma"
 
@@ -29,13 +28,23 @@ function record(name: string, pass: boolean, detail: string) {
 }
 
 async function main() {
-  // Use a one-off owner-ish client only to look up the seeded users by email.
-  // Under lawdger_app, User has no RLS policy on SELECT in our setup; if that
-  // ever changes, this lookup would have to move behind DIRECT_URL.
-  const lookup = new PrismaClient()
-  const userA = await lookup.user.findUnique({ where: { email: USER_A_EMAIL } })
-  const userB = await lookup.user.findUnique({ where: { email: USER_B_EMAIL } })
-  await lookup.$disconnect()
+  type AuthUserRow = {
+    id: string
+    email: string
+    name: string | null
+    password: string
+  }
+
+  const userARows = await baseClient.$queryRaw<AuthUserRow[]>`
+    SELECT id, email, name, password
+    FROM public.auth_find_user_by_email(${USER_A_EMAIL})
+  `
+  const userBRows = await baseClient.$queryRaw<AuthUserRow[]>`
+    SELECT id, email, name, password
+    FROM public.auth_find_user_by_email(${USER_B_EMAIL})
+  `
+  const userA = userARows[0] ?? null
+  const userB = userBRows[0] ?? null
 
   if (!userA || !userB) {
     throw new Error(

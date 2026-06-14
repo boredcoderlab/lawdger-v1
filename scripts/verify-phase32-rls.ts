@@ -17,7 +17,6 @@
  *   npx dotenv -e .env.local -- npx tsx scripts/verify-phase32-rls.ts
  */
 
-import { PrismaClient } from "@prisma/client"
 import { getPrismaForUser } from "../src/lib/prisma-rls"
 import { prisma as baseClient } from "../src/lib/prisma"
 
@@ -33,12 +32,25 @@ function record(name: string, pass: boolean, detail: string) {
 }
 
 async function main() {
-  const lookup = new PrismaClient()
-  const userA = await lookup.user.findUnique({ where: { email: USER_A_EMAIL } })
-  const userB = await lookup.user.findUnique({ where: { email: USER_B_EMAIL } })
+  type AuthUserRow = {
+    id: string
+    email: string
+    name: string | null
+    password: string
+  }
+
+  const userARows = await baseClient.$queryRaw<AuthUserRow[]>`
+    SELECT id, email, name, password
+    FROM public.auth_find_user_by_email(${USER_A_EMAIL})
+  `
+  const userBRows = await baseClient.$queryRaw<AuthUserRow[]>`
+    SELECT id, email, name, password
+    FROM public.auth_find_user_by_email(${USER_B_EMAIL})
+  `
+  const userA = userARows[0] ?? null
+  const userB = userBRows[0] ?? null
 
   if (!userA || !userB) {
-    await lookup.$disconnect()
     throw new Error(
       `Seed users missing — got A=${!!userA} B=${!!userB}. Run \`npx dotenv -e .env.local -- npx prisma db seed\` first.`,
     )
@@ -49,12 +61,9 @@ async function main() {
   const aCases = await dbA.case.findMany({ select: { id: true, title: true } })
   const targetA = aCases[0]
   if (!targetA) {
-    await lookup.$disconnect()
     throw new Error("userA has no cases — re-seed first.")
   }
   console.log(`\nTargeting userA case id=${targetA.id} title="${targetA.title}"\n`)
-
-  await lookup.$disconnect()
 
   const dbB = getPrismaForUser(userB.id)
 
