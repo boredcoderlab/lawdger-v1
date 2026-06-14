@@ -148,6 +148,14 @@ Single statement group: the function definition above, REVOKE + GRANTs.
 **Smoke:** manual matrix — wrong current password → error banner; valid change → success banner; logout + login with new password → succeeds. tsc clean. `npm run smoke` green.
 
 ### 3.0.1d — `DATABASE_URL` repoint + smoke wiring
+
+> **Scope correction (2026-06-14):** Vercel cutover is **deferred to
+> Phase 9 (Platform + deploy)** per Lawdger_Production_Roadmap.md.
+> 3.0.1d now covers local `.env.local` swap only. Steps 3.0 (Vercel
+> env precondition), 3.5 (Vercel env swap), and 3.6 (Vercel redeploy +
+> prod smoke) are removed from this phase. Phase 9 picks them up when
+> production deployment begins.
+
 **No DB migration.**
 
 **Files touched:**
