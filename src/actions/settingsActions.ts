@@ -287,10 +287,15 @@ export async function changePassword(
 
   const { currentPassword, newPassword } = parsed.data;
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.id },
-    select: { password: true, email: true },
-  });
+  if (!session.email) return { ok: false, error: "Session missing email." };
+
+  type AuthUserRow = { id: string; email: string; name: string | null; password: string }
+
+  const userRows = await prisma.$queryRaw<AuthUserRow[]>`
+    SELECT id, email, name, password
+    FROM public.auth_find_user_by_email(${session.email})
+  `
+  const user = userRows[0] ?? null
 
   if (!user?.password) return { ok: false, error: "Account has no password set." };
 
