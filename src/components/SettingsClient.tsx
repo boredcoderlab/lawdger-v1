@@ -10,7 +10,6 @@ import {
   updateWorkspacePreferences,
   updateNotificationPreferences,
   type ActionState,
-  type PasswordState,
   type Preferences,
 } from "@/actions/settingsActions";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
@@ -175,7 +174,7 @@ export default function SettingsClient({
   const [profileState, profileAction, profilePending] =
     useActionState<ActionState, FormData>(updateProfile, null);
   const [pwState, pwAction, pwPending] =
-    useActionState<PasswordState, FormData>(changePassword, {});
+    useActionState<ActionState, FormData>(changePassword, null);
   const [wsState, wsAction, wsPending] =
     useActionState<ActionState, FormData>(updateWorkspacePreferences, null);
   const [notifState, notifAction, notifPending] =
@@ -285,7 +284,7 @@ export default function SettingsClient({
           <div className={activeTab === "security" ? "block animate-in fade-in slide-in-from-right-4 duration-500" : "hidden"}>
             <Card title="Access Credentials" icon={Lock}>
               <form action={pwAction} className="space-y-6">
-                <StatusBanner banner={pwState} />
+                <StatusBanner banner={bannerFromResult(pwState)} />
                 <Field label="Current Password" name="currentPassword" type="password" placeholder="Enter current password" />
                 <Field label="New Password" name="newPassword" type="password" placeholder="At least 8 characters" />
                 <Field label="Confirm New Password" name="confirmPassword" type="password" placeholder="Repeat new password" />
