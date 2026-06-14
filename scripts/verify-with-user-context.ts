@@ -27,7 +27,6 @@
  *      was NOT mutated by the attack — RLS held, the row is intact.
  */
 
-import { PrismaClient } from "@prisma/client"
 import { prisma as baseClient } from "../src/lib/prisma"
 import { withUserContext } from "../src/lib/prisma-rls"
 
@@ -58,12 +57,23 @@ function abortPrecondition(message: string): never {
 }
 
 async function main() {
-  // User lookup uses a one-off client — User has no RLS policy and we
-  // need both ids before we can build any scoped tx.
-  const lookup = new PrismaClient()
-  const userA = await lookup.user.findUnique({ where: { email: USER_A_EMAIL } })
-  const userB = await lookup.user.findUnique({ where: { email: USER_B_EMAIL } })
-  await lookup.$disconnect()
+  type AuthUserRow = {
+    id: string
+    email: string
+    name: string | null
+    password: string
+  }
+
+  const userARows = await baseClient.$queryRaw<AuthUserRow[]>`
+    SELECT id, email, name, password
+    FROM public.auth_find_user_by_email(${USER_A_EMAIL})
+  `
+  const userBRows = await baseClient.$queryRaw<AuthUserRow[]>`
+    SELECT id, email, name, password
+    FROM public.auth_find_user_by_email(${USER_B_EMAIL})
+  `
+  const userA = userARows[0] ?? null
+  const userB = userBRows[0] ?? null
 
   if (!userA || !userB) {
     abortPrecondition(
