@@ -32,16 +32,12 @@
  * RLS lands, the `postgres` runtime user bypasses these — so the
  * `where: { id: session.id }` defence-in-depth is load-bearing.
  *
- * NOTE on changePassword: retained on the legacy contract (requireUserId
- * + base prisma + thrown errors / SettingsState shape) pending the
- * 3.0.1 auth-role layer. See TODO marker below.
  */
 
 import { compare, hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { requireUserId } from "@/actions/requireUserId";
 import { prisma } from "@/lib/prisma";
 import {
   getServerScopedPrisma,
@@ -265,45 +261,50 @@ export async function updateNotificationPreferences(
   return { ok: true, data: { message: "Notification preferences saved." } };
 }
 
-// ── Legacy contract (deferred to 3.0.1) ──────────────────────────────────────
-
-/**
- * Legacy action shape preserved for changePassword only — returns
- * { success?, error? } via useActionState, uses requireUserId + base
- * prisma, throws on system errors. Will be migrated to the full 3.2
- * contract once 3.0.1 establishes the auth-role layer (lawdger_app
- * GRANTs + FORCE RLS) and authors the auth_update_password SECURITY
- * DEFINER RPC for password rotation.
- *
- * TODO(3.0.1): Migrate to auth_update_password RPC + Result contract.
- */
-export type PasswordState = { success?: string; error?: string };
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required."),
+  newPassword: z.string().min(8, "New password must be at least 8 characters."),
+  confirmPassword: z.string().min(1, "Please confirm your new password."),
+}).refine((d) => d.newPassword === d.confirmPassword, {
+  message: "New passwords do not match.",
+  path: ["confirmPassword"],
+});
 
 export async function changePassword(
-  _prev: PasswordState,
+  _prev: ActionState,
   formData: FormData,
-): Promise<PasswordState> {
-  const userId = await requireUserId();
-  const current = String(formData.get("currentPassword") ?? "");
-  const next = String(formData.get("newPassword") ?? "");
-  const confirm = String(formData.get("confirmPassword") ?? "");
+): Promise<ActionState> {
+  const session = await getServerUser();
 
-  if (!current || !next || !confirm) return { error: "Please fill in all fields." };
-  if (next.length < 8) return { error: "New password must be at least 8 characters." };
-  if (next !== confirm) return { error: "New passwords do not match." };
+  const parsed = changePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const { currentPassword, newPassword } = parsed.data;
 
   const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { password: true },
+    where: { id: session.id },
+    select: { password: true, email: true },
   });
 
-  if (!user?.password) return { error: "Account has no password set." };
+  if (!user?.password) return { ok: false, error: "Account has no password set." };
 
-  const valid = await compare(current, user.password);
-  if (!valid) return { error: "Current password is incorrect." };
+  const valid = await compare(currentPassword, user.password);
+  if (!valid) return { ok: false, error: "Current password is incorrect." };
 
-  const hashed = await hash(next, 12);
-  await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+  const hashed = await hash(newPassword, 12);
 
-  return { success: "Password changed successfully." };
+  const rows = await prisma.$queryRaw<{ id: string; email: string; updatedAt: Date }[]>`
+    SELECT id, email, "updatedAt"
+    FROM public.auth_update_password(${user.email}, ${hashed})
+  `;
+
+  if (rows.length === 0) return { ok: false, error: "User not found." };
+
+  return { ok: true, data: { message: "Password changed successfully." } };
 }
