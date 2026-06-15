@@ -19,7 +19,7 @@ import {
   deleteCaseTask,
   toggleCaseTaskStatus,
 } from "@/actions/taskActions";
-import type { CaseStatus } from "@prisma/client";
+import { CaseStatus } from "@prisma/client";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -39,14 +39,11 @@ type CalendarEvent = {
   description: string | null;
 };
 
-const STATUS_OPTIONS = ["active", "inactive", "closed"] as const;
+const STATUS_OPTIONS = [CaseStatus.ACTIVE, CaseStatus.CLOSED] as const;
 type Status = (typeof STATUS_OPTIONS)[number];
 
-const STATUS_STYLES: Record<Status, string> = {
-  active:   "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-  inactive: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  closed:   "bg-black/5 dark:bg-white/5 text-muted-foreground border-black/10 dark:border-white/10",
-};
+const titleCaseStatus = (s: Status) =>
+  s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -83,17 +80,13 @@ export default function CaseDetailClient({
 
   const handleSave = async () => {
     setSaving(true);
-    // TODO(3.3): drop "inactive" from STATUS_OPTIONS — updateCaseStatus
-    // Zod rejects it. Local UI status is lowercase ("active" | "closed");
-    // Prisma enum domain is uppercase. "inactive" has no enum home and
-    // will produce { ok: false } here. Phase 3.3 redesigns the picker.
     await updateCase(caseId, {
       title:      info.title || undefined,
       clientName: info.clientName || undefined,
       court:      info.courtName || undefined,
       agreedFee:  info.agreedFee ? parseFloat(info.agreedFee) : undefined,
     });
-    await updateCaseStatus(caseId, info.status.toUpperCase() as CaseStatus);
+    await updateCaseStatus(caseId, info.status);
     setIsEditing(false);
     setSaving(false);
   };
@@ -230,7 +223,7 @@ export default function CaseDetailClient({
                               : "border-white/10 text-white/50 hover:bg-white/5"
                           }`}
                         >
-                          {s}
+                          {titleCaseStatus(s)}
                         </button>
                       ))}
                     </div>
@@ -256,11 +249,11 @@ export default function CaseDetailClient({
                 <div className="space-y-6">
                   <div className="flex items-center gap-3">
                     <span className={`inline-flex items-center rounded-lg border px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-white/5 ${
-                        info.status === 'active' ? 'text-primary border-primary/30 dark:text-[var(--gold-text)] dark:border-[rgba(212,175,55,0.35)]' :
-                        info.status === 'inactive' ? 'text-amber-400 border-amber-400/30' :
-                        'text-white/40 border-white/10'
+                        info.status === CaseStatus.ACTIVE
+                          ? 'text-primary border-primary/30 dark:text-[var(--gold-text)] dark:border-[rgba(212,175,55,0.35)]'
+                          : 'text-white/40 border-white/10'
                     }`}>
-                      {info.status}
+                      {titleCaseStatus(info.status)}
                     </span>
                   </div>
                   <InfoRow icon={<Briefcase className="h-4 w-4" />} label="Client Identifier" value={info.clientName || null} />
