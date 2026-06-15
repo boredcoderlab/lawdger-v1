@@ -19,7 +19,8 @@ import {
   deleteCaseTask,
   toggleCaseTaskStatus,
 } from "@/actions/taskActions";
-import { CaseStatus } from "@prisma/client";
+import { CaseStatus, MatterType, type Case } from "@prisma/client";
+import { CASE_TYPES, type CaseType } from "@/lib/case-constants";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -42,11 +43,35 @@ type CalendarEvent = {
 const STATUS_OPTIONS = [CaseStatus.ACTIVE, CaseStatus.CLOSED] as const;
 type Status = (typeof STATUS_OPTIONS)[number];
 
+const MATTER_TYPE_OPTIONS = [
+  MatterType.LITIGATION,
+  MatterType.ADVISORY,
+  MatterType.PRE_LITIGATION,
+] as const;
+
+const CRIMINAL_CASE_TYPE: CaseType = "CRIMINAL";
+
+const titleCase = (s: string) =>
+  s.charAt(0).toUpperCase() + s.slice(1).toLowerCase().replace(/_/g, " ");
+
 const titleCaseStatus = (s: Status) =>
   s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 
+const toDateInputValue = (d: Date | null) =>
+  d ? new Date(d).toISOString().split("T")[0] : "";
+
+const formatIndianDate = (d: Date) =>
+  new Date(d).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+
 // ── Component ────────────────────────────────────────────────────────────────
 
+// Phase 3.5: initial* props own the original 5 fields (title/clientName/court/agreedFee/status).
+// caseData owns the 9 Indian fields (caseNumber, caseType, matterType, nextHearingDate,
+// description, filingDate, actsSections, firNumber, policeStation). Do not cross the streams.
 export default function CaseDetailClient({
   caseId,
   initialTitle,
@@ -56,6 +81,7 @@ export default function CaseDetailClient({
   initialStatus,
   initialTasks,
   upcomingHearings,
+  caseData,
 }: {
   caseId: string;
   initialTitle: string;
@@ -65,6 +91,7 @@ export default function CaseDetailClient({
   initialStatus: string;
   initialTasks: Task[];
   upcomingHearings: CalendarEvent[];
+  caseData: Case;
 }) {
 
   // ── Case info edit ──────────────────────────────────────────────────────────
@@ -78,13 +105,37 @@ export default function CaseDetailClient({
     status:     initialStatus as Status,
   });
 
+  // 9 Indian fields — sourced from caseData prop only (see header comment).
+  const initialMatterData = {
+    caseNumber:      caseData.caseNumber ?? "",
+    matterType:      caseData.matterType,
+    caseType:        (caseData.caseType ?? "") as CaseType | "",
+    filingDate:      toDateInputValue(caseData.filingDate),
+    nextHearingDate: toDateInputValue(caseData.nextHearingDate),
+    description:     caseData.description ?? "",
+    actsSections:    caseData.actsSections ?? "",
+    firNumber:       caseData.firNumber ?? "",
+    policeStation:   caseData.policeStation ?? "",
+  };
+  const [matterData, setMatterData] = useState(initialMatterData);
+
   const handleSave = async () => {
     setSaving(true);
+    const isCriminal = matterData.caseType === CRIMINAL_CASE_TYPE;
     await updateCase(caseId, {
-      title:      info.title || undefined,
-      clientName: info.clientName || undefined,
-      court:      info.courtName || undefined,
-      agreedFee:  info.agreedFee ? parseFloat(info.agreedFee) : undefined,
+      title:           info.title || undefined,
+      clientName:      info.clientName || undefined,
+      court:           info.courtName || undefined,
+      agreedFee:       info.agreedFee ? parseFloat(info.agreedFee) : undefined,
+      caseNumber:      matterData.caseNumber || undefined,
+      caseType:        matterData.caseType ? matterData.caseType : undefined,
+      matterType:      matterData.matterType,
+      filingDate:      matterData.filingDate ? new Date(matterData.filingDate) : undefined,
+      nextHearingDate: matterData.nextHearingDate ? new Date(matterData.nextHearingDate) : undefined,
+      description:     matterData.description || undefined,
+      actsSections:    matterData.actsSections || undefined,
+      firNumber:       isCriminal && matterData.firNumber ? matterData.firNumber : undefined,
+      policeStation:   isCriminal && matterData.policeStation ? matterData.policeStation : undefined,
     });
     await updateCaseStatus(caseId, info.status);
     setIsEditing(false);
@@ -99,6 +150,7 @@ export default function CaseDetailClient({
       agreedFee:  initialAgreedFee != null ? String(initialAgreedFee) : "",
       status:     initialStatus as Status,
     });
+    setMatterData(initialMatterData);
     setIsEditing(false);
   };
 
@@ -228,6 +280,91 @@ export default function CaseDetailClient({
                       ))}
                     </div>
                   </EditField>
+                  <EditField label="Case Number">
+                    <input
+                      value={matterData.caseNumber}
+                      onChange={(e) => setMatterData({ ...matterData, caseNumber: e.target.value })}
+                      placeholder="Court-assigned number (e.g. W.P. 1234/2026)"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner placeholder:text-white/30"
+                    />
+                  </EditField>
+                  <EditField label="Matter Type">
+                    <select
+                      value={matterData.matterType}
+                      onChange={(e) => setMatterData({ ...matterData, matterType: e.target.value as MatterType })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner appearance-none"
+                    >
+                      {MATTER_TYPE_OPTIONS.map((m) => (
+                        <option key={m} value={m} className="bg-background text-foreground">
+                          {titleCase(m)}
+                        </option>
+                      ))}
+                    </select>
+                  </EditField>
+                  <EditField label="Case Type">
+                    <select
+                      value={matterData.caseType}
+                      onChange={(e) => setMatterData({ ...matterData, caseType: e.target.value as CaseType | "" })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner appearance-none"
+                    >
+                      <option value="" className="bg-background text-foreground">Select type</option>
+                      {CASE_TYPES.map((t) => (
+                        <option key={t} value={t} className="bg-background text-foreground">
+                          {titleCase(t)}
+                        </option>
+                      ))}
+                    </select>
+                  </EditField>
+                  <EditField label="Filing Date">
+                    <input
+                      type="date"
+                      value={matterData.filingDate}
+                      onChange={(e) => setMatterData({ ...matterData, filingDate: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner"
+                    />
+                  </EditField>
+                  <EditField label="Next Hearing Date">
+                    <input
+                      type="date"
+                      value={matterData.nextHearingDate}
+                      onChange={(e) => setMatterData({ ...matterData, nextHearingDate: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner"
+                    />
+                  </EditField>
+                  <EditField label="Description">
+                    <textarea
+                      rows={3}
+                      value={matterData.description}
+                      onChange={(e) => setMatterData({ ...matterData, description: e.target.value })}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner resize-none placeholder:text-white/30"
+                    />
+                  </EditField>
+                  <EditField label="Acts & Sections">
+                    <input
+                      value={matterData.actsSections}
+                      onChange={(e) => setMatterData({ ...matterData, actsSections: e.target.value })}
+                      placeholder="Pipe-delimited, e.g. IPC § 420 | CrPC § 173"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner placeholder:text-white/30"
+                    />
+                  </EditField>
+                  {matterData.caseType === CRIMINAL_CASE_TYPE && (
+                    <>
+                      <EditField label="FIR Number">
+                        <input
+                          value={matterData.firNumber}
+                          onChange={(e) => setMatterData({ ...matterData, firNumber: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner placeholder:text-white/30"
+                        />
+                      </EditField>
+                      <EditField label="Police Station">
+                        <input
+                          value={matterData.policeStation}
+                          onChange={(e) => setMatterData({ ...matterData, policeStation: e.target.value })}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner placeholder:text-white/30"
+                        />
+                      </EditField>
+                    </>
+                  )}
                   <div className="flex gap-2 pt-2">
                     <button
                       type="button"
@@ -263,6 +400,7 @@ export default function CaseDetailClient({
                     label="Agreed Fee Structure"
                     value={info.agreedFee ? `₹${parseFloat(info.agreedFee).toLocaleString("en-IN")}` : null}
                   />
+                  <MatterDetails caseData={caseData} />
                 </div>
               )}
             </div>
@@ -572,6 +710,59 @@ function InfoRow({
           {value ?? <span className="text-white/30 italic text-[12px]">—</span>}
         </p>
       </div>
+    </div>
+  );
+}
+
+function DetailLine({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <p className="flex items-baseline justify-between gap-3 text-sm">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-muted-foreground shrink-0">
+        {label}
+      </span>
+      <span className="text-[13px] font-medium text-lawdger-cream dark:text-foreground text-right truncate">
+        {children}
+      </span>
+    </p>
+  );
+}
+
+function MatterDetails({ caseData }: { caseData: Case }) {
+  const hasAny =
+    caseData.caseNumber ||
+    caseData.caseType ||
+    caseData.matterType ||
+    caseData.nextHearingDate ||
+    caseData.filingDate ||
+    caseData.description ||
+    caseData.actsSections ||
+    caseData.firNumber ||
+    caseData.policeStation;
+  if (!hasAny) return null;
+
+  return (
+    <div className="pt-4 mt-2 border-t border-white/10 space-y-2.5">
+      <h4 className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/70 dark:text-muted-foreground mb-3">
+        Matter Details
+      </h4>
+      {caseData.caseNumber && <DetailLine label="Case No.">{caseData.caseNumber}</DetailLine>}
+      {caseData.caseType && <DetailLine label="Type">{titleCase(caseData.caseType)}</DetailLine>}
+      {caseData.matterType && <DetailLine label="Matter">{titleCase(caseData.matterType)}</DetailLine>}
+      {caseData.filingDate && <DetailLine label="Filing Date">{formatIndianDate(caseData.filingDate)}</DetailLine>}
+      {caseData.nextHearingDate && <DetailLine label="Next Hearing">{formatIndianDate(caseData.nextHearingDate)}</DetailLine>}
+      {caseData.description && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-muted-foreground mb-1">
+            Description
+          </p>
+          <p className="text-[13px] font-medium text-lawdger-cream/90 dark:text-foreground leading-relaxed">
+            {caseData.description}
+          </p>
+        </div>
+      )}
+      {caseData.actsSections && <DetailLine label="Acts & Sections">{caseData.actsSections}</DetailLine>}
+      {caseData.firNumber && <DetailLine label="FIR No.">{caseData.firNumber}</DetailLine>}
+      {caseData.policeStation && <DetailLine label="Police Station">{caseData.policeStation}</DetailLine>}
     </div>
   );
 }

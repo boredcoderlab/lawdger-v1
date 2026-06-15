@@ -280,6 +280,7 @@ export default async function CaseDetail({
               initialStatus={caseData.status}
               initialTasks={caseData.tasks}
               upcomingHearings={caseData.calendarEvents}
+              caseData={caseData}
             />
           </div>
         </div>
