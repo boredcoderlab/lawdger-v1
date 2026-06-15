@@ -27,16 +27,6 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const FORUM_OPTIONS = [
-  "Supreme Court of India",
-  "High Court",
-  "District Court",
-  "Sessions Court",
-  "Magistrate Court",
-  "Tribunal",
-  "Other",
-] as const;
-
 const CASE_TYPE_LABEL: Record<CaseType, string> = {
   CIVIL: "Civil",
   CRIMINAL: "Criminal",
@@ -48,12 +38,11 @@ const CASE_TYPE_LABEL: Record<CaseType, string> = {
   OTHER: "Other",
 };
 
-type StatusTab = "all" | "active" | "pending" | "closed";
+type StatusTab = "all" | "active" | "closed";
 
 const STATUS_TABS: { id: StatusTab; label: string }[] = [
   { id: "all", label: "All" },
   { id: "active", label: "Active" },
-  { id: "pending", label: "Pending" },
   { id: "closed", label: "Closed" },
 ];
 
@@ -96,8 +85,6 @@ function NewMatterDialog({
 }) {
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
-  const [matterId, setMatterId] = useState("");
-  const [forum, setForum] = useState<string>(FORUM_OPTIONS[1]);
   const [court, setCourt] = useState("");
   const [caseType, setCaseType] = useState<CaseType>("CIVIL");
   const [nextHearingDate, setNextHearingDate] = useState("");
@@ -113,8 +100,6 @@ function NewMatterDialog({
     if (open) {
       setTitle("");
       setClientName("");
-      setMatterId("");
-      setForum(FORUM_OPTIONS[1]);
       setCourt("");
       setCaseType("CIVIL");
       setNextHearingDate("");
@@ -170,9 +155,6 @@ function NewMatterDialog({
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      // matterId/forum dropped at the schema level in 3.1; dialog still
-      // collects them for layout but they're discarded here. Dialog rewrite
-      // is 3.3 territory.
       const result = await createCase({
         title,
         clientName,
@@ -258,22 +240,6 @@ function NewMatterDialog({
             onChange={setClientName}
             placeholder="e.g. Amit Sharma"
           />
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              label="Matter ID (optional)"
-              value={matterId}
-              onChange={setMatterId}
-              placeholder="e.g. MP/2026/0142"
-            />
-            <FormSelect
-              label="Forum"
-              required
-              value={forum}
-              onChange={setForum}
-              options={FORUM_OPTIONS.map((o) => ({ value: o, label: o }))}
-            />
-          </div>
 
           <FormField
             label="Court"
@@ -454,8 +420,7 @@ function CaseTile({ c }: { c: CaseRecord }) {
               <Hash className="w-2.5 h-2.5" /> Matter ID
             </p>
             <p className="text-[12px] font-semibold text-lawdger-espresso dark:text-foreground truncate">
-              {/* matterId column dropped in phase 3.1; caseNumber wiring is phase 3.4 */}
-              <span className="text-lawdger-muted/70">—</span>
+              {c.caseNumber ?? <span className="text-lawdger-muted/70">—</span>}
             </p>
           </div>
           <div className="rounded-lg bg-lawdger-base/60 border border-lawdger-gold/10 px-3 py-2.5">
@@ -502,7 +467,7 @@ export default function CasesClient({
   counts,
 }: {
   initialCases: CaseRecord[];
-  counts: { total: number; active: number; pending: number; closed: number };
+  counts: { total: number; active: number; closed: number };
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -554,7 +519,6 @@ export default function CasesClient({
                 value={counts.active}
                 accentDot
               />
-              <MetricRow label="Pending" value={counts.pending} />
               <MetricRow label="Closed" value={counts.closed} dim />
             </div>
 
