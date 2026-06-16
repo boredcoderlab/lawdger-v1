@@ -86,6 +86,7 @@ function NewMatterDialog({
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [court, setCourt] = useState("");
+  const [caseNumber, setCaseNumber] = useState("");
   const [caseType, setCaseType] = useState<CaseType>("CIVIL");
   const [nextHearingDate, setNextHearingDate] = useState("");
   const [description, setDescription] = useState("");
@@ -101,6 +102,7 @@ function NewMatterDialog({
       setTitle("");
       setClientName("");
       setCourt("");
+      setCaseNumber("");
       setCaseType("CIVIL");
       setNextHearingDate("");
       setDescription("");
@@ -159,6 +161,7 @@ function NewMatterDialog({
         title,
         clientName,
         court,
+        caseNumber: caseNumber || undefined,
         caseType,
         nextHearingDate: nextHearingDate || undefined,
         description: description || undefined,
@@ -247,6 +250,13 @@ function NewMatterDialog({
             value={court}
             onChange={setCourt}
             placeholder="e.g. M.P. High Court, Indore Bench"
+          />
+
+          <FormField
+            label="Case Number (optional)"
+            value={caseNumber}
+            onChange={setCaseNumber}
+            placeholder="e.g. CP 11/99, WP 1234/2024"
           />
 
           <div className="grid grid-cols-2 gap-4">

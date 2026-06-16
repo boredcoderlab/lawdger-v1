@@ -280,91 +280,6 @@ export default function CaseDetailClient({
                       ))}
                     </div>
                   </EditField>
-                  <EditField label="Case Number">
-                    <input
-                      value={matterData.caseNumber}
-                      onChange={(e) => setMatterData({ ...matterData, caseNumber: e.target.value })}
-                      placeholder="Court-assigned number (e.g. W.P. 1234/2026)"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner placeholder:text-white/30"
-                    />
-                  </EditField>
-                  <EditField label="Matter Type">
-                    <select
-                      value={matterData.matterType}
-                      onChange={(e) => setMatterData({ ...matterData, matterType: e.target.value as MatterType })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner appearance-none"
-                    >
-                      {MATTER_TYPE_OPTIONS.map((m) => (
-                        <option key={m} value={m} className="bg-background text-foreground">
-                          {titleCase(m)}
-                        </option>
-                      ))}
-                    </select>
-                  </EditField>
-                  <EditField label="Case Type">
-                    <select
-                      value={matterData.caseType}
-                      onChange={(e) => setMatterData({ ...matterData, caseType: e.target.value as CaseType | "" })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner appearance-none"
-                    >
-                      <option value="" className="bg-background text-foreground">Select type</option>
-                      {CASE_TYPES.map((t) => (
-                        <option key={t} value={t} className="bg-background text-foreground">
-                          {titleCase(t)}
-                        </option>
-                      ))}
-                    </select>
-                  </EditField>
-                  <EditField label="Filing Date">
-                    <input
-                      type="date"
-                      value={matterData.filingDate}
-                      onChange={(e) => setMatterData({ ...matterData, filingDate: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner"
-                    />
-                  </EditField>
-                  <EditField label="Next Hearing Date">
-                    <input
-                      type="date"
-                      value={matterData.nextHearingDate}
-                      onChange={(e) => setMatterData({ ...matterData, nextHearingDate: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner"
-                    />
-                  </EditField>
-                  <EditField label="Description">
-                    <textarea
-                      rows={3}
-                      value={matterData.description}
-                      onChange={(e) => setMatterData({ ...matterData, description: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner resize-none placeholder:text-white/30"
-                    />
-                  </EditField>
-                  <EditField label="Acts & Sections">
-                    <input
-                      value={matterData.actsSections}
-                      onChange={(e) => setMatterData({ ...matterData, actsSections: e.target.value })}
-                      placeholder="Pipe-delimited, e.g. IPC § 420 | CrPC § 173"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner placeholder:text-white/30"
-                    />
-                  </EditField>
-                  {matterData.caseType === CRIMINAL_CASE_TYPE && (
-                    <>
-                      <EditField label="FIR Number">
-                        <input
-                          value={matterData.firNumber}
-                          onChange={(e) => setMatterData({ ...matterData, firNumber: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner placeholder:text-white/30"
-                        />
-                      </EditField>
-                      <EditField label="Police Station">
-                        <input
-                          value={matterData.policeStation}
-                          onChange={(e) => setMatterData({ ...matterData, policeStation: e.target.value })}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:border-primary transition-all shadow-inner placeholder:text-white/30"
-                        />
-                      </EditField>
-                    </>
-                  )}
                   <div className="flex gap-2 pt-2">
                     <button
                       type="button"
@@ -456,6 +371,106 @@ export default function CaseDetailClient({
         mainPaneContent={
           <div className="h-full overflow-y-auto scrollbar-hide p-10 pb-20">
             <div className="grid grid-cols-1 gap-12">
+
+              {/* ── Matter Details (Editing) ────────────────────── */}
+              {isEditing && (
+                <div className="rounded-[2rem] border border-primary/20 bg-primary/5 p-6">
+                  <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground mb-6">
+                    Matter Details (Editing)
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <EditField label="Case Number" tone="light">
+                      <input
+                        value={matterData.caseNumber}
+                        onChange={(e) => setMatterData({ ...matterData, caseNumber: e.target.value })}
+                        placeholder="Court-assigned number (e.g. W.P. 1234/2026)"
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm placeholder:text-muted-foreground/50"
+                      />
+                    </EditField>
+                    <EditField label="Matter Type" tone="light">
+                      <select
+                        value={matterData.matterType}
+                        onChange={(e) => setMatterData({ ...matterData, matterType: e.target.value as MatterType })}
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm appearance-none"
+                      >
+                        {MATTER_TYPE_OPTIONS.map((m) => (
+                          <option key={m} value={m}>
+                            {titleCase(m)}
+                          </option>
+                        ))}
+                      </select>
+                    </EditField>
+                    <EditField label="Case Type" tone="light">
+                      <select
+                        value={matterData.caseType}
+                        onChange={(e) => setMatterData({ ...matterData, caseType: e.target.value as CaseType | "" })}
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm appearance-none"
+                      >
+                        <option value="">Select type</option>
+                        {CASE_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {titleCase(t)}
+                          </option>
+                        ))}
+                      </select>
+                    </EditField>
+                    <EditField label="Filing Date" tone="light">
+                      <input
+                        type="date"
+                        value={matterData.filingDate}
+                        onChange={(e) => setMatterData({ ...matterData, filingDate: e.target.value })}
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm"
+                      />
+                    </EditField>
+                    <EditField label="Next Hearing Date" tone="light">
+                      <input
+                        type="date"
+                        value={matterData.nextHearingDate}
+                        onChange={(e) => setMatterData({ ...matterData, nextHearingDate: e.target.value })}
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm"
+                      />
+                    </EditField>
+                    <div className="sm:col-span-2">
+                      <EditField label="Description" tone="light">
+                        <textarea
+                          rows={3}
+                          value={matterData.description}
+                          onChange={(e) => setMatterData({ ...matterData, description: e.target.value })}
+                          className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm resize-none placeholder:text-muted-foreground/50"
+                        />
+                      </EditField>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <EditField label="Acts & Sections" tone="light">
+                        <input
+                          value={matterData.actsSections}
+                          onChange={(e) => setMatterData({ ...matterData, actsSections: e.target.value })}
+                          placeholder="Pipe-delimited, e.g. IPC § 420 | CrPC § 173"
+                          className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm placeholder:text-muted-foreground/50"
+                        />
+                      </EditField>
+                    </div>
+                    {matterData.caseType === CRIMINAL_CASE_TYPE && (
+                      <>
+                        <EditField label="FIR Number" tone="light">
+                          <input
+                            value={matterData.firNumber}
+                            onChange={(e) => setMatterData({ ...matterData, firNumber: e.target.value })}
+                            className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm"
+                          />
+                        </EditField>
+                        <EditField label="Police Station" tone="light">
+                          <input
+                            value={matterData.policeStation}
+                            onChange={(e) => setMatterData({ ...matterData, policeStation: e.target.value })}
+                            className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm"
+                          />
+                        </EditField>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* ── Next Hearing ─────────────────────────────────── */}
               {nextHearing && (
@@ -677,10 +692,24 @@ export default function CaseDetailClient({
 
 // ── Helper sub-components ────────────────────────────────────────────────────
 
-function EditField({ label, children }: { label: string; children: React.ReactNode }) {
+function EditField({
+  label,
+  children,
+  tone = "dark",
+}: {
+  label: string;
+  children: React.ReactNode;
+  tone?: "dark" | "light";
+}) {
   return (
     <div>
-      <label className="block text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground-secondary mb-1.5 ml-1">
+      <label
+        className={`block text-[9px] font-bold uppercase tracking-widest mb-1.5 ml-1 ${
+          tone === "light"
+            ? "text-muted-foreground"
+            : "text-lawdger-cream/50 dark:text-foreground-secondary"
+        }`}
+      >
         {label}
       </label>
       {children}
@@ -728,10 +757,11 @@ function DetailLine({ label, children }: { label: string; children: React.ReactN
 }
 
 function MatterDetails({ caseData }: { caseData: Case }) {
+  // matterType excluded — it defaults to LITIGATION and is never absent,
+  // so including it here would make hasAny always true.
   const hasAny =
     caseData.caseNumber ||
     caseData.caseType ||
-    caseData.matterType ||
     caseData.nextHearingDate ||
     caseData.filingDate ||
     caseData.description ||
