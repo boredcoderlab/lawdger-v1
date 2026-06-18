@@ -749,7 +749,7 @@ function DetailLine({ label, children }: { label: string; children: React.ReactN
       <span className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-muted-foreground shrink-0">
         {label}
       </span>
-      <span className="text-[13px] font-medium text-lawdger-cream dark:text-foreground text-right truncate">
+      <span className="flex-1 min-w-0 text-[13px] font-medium text-lawdger-cream dark:text-foreground text-right truncate">
         {children}
       </span>
     </p>
