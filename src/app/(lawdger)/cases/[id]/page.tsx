@@ -270,7 +270,7 @@ export default async function CaseDetail({
           </div>
 
           {/* ══ Sidebar ════════════════════════════════════════ */}
-          <div className="xl:sticky xl:top-6">
+          <div className="xl:col-span-3 xl:sticky xl:top-6">
             <CaseDetailClient
               caseId={caseData.id}
               initialTitle={caseData.title}
