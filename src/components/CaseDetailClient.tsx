@@ -5,21 +5,21 @@ import {
   Plus, X, CheckCircle2, Trash2, Clock, AlertCircle,
   Calendar as CalendarIcon, ChevronLeft, ChevronRight,
   Pencil, Check, Briefcase, Building2, IndianRupee, FileText,
-  StickyNote, BriefcaseBusiness
+  StickyNote, BriefcaseBusiness, CheckSquare
 } from "lucide-react";
 import {
   format, isPast, isToday, isTomorrow, differenceInDays,
   subMonths, addMonths, startOfWeek, endOfWeek,
   startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, parse,
 } from "date-fns";
-import { updateCase, updateCaseStatus } from "@/actions/caseActions";
+import { updateCase, updateCaseStatus, type CaseWithChildren } from "@/actions/caseActions";
 import { createNote } from "@/actions/noteActions";
 import {
   createCaseTask,
   deleteCaseTask,
   toggleCaseTaskStatus,
 } from "@/actions/taskActions";
-import { CaseStatus, MatterType, type Case } from "@prisma/client";
+import { CaseStatus, MatterType } from "@prisma/client";
 import { CASE_TYPES, type CaseType } from "@/lib/case-constants";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
@@ -50,6 +50,18 @@ const MATTER_TYPE_OPTIONS = [
 ] as const;
 
 const CRIMINAL_CASE_TYPE: CaseType = "CRIMINAL";
+
+const CATEGORY_COLOR: Record<string, { dot: string; badge: string }> = {
+  "General Note":  { dot: "bg-blue-500",    badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+  "Client Update": { dot: "bg-purple-500",  badge: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
+  "Next Date":     { dot: "bg-orange-500",  badge: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" },
+  "Task":          { dot: "bg-primary",     badge: "bg-primary/10 text-primary border-primary/20" },
+};
+
+type TimelineItem =
+  | { kind: "note";  id: string; date: Date; content: string; category: string }
+  | { kind: "task";  id: string; date: Date; description: string; status: string; dueDate: Date | null }
+  | { kind: "event"; id: string; date: Date; title: string; description: string | null };
 
 const titleCase = (s: string) =>
   s.charAt(0).toUpperCase() + s.slice(1).toLowerCase().replace(/_/g, " ");
@@ -91,7 +103,7 @@ export default function CaseDetailClient({
   initialStatus: string;
   initialTasks: Task[];
   upcomingHearings: CalendarEvent[];
-  caseData: Case;
+  caseData: CaseWithChildren;
 }) {
 
   // ── Case info edit ──────────────────────────────────────────────────────────
@@ -206,6 +218,32 @@ export default function CaseDetailClient({
   // ── Next hearing ────────────────────────────────────────────────────────────
   const now         = new Date();
   const nextHearing = upcomingHearings.find((h) => new Date(h.hearingDate) >= now);
+
+  // ── Activity Timeline (merged notes + tasks + hearings, read-only) ─────────
+  const timeline: TimelineItem[] = [
+    ...caseData.notes.map((n) => ({
+      kind: "note" as const,
+      id: n.id,
+      date: n.createdAt,
+      content: n.cleanContent,
+      category: n.category,
+    })),
+    ...caseData.tasks.map((t) => ({
+      kind: "task" as const,
+      id: t.id,
+      date: t.dueDate ?? t.createdAt,
+      description: t.description,
+      status: t.status,
+      dueDate: t.dueDate,
+    })),
+    ...caseData.calendarEvents.map((e) => ({
+      kind: "event" as const,
+      id: e.id,
+      date: e.hearingDate,
+      title: e.title,
+      description: e.description,
+    })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -471,6 +509,113 @@ export default function CaseDetailClient({
                   </div>
                 </div>
               )}
+
+              {/* ── Activity Timeline ─────────────────────────────────── */}
+              <div>
+                <div className="flex items-center justify-between mb-6 pb-2 border-b border-primary/10">
+                  <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3">
+                    <span className="inline-block h-2 w-2 rounded-full bg-primary shadow-[0_0_10px_rgba(200,150,62,0.5)]" />
+                    Case Timeline
+                  </h3>
+                  {timeline.length > 0 && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {timeline.length} {timeline.length === 1 ? "entry" : "entries"}
+                    </span>
+                  )}
+                </div>
+
+                {timeline.length === 0 ? (
+                  <div className="rounded-[2rem] border border-dashed border-primary/15 bg-white/40 dark:bg-card/30 p-10 text-center text-[13px] font-medium text-muted-foreground">
+                    No activity yet. Add a task, note, or hearing to get started.
+                  </div>
+                ) : (
+                  <div className="relative border-l border-primary/15 ml-3 space-y-4 pb-2">
+                    {timeline.map((item) => {
+                      if (item.kind === "event") {
+                        return (
+                          <div key={item.id} className="relative pl-8">
+                            <div className="absolute -left-3.5 top-1.5 h-7 w-7 flex items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30">
+                              <CalendarIcon className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="rounded-2xl border border-primary/10 bg-white/80 dark:bg-card/60 backdrop-blur-md px-5 py-4 shadow-sm hover:border-orange-500/30 transition-colors">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400">
+                                    Hearing
+                                  </span>
+                                  <p className="font-serif text-base font-bold text-foreground mt-1 leading-snug">
+                                    {item.title}
+                                  </p>
+                                  {item.description && (
+                                    <p className="text-[13px] text-muted-foreground font-medium mt-1">
+                                      {item.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest shrink-0 mt-0.5">
+                                  {format(item.date, "d MMM yyyy")}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (item.kind === "task") {
+                        const done = item.status === "completed";
+                        return (
+                          <div key={item.id} className={`relative pl-8 ${done ? "opacity-50" : ""}`}>
+                            <div className={`absolute -left-3.5 top-1.5 h-7 w-7 flex items-center justify-center rounded-full border ${
+                              done
+                                ? "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30"
+                                : "bg-primary/15 text-primary border-primary/30"
+                            }`}>
+                              <CheckSquare className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="rounded-2xl border border-primary/10 bg-white/80 dark:bg-card/60 backdrop-blur-md px-5 py-4 shadow-sm transition-colors">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                  <span className={`text-[10px] font-bold uppercase tracking-widest ${done ? "text-green-600 dark:text-green-400" : "text-primary"}`}>
+                                    {done ? "Done" : "Task"}
+                                  </span>
+                                  <p className={`text-[13px] font-medium mt-1 leading-relaxed ${done ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                                    {item.description}
+                                  </p>
+                                </div>
+                                {item.dueDate && (
+                                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest shrink-0 mt-0.5">
+                                    Due {format(item.dueDate, "d MMM yyyy")}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const colors = CATEGORY_COLOR[item.category] ?? CATEGORY_COLOR["General Note"];
+                      return (
+                        <div key={item.id} className="relative pl-8">
+                          <div className={`absolute -left-2 top-2.5 h-4 w-4 rounded-full border-2 border-background ${colors.dot}`} />
+                          <div className="rounded-2xl border border-primary/10 bg-white/80 dark:bg-card/60 backdrop-blur-md px-5 py-4 shadow-sm hover:border-primary/20 transition-colors">
+                            <div className="flex items-start justify-between gap-4 mb-2">
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${colors.badge}`}>
+                                {item.category}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest shrink-0">
+                                {format(item.date, "d MMM yyyy")}
+                              </span>
+                            </div>
+                            <p className="text-[13px] font-medium text-foreground leading-relaxed">
+                              {item.content}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               {/* ── Next Hearing ─────────────────────────────────── */}
               {nextHearing && (
@@ -756,7 +901,7 @@ function DetailLine({ label, children }: { label: string; children: React.ReactN
   );
 }
 
-function MatterDetails({ caseData }: { caseData: Case }) {
+function MatterDetails({ caseData }: { caseData: CaseWithChildren }) {
   // matterType excluded — it defaults to LITIGATION and is never absent,
   // so including it here would make hasAny always true.
   const hasAny =
