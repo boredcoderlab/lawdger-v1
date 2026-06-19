@@ -165,7 +165,7 @@ export function PageLayout(props: PageLayoutProps) {
         */}
         <div
           className={[
-            "w-[35%]",
+            "w-[42%] lg:w-[38%]",
             // Phase 4d-1: radius bump (24 → 28) reads as embossed leather not stamped tile
             "rounded-[28px]",
             // Light: espresso; Dark: elevated warm-dark step UP from #0D0A09 canvas

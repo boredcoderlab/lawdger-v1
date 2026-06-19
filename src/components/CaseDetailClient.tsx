@@ -5,21 +5,22 @@ import {
   Plus, X, CheckCircle2, Trash2, Clock, AlertCircle,
   Calendar as CalendarIcon, ChevronLeft, ChevronRight,
   Pencil, Check, Briefcase, Building2, IndianRupee, FileText,
-  StickyNote, BriefcaseBusiness
+  StickyNote, BriefcaseBusiness, CheckSquare
 } from "lucide-react";
 import {
   format, isPast, isToday, isTomorrow, differenceInDays,
   subMonths, addMonths, startOfWeek, endOfWeek,
   startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, parse,
 } from "date-fns";
-import { updateCase, updateCaseStatus } from "@/actions/caseActions";
+import { updateCase, updateCaseStatus, type CaseWithChildren } from "@/actions/caseActions";
 import { createNote } from "@/actions/noteActions";
 import {
   createCaseTask,
   deleteCaseTask,
   toggleCaseTaskStatus,
 } from "@/actions/taskActions";
-import type { CaseStatus } from "@prisma/client";
+import { CaseStatus, MatterType } from "@prisma/client";
+import { CASE_TYPES, type CaseType } from "@/lib/case-constants";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -39,17 +40,50 @@ type CalendarEvent = {
   description: string | null;
 };
 
-const STATUS_OPTIONS = ["active", "inactive", "closed"] as const;
+const STATUS_OPTIONS = [CaseStatus.ACTIVE, CaseStatus.CLOSED] as const;
 type Status = (typeof STATUS_OPTIONS)[number];
 
-const STATUS_STYLES: Record<Status, string> = {
-  active:   "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20",
-  inactive: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  closed:   "bg-black/5 dark:bg-white/5 text-muted-foreground border-black/10 dark:border-white/10",
+const MATTER_TYPE_OPTIONS = [
+  MatterType.LITIGATION,
+  MatterType.ADVISORY,
+  MatterType.PRE_LITIGATION,
+] as const;
+
+const CRIMINAL_CASE_TYPE: CaseType = "CRIMINAL";
+
+const CATEGORY_COLOR: Record<string, { dot: string; badge: string }> = {
+  "General Note":  { dot: "bg-blue-500",    badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
+  "Client Update": { dot: "bg-purple-500",  badge: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20" },
+  "Next Date":     { dot: "bg-orange-500",  badge: "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20" },
+  "Task":          { dot: "bg-primary",     badge: "bg-primary/10 text-primary border-primary/20" },
 };
+
+type TimelineItem =
+  | { kind: "note";  id: string; date: Date; content: string; category: string }
+  | { kind: "task";  id: string; date: Date; description: string; status: string; dueDate: Date | null }
+  | { kind: "event"; id: string; date: Date; title: string; description: string | null };
+
+const titleCase = (s: string) =>
+  s.charAt(0).toUpperCase() + s.slice(1).toLowerCase().replace(/_/g, " ");
+
+const titleCaseStatus = (s: Status) =>
+  s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+
+const toDateInputValue = (d: Date | null) =>
+  d ? new Date(d).toISOString().split("T")[0] : "";
+
+const formatIndianDate = (d: Date) =>
+  new Date(d).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
 // ── Component ────────────────────────────────────────────────────────────────
 
+// Phase 3.5: initial* props own the original 5 fields (title/clientName/court/agreedFee/status).
+// caseData owns the 9 Indian fields (caseNumber, caseType, matterType, nextHearingDate,
+// description, filingDate, actsSections, firNumber, policeStation). Do not cross the streams.
 export default function CaseDetailClient({
   caseId,
   initialTitle,
@@ -59,6 +93,7 @@ export default function CaseDetailClient({
   initialStatus,
   initialTasks,
   upcomingHearings,
+  caseData,
 }: {
   caseId: string;
   initialTitle: string;
@@ -68,6 +103,7 @@ export default function CaseDetailClient({
   initialStatus: string;
   initialTasks: Task[];
   upcomingHearings: CalendarEvent[];
+  caseData: CaseWithChildren;
 }) {
 
   // ── Case info edit ──────────────────────────────────────────────────────────
@@ -81,19 +117,39 @@ export default function CaseDetailClient({
     status:     initialStatus as Status,
   });
 
+  // 9 Indian fields — sourced from caseData prop only (see header comment).
+  const initialMatterData = {
+    caseNumber:      caseData.caseNumber ?? "",
+    matterType:      caseData.matterType,
+    caseType:        (caseData.caseType ?? "") as CaseType | "",
+    filingDate:      toDateInputValue(caseData.filingDate),
+    nextHearingDate: toDateInputValue(caseData.nextHearingDate),
+    description:     caseData.description ?? "",
+    actsSections:    caseData.actsSections ?? "",
+    firNumber:       caseData.firNumber ?? "",
+    policeStation:   caseData.policeStation ?? "",
+  };
+  const [matterData, setMatterData] = useState(initialMatterData);
+
   const handleSave = async () => {
     setSaving(true);
-    // TODO(3.3): drop "inactive" from STATUS_OPTIONS — updateCaseStatus
-    // Zod rejects it. Local UI status is lowercase ("active" | "closed");
-    // Prisma enum domain is uppercase. "inactive" has no enum home and
-    // will produce { ok: false } here. Phase 3.3 redesigns the picker.
+    const isCriminal = matterData.caseType === CRIMINAL_CASE_TYPE;
     await updateCase(caseId, {
-      title:      info.title || undefined,
-      clientName: info.clientName || undefined,
-      court:      info.courtName || undefined,
-      agreedFee:  info.agreedFee ? parseFloat(info.agreedFee) : undefined,
+      title:           info.title || undefined,
+      clientName:      info.clientName || undefined,
+      court:           info.courtName || undefined,
+      agreedFee:       info.agreedFee ? parseFloat(info.agreedFee) : undefined,
+      caseNumber:      matterData.caseNumber || undefined,
+      caseType:        matterData.caseType ? matterData.caseType : undefined,
+      matterType:      matterData.matterType,
+      filingDate:      matterData.filingDate ? new Date(matterData.filingDate) : undefined,
+      nextHearingDate: matterData.nextHearingDate ? new Date(matterData.nextHearingDate) : undefined,
+      description:     matterData.description || undefined,
+      actsSections:    matterData.actsSections || undefined,
+      firNumber:       isCriminal && matterData.firNumber ? matterData.firNumber : undefined,
+      policeStation:   isCriminal && matterData.policeStation ? matterData.policeStation : undefined,
     });
-    await updateCaseStatus(caseId, info.status.toUpperCase() as CaseStatus);
+    await updateCaseStatus(caseId, info.status);
     setIsEditing(false);
     setSaving(false);
   };
@@ -106,6 +162,7 @@ export default function CaseDetailClient({
       agreedFee:  initialAgreedFee != null ? String(initialAgreedFee) : "",
       status:     initialStatus as Status,
     });
+    setMatterData(initialMatterData);
     setIsEditing(false);
   };
 
@@ -161,6 +218,32 @@ export default function CaseDetailClient({
   // ── Next hearing ────────────────────────────────────────────────────────────
   const now         = new Date();
   const nextHearing = upcomingHearings.find((h) => new Date(h.hearingDate) >= now);
+
+  // ── Activity Timeline (merged notes + tasks + hearings, read-only) ─────────
+  const timeline: TimelineItem[] = [
+    ...caseData.notes.map((n) => ({
+      kind: "note" as const,
+      id: n.id,
+      date: n.createdAt,
+      content: n.cleanContent,
+      category: n.category,
+    })),
+    ...caseData.tasks.map((t) => ({
+      kind: "task" as const,
+      id: t.id,
+      date: t.dueDate ?? t.createdAt,
+      description: t.description,
+      status: t.status,
+      dueDate: t.dueDate,
+    })),
+    ...caseData.calendarEvents.map((e) => ({
+      kind: "event" as const,
+      id: e.id,
+      date: e.hearingDate,
+      title: e.title,
+      description: e.description,
+    })),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -230,7 +313,7 @@ export default function CaseDetailClient({
                               : "border-white/10 text-white/50 hover:bg-white/5"
                           }`}
                         >
-                          {s}
+                          {titleCaseStatus(s)}
                         </button>
                       ))}
                     </div>
@@ -256,11 +339,11 @@ export default function CaseDetailClient({
                 <div className="space-y-6">
                   <div className="flex items-center gap-3">
                     <span className={`inline-flex items-center rounded-lg border px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-white/5 ${
-                        info.status === 'active' ? 'text-primary border-primary/30 dark:text-[var(--gold-text)] dark:border-[rgba(212,175,55,0.35)]' :
-                        info.status === 'inactive' ? 'text-amber-400 border-amber-400/30' :
-                        'text-white/40 border-white/10'
+                        info.status === CaseStatus.ACTIVE
+                          ? 'text-primary border-primary/30 dark:text-[var(--gold-text)] dark:border-[rgba(212,175,55,0.35)]'
+                          : 'text-white/40 border-white/10'
                     }`}>
-                      {info.status}
+                      {titleCaseStatus(info.status)}
                     </span>
                   </div>
                   <InfoRow icon={<Briefcase className="h-4 w-4" />} label="Client Identifier" value={info.clientName || null} />
@@ -270,6 +353,7 @@ export default function CaseDetailClient({
                     label="Agreed Fee Structure"
                     value={info.agreedFee ? `₹${parseFloat(info.agreedFee).toLocaleString("en-IN")}` : null}
                   />
+                  <MatterDetails caseData={caseData} />
                 </div>
               )}
             </div>
@@ -325,6 +409,213 @@ export default function CaseDetailClient({
         mainPaneContent={
           <div className="h-full overflow-y-auto scrollbar-hide p-10 pb-20">
             <div className="grid grid-cols-1 gap-12">
+
+              {/* ── Matter Details (Editing) ────────────────────── */}
+              {isEditing && (
+                <div className="rounded-[2rem] border border-primary/20 bg-primary/5 p-6">
+                  <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground mb-6">
+                    Matter Details (Editing)
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <EditField label="Case Number" tone="light">
+                      <input
+                        value={matterData.caseNumber}
+                        onChange={(e) => setMatterData({ ...matterData, caseNumber: e.target.value })}
+                        placeholder="Court-assigned number (e.g. W.P. 1234/2026)"
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm placeholder:text-muted-foreground/50"
+                      />
+                    </EditField>
+                    <EditField label="Matter Type" tone="light">
+                      <select
+                        value={matterData.matterType}
+                        onChange={(e) => setMatterData({ ...matterData, matterType: e.target.value as MatterType })}
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm appearance-none"
+                      >
+                        {MATTER_TYPE_OPTIONS.map((m) => (
+                          <option key={m} value={m}>
+                            {titleCase(m)}
+                          </option>
+                        ))}
+                      </select>
+                    </EditField>
+                    <EditField label="Case Type" tone="light">
+                      <select
+                        value={matterData.caseType}
+                        onChange={(e) => setMatterData({ ...matterData, caseType: e.target.value as CaseType | "" })}
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm appearance-none"
+                      >
+                        <option value="">Select type</option>
+                        {CASE_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {titleCase(t)}
+                          </option>
+                        ))}
+                      </select>
+                    </EditField>
+                    <EditField label="Filing Date" tone="light">
+                      <input
+                        type="date"
+                        value={matterData.filingDate}
+                        onChange={(e) => setMatterData({ ...matterData, filingDate: e.target.value })}
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm"
+                      />
+                    </EditField>
+                    <EditField label="Next Hearing Date" tone="light">
+                      <input
+                        type="date"
+                        value={matterData.nextHearingDate}
+                        onChange={(e) => setMatterData({ ...matterData, nextHearingDate: e.target.value })}
+                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm"
+                      />
+                    </EditField>
+                    <div className="sm:col-span-2">
+                      <EditField label="Description" tone="light">
+                        <textarea
+                          rows={3}
+                          value={matterData.description}
+                          onChange={(e) => setMatterData({ ...matterData, description: e.target.value })}
+                          className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm resize-none placeholder:text-muted-foreground/50"
+                        />
+                      </EditField>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <EditField label="Acts & Sections" tone="light">
+                        <input
+                          value={matterData.actsSections}
+                          onChange={(e) => setMatterData({ ...matterData, actsSections: e.target.value })}
+                          placeholder="Pipe-delimited, e.g. IPC § 420 | CrPC § 173"
+                          className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm placeholder:text-muted-foreground/50"
+                        />
+                      </EditField>
+                    </div>
+                    {matterData.caseType === CRIMINAL_CASE_TYPE && (
+                      <>
+                        <EditField label="FIR Number" tone="light">
+                          <input
+                            value={matterData.firNumber}
+                            onChange={(e) => setMatterData({ ...matterData, firNumber: e.target.value })}
+                            className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm"
+                          />
+                        </EditField>
+                        <EditField label="Police Station" tone="light">
+                          <input
+                            value={matterData.policeStation}
+                            onChange={(e) => setMatterData({ ...matterData, policeStation: e.target.value })}
+                            className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm"
+                          />
+                        </EditField>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ── Activity Timeline ─────────────────────────────────── */}
+              <div>
+                <div className="flex items-center justify-between mb-6 pb-2 border-b border-primary/10">
+                  <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3">
+                    <span className="inline-block h-2 w-2 rounded-full bg-primary shadow-[0_0_10px_rgba(200,150,62,0.5)]" />
+                    Case Timeline
+                  </h3>
+                  {timeline.length > 0 && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      {timeline.length} {timeline.length === 1 ? "entry" : "entries"}
+                    </span>
+                  )}
+                </div>
+
+                {timeline.length === 0 ? (
+                  <div className="rounded-[2rem] border border-dashed border-primary/15 bg-white/40 dark:bg-card/30 p-10 text-center text-[13px] font-medium text-muted-foreground">
+                    No activity yet. Add a task, note, or hearing to get started.
+                  </div>
+                ) : (
+                  <div className="relative border-l border-primary/15 ml-3 space-y-4 pb-2">
+                    {timeline.map((item) => {
+                      if (item.kind === "event") {
+                        return (
+                          <div key={item.id} className="relative pl-8">
+                            <div className="absolute -left-3.5 top-1.5 h-7 w-7 flex items-center justify-center rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/30">
+                              <CalendarIcon className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="rounded-2xl border border-primary/10 bg-white/80 dark:bg-card/60 backdrop-blur-md px-5 py-4 shadow-sm hover:border-orange-500/30 transition-colors">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400">
+                                    Hearing
+                                  </span>
+                                  <p className="font-serif text-base font-bold text-foreground mt-1 leading-snug">
+                                    {item.title}
+                                  </p>
+                                  {item.description && (
+                                    <p className="text-[13px] text-muted-foreground font-medium mt-1">
+                                      {item.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest shrink-0 mt-0.5">
+                                  {format(item.date, "d MMM yyyy")}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (item.kind === "task") {
+                        const done = item.status === "completed";
+                        return (
+                          <div key={item.id} className={`relative pl-8 ${done ? "opacity-50" : ""}`}>
+                            <div className={`absolute -left-3.5 top-1.5 h-7 w-7 flex items-center justify-center rounded-full border ${
+                              done
+                                ? "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30"
+                                : "bg-primary/15 text-primary border-primary/30"
+                            }`}>
+                              <CheckSquare className="h-3.5 w-3.5" />
+                            </div>
+                            <div className="rounded-2xl border border-primary/10 bg-white/80 dark:bg-card/60 backdrop-blur-md px-5 py-4 shadow-sm transition-colors">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                  <span className={`text-[10px] font-bold uppercase tracking-widest ${done ? "text-green-600 dark:text-green-400" : "text-primary"}`}>
+                                    {done ? "Done" : "Task"}
+                                  </span>
+                                  <p className={`text-[13px] font-medium mt-1 leading-relaxed ${done ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                                    {item.description}
+                                  </p>
+                                </div>
+                                {item.dueDate && (
+                                  <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest shrink-0 mt-0.5">
+                                    Due {format(item.dueDate, "d MMM yyyy")}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const colors = CATEGORY_COLOR[item.category] ?? CATEGORY_COLOR["General Note"];
+                      return (
+                        <div key={item.id} className="relative pl-8">
+                          <div className={`absolute -left-2 top-2.5 h-4 w-4 rounded-full border-2 border-background ${colors.dot}`} />
+                          <div className="rounded-2xl border border-primary/10 bg-white/80 dark:bg-card/60 backdrop-blur-md px-5 py-4 shadow-sm hover:border-primary/20 transition-colors">
+                            <div className="flex items-start justify-between gap-4 mb-2">
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${colors.badge}`}>
+                                {item.category}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest shrink-0">
+                                {format(item.date, "d MMM yyyy")}
+                              </span>
+                            </div>
+                            <p className="text-[13px] font-medium text-foreground leading-relaxed">
+                              {item.content}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               {/* ── Next Hearing ─────────────────────────────────── */}
               {nextHearing && (
@@ -546,10 +837,24 @@ export default function CaseDetailClient({
 
 // ── Helper sub-components ────────────────────────────────────────────────────
 
-function EditField({ label, children }: { label: string; children: React.ReactNode }) {
+function EditField({
+  label,
+  children,
+  tone = "dark",
+}: {
+  label: string;
+  children: React.ReactNode;
+  tone?: "dark" | "light";
+}) {
   return (
     <div>
-      <label className="block text-[9px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-foreground-secondary mb-1.5 ml-1">
+      <label
+        className={`block text-[9px] font-bold uppercase tracking-widest mb-1.5 ml-1 ${
+          tone === "light"
+            ? "text-muted-foreground"
+            : "text-lawdger-cream/50 dark:text-foreground-secondary"
+        }`}
+      >
         {label}
       </label>
       {children}
@@ -579,6 +884,60 @@ function InfoRow({
           {value ?? <span className="text-white/30 italic text-[12px]">—</span>}
         </p>
       </div>
+    </div>
+  );
+}
+
+function DetailLine({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <p className="flex items-baseline justify-between gap-3 text-sm">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-muted-foreground shrink-0">
+        {label}
+      </span>
+      <span className="flex-1 min-w-0 text-[13px] font-medium text-lawdger-cream dark:text-foreground text-right truncate">
+        {children}
+      </span>
+    </p>
+  );
+}
+
+function MatterDetails({ caseData }: { caseData: CaseWithChildren }) {
+  // matterType excluded — it defaults to LITIGATION and is never absent,
+  // so including it here would make hasAny always true.
+  const hasAny =
+    caseData.caseNumber ||
+    caseData.caseType ||
+    caseData.nextHearingDate ||
+    caseData.filingDate ||
+    caseData.description ||
+    caseData.actsSections ||
+    caseData.firNumber ||
+    caseData.policeStation;
+  if (!hasAny) return null;
+
+  return (
+    <div className="pt-4 mt-2 border-t border-white/10 space-y-2.5">
+      <h4 className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/70 dark:text-muted-foreground mb-3">
+        Matter Details
+      </h4>
+      {caseData.caseNumber && <DetailLine label="Case No.">{caseData.caseNumber}</DetailLine>}
+      {caseData.caseType && <DetailLine label="Type">{titleCase(caseData.caseType)}</DetailLine>}
+      {caseData.matterType && <DetailLine label="Matter">{titleCase(caseData.matterType)}</DetailLine>}
+      {caseData.filingDate && <DetailLine label="Filing Date">{formatIndianDate(caseData.filingDate)}</DetailLine>}
+      {caseData.nextHearingDate && <DetailLine label="Next Hearing">{formatIndianDate(caseData.nextHearingDate)}</DetailLine>}
+      {caseData.description && (
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/50 dark:text-muted-foreground mb-1">
+            Description
+          </p>
+          <p className="text-[13px] font-medium text-lawdger-cream/90 dark:text-foreground leading-relaxed">
+            {caseData.description}
+          </p>
+        </div>
+      )}
+      {caseData.actsSections && <DetailLine label="Acts & Sections">{caseData.actsSections}</DetailLine>}
+      {caseData.firNumber && <DetailLine label="FIR No.">{caseData.firNumber}</DetailLine>}
+      {caseData.policeStation && <DetailLine label="Police Station">{caseData.policeStation}</DetailLine>}
     </div>
   );
 }

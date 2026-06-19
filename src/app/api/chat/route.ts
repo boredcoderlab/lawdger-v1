@@ -11,7 +11,8 @@ import {
   createCase,
   updateCaseStatus,
 } from "@/actions/caseActions";
-import { createNote, type NoteCategory } from "@/actions/noteActions";
+import { createNote } from "@/actions/noteActions";
+import { type NoteCategory } from "@/actions/noteActions.types";
 import type { CaseStatus } from "@prisma/client";
 import {
   getTasks,

@@ -17,18 +17,11 @@
 import { getServerScopedPrisma, getServerUser } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { NOTE_CATEGORIES, type NoteCategory } from "./noteActions.types";
 
-export type Result<T> =
+type Result<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
-
-export const NOTE_CATEGORIES = [
-  "General Note",
-  "Client Update",
-  "Next Date",
-  "Task",
-] as const;
-export type NoteCategory = (typeof NOTE_CATEGORIES)[number];
 
 const createNoteSchema = z.object({
   caseId: z.string().min(1, "caseId required"),

@@ -92,7 +92,10 @@ CC prompt for each pillar must include: "add cross-user isolation test for [tabl
 
 ---
 
-## 6. Pillar C — Chat-500 Fix + NoteCategory Type Extraction
+## 6. Pillar C — Chat-500 Fix + NoteCategory Type Extraction — ✅ DONE (pulled forward to 3.5.1-h)
+
+> **Status:** Completed in 3.5.1-h. `noteActions.types.ts` created; `NOTE_CATEGORIES` + `NoteCategory` moved out of `"use server"` file. `chat/route.ts` and `noteActions.ts` import from the side-car module. No backward-compat re-export needed (only one external importer existed: `chat/route.ts`). Verified: `npm run smoke` exit 0, chat route loads with no 500, CaseDetail Append Task / toggle / delete CRUD all functional. **Pillar C remaining scope: none.**
+
 
 ### Scope
 

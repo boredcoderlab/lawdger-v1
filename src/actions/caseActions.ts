@@ -323,7 +323,7 @@ export async function archiveCase(id: string): Promise<Result<Case>> {
 // ─── getCaseCounts ───────────────────────────────────────────────────────────
 
 export async function getCaseCounts(): Promise<
-  Result<{ total: number; active: number; pending: number; closed: number }>
+  Result<{ total: number; active: number; closed: number }>
 > {
   const user = await getServerUser();
 
@@ -340,8 +340,7 @@ export async function getCaseCounts(): Promise<
       grouped.find((g) => g.status === CaseStatus.ACTIVE)?._count._all ?? 0;
     const closed =
       grouped.find((g) => g.status === CaseStatus.CLOSED)?._count._all ?? 0;
-    // TODO(3.3): drop phantom `pending` field once CasesClient tab is removed.
-    return { ok: true, data: { total, active, pending: 0, closed } };
+    return { ok: true, data: { total, active, closed } };
   });
 }
 
