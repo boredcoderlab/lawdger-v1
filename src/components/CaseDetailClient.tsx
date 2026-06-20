@@ -30,6 +30,7 @@ type Task = {
   description: string;
   status: string;
   dueDate: Date | null;
+  isUrgent: boolean;
   createdAt: Date;
 };
 
@@ -170,7 +171,7 @@ export default function CaseDetailClient({
   const [taskModalOpen,  setTaskModalOpen]  = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [pickerMonth,    setPickerMonth]    = useState(new Date());
-  const [newTask,        setNewTask]        = useState({ desc: "", due: "" });
+  const [newTask,        setNewTask]        = useState({ desc: "", due: "", isUrgent: false });
   const [taskSubmitting, setTaskSubmitting] = useState(false);
 
   const pendingTasks   = initialTasks.filter((t) => t.status === "pending");
@@ -183,8 +184,9 @@ export default function CaseDetailClient({
       caseId,
       description: newTask.desc,
       dueDate: newTask.due ? new Date(newTask.due) : undefined,
+      isUrgent: newTask.isUrgent,
     });
-    setNewTask({ desc: "", due: "" });
+    setNewTask({ desc: "", due: "", isUrgent: false });
     setTaskModalOpen(false);
     setDatePickerOpen(false);
     setTaskSubmitting(false);
@@ -684,7 +686,17 @@ export default function CaseDetailClient({
                               className="h-5 w-5 rounded-full border-2 border-primary/30 shrink-0 hover:border-primary transition-colors flex items-center justify-center"
                             />
                             <div className="flex-1 min-w-0 pr-4 border-r border-primary/10">
-                              <p className="text-[14px] font-bold text-foreground leading-snug group-hover:text-primary transition-colors">{task.description}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[14px] font-bold text-foreground leading-snug group-hover:text-primary transition-colors">{task.description}</p>
+                                {task.isUrgent && (
+                                  <span
+                                    className="inline-flex items-center rounded-full bg-lawdger-gold/15 dark:bg-[var(--surface-inset)] text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 shrink-0"
+                                    style={{ color: "var(--gold-text, var(--accent-gold))" }}
+                                  >
+                                    Urgent
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <div className="w-24 shrink-0 flex items-center justify-end">
                               {due && (
@@ -816,6 +828,20 @@ export default function CaseDetailClient({
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={newTask.isUrgent}
+                    onChange={(e) => setNewTask({ ...newTask, isUrgent: e.target.checked })}
+                    className="h-4 w-4 rounded border-primary/30 text-primary focus:ring-primary/30"
+                  />
+                  <span className="text-[12.5px] font-medium text-foreground">
+                    Mark as urgent
+                  </span>
+                </label>
               </div>
 
               <div className="pt-2">

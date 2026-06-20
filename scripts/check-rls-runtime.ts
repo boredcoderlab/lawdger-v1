@@ -34,6 +34,7 @@ const VERIFY_SCRIPTS = [
   "scripts/verify-isolation.ts",
   "scripts/verify-phase32-rls.ts",
   "scripts/verify-with-user-context.ts",
+  "scripts/verify-phase4-rls.ts",
 ];
 
 async function detectRole(): Promise<string> {
