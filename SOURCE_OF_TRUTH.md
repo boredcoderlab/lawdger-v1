@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-14 (Phase 3.0.1 closed — local runtime RLS enforced; Vercel cutover deferred to Phase 9)
+**Last updated:** 2026-06-21 (Phase 4 Pillar A closed — `/tasks` SEED killed, wired to DB; main @ `fff9901`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,6 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
+- **Current main sha:** `fff9901` (Phase 4 Pillar A — PR #16)
 
 ---
 
@@ -68,6 +69,13 @@ missing/malformed values.
   `db.<PROJECT_REF>.supabase.co:5432` is IPv6-only on some Supabase regions.
   Use the session-mode pooler instead:
   `postgresql://postgres.<PROJECT_REF>:<PASS>@<HOST>.pooler.supabase.com:5432/postgres`
+- **Current `.env.local` reality (Sahil's home IPv4 network):** `DIRECT_URL`
+  operationally points at the pgbouncer pooler (port 6543), NOT the direct
+  endpoint. This contradicts §4 intent but reflects working state. Schema
+  migrations through `prisma migrate diff` hang as a result — use the
+  Supabase MCP `execute_sql` + manual `_prisma_migrations` INSERT detour
+  documented in PR #16. **Fix deferred to Phase 9** (Supabase IPv4 add-on
+  or session-pooler endpoint).
 
 ---
 
@@ -107,7 +115,7 @@ MUST call `auth()` in its handler. There is no automatic protection.
 | `_prisma_migrations` | ✅ | ❌ | 0 (default deny) | Infra table — FORCE deliberately omitted; postgres BYPASSRLS covers migration runner; `lawdger_app` has no GRANTs on this table. |
 | `Case` | ✅ | ✅ | 1 (`Case_isolation`) | userId scoped |
 | `Note` | ✅ | ✅ | 1 (`Note_isolation`) | userId scoped |
-| `Task` | ✅ | ✅ | 1 (`Task_isolation`) | userId scoped |
+| `Task` | ✅ | ✅ | 1 (`Task_isolation`) | userId scoped. `isUrgent Boolean @default(false)` added 4-A.1. |
 | `CalendarEvent` | ✅ | ✅ | 1 (`CalendarEvent_isolation`) | userId scoped |
 | `Payment` | ✅ | ✅ | 1 (`Payment_isolation`) | userId scoped |
 | `Document` | ✅ | ✅ | 1 (`Document_isolation`) | userId scoped |
@@ -116,7 +124,7 @@ Verified by `npm run smoke:rls`.
 
 ### Current Runtime Isolation Posture
 
-> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — 15/15 PASS confirmed. Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
+> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **17/17 PASS** confirmed (post-4-A.3: +6 Phase 4 Task RLS checks). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
 
 - 8 tables have RLS **ENABLED**; 7 app tables also have **FORCE ROW LEVEL SECURITY** (as of 3.0.1a). `_prisma_migrations` has ENABLED only.
 - `lawdger_app` is a **fully hardened LOGIN role**: real password (in `.env.local` as `LAWDGER_APP_DB_PASSWORD`), NOBYPASSRLS, SELECT/INSERT/UPDATE/DELETE GRANTs on all 7 app tables, subject to FORCE RLS.
@@ -155,18 +163,22 @@ before each user-scoped query.
 - No `$transaction([...])` array form against scoped clients
 - No `Promise.all([scopedOp, scopedOp])` against scoped clients
 
+**Verify-script cleanup hooks** (Pillar A learning, PR #16) MUST run under
+`getPrismaForUser(userId)` GUC — never `baseClient`. FORCE RLS at `lawdger_app`
+makes unscoped `deleteMany` match zero rows silently.
+
 ### Action File Migration State
 
 | File | Status | Notes |
 |------|--------|-------|
 | `src/actions/caseActions.ts` | ✅ Migrated | Zod, scoped Prisma, `where: { userId }`, `Result<T>` envelope |
 | `src/actions/noteActions.ts` | ✅ Migrated | New in 3.2 — split from caseActions |
-| `src/actions/taskActions.ts` | ⚠️ Partial | Case-task helpers scoped; own task ops still use bare `prisma`. Full contract uplift sequenced to **3.2.6**. |
-| `src/actions/calendarActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped patterns. **No Zod/Result yet** — contract uplift sequenced to 3.2.6. `where: { userId }` retained as defence-in-depth. |
+| `src/actions/taskActions.ts` | ⚠️ Partial | `listAllTasks` 3.2-compliant additive (4-A.2). Case-task helpers scoped. Own task ops (legacy L28–150) still use bare `prisma`. Full contract uplift sequenced to **3.2.6**. |
+| `src/actions/calendarActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped patterns. `getCasesForSelect` extended with `caseNumber` in 4-A.2. **No Zod/Result yet** — contract uplift sequenced to 3.2.6. `where: { userId }` retained as defence-in-depth. |
 | `src/actions/dashboardActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` + 6-query `Promise.all` → single `withServerUserContext` interactive tx with sequential awaits. Page-level duplicate queries collapsed; `dashboard/page.tsx` now thin consumer of `getDashboardData()`. Contract uplift sequenced to 3.2.6. |
 | `src/actions/financeActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped; `assertCaseAccess` helper inlined into `createPayment`'s `withServerUserContext` tx. Contract uplift sequenced to 3.2.6. |
-| `src/actions/settingsActions.ts` | ✅ Full contract (3.2.5b-ii + 3.0.1c + 3.0.1e) | Zod schemas + `Result<T>` envelope + scoped Prisma for `getFullProfile`, `updateProfile`, `updateWorkspacePreferences`, `updateNotificationPreferences`. `changePassword` migrated (3.0.1c) — `getServerUser` + Zod + `bcrypt.compare`/`hash(_, 12)` + `auth_update_password` SECURITY DEFINER RPC via `$queryRaw` + `ActionState` envelope. User lookup patched (3.0.1e) — `prisma.user.findUnique` replaced with `$queryRaw` against `auth_find_user_by_email`; `session.email` explicit guard replaces `!` assertion. All five functions on the same contract. |
-| `src/auth.ts` + signup actions | ✅ Migrated (3.2.5a) | Now use `prisma.$queryRaw` → `auth_find_user_by_email` / `auth_create_user` SECURITY DEFINER RPCs. Bare `prisma` import retained for the raw-query call site only. |
+| `src/actions/settingsActions.ts` | ✅ Full contract (3.2.5b-ii + 3.0.1c + 3.0.1e) | All five functions on 3.2 contract. |
+| `src/auth.ts` + signup actions | ✅ Migrated (3.2.5a) | Use `prisma.$queryRaw` → `auth_find_user_by_email` / `auth_create_user` SECURITY DEFINER RPCs. |
 
 ### Case model — enums and key fields
 
@@ -187,6 +199,16 @@ before each user-scoped query.
 | `firNumber` | `String?` | For criminal matters |
 | `policeStation` | `String?` | For criminal matters |
 
+### Task model — key fields (post-4-A)
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `status` | `String` | `pending \| completed`; default `pending` |
+| `assignee` | `String` | Default `"Unassigned"`; bucketed via `src/lib/task-bucket.ts` into `unassigned \| my-plate \| associates` |
+| `dueDate` | `DateTime?` | |
+| `isUrgent` | `Boolean` | Default `false`. Added 4-A.1. Drives gold URGENT pill on /tasks + CaseDetail docket. |
+| `priority` | — | **DROPPED in 4-A.2** — was TypeScript-only fiction, never in schema. |
+
 ### Migration history
 
 | Migration | Date | Purpose |
@@ -194,10 +216,11 @@ before each user-scoped query.
 | `0_init` | 2026-05-26 | Baseline schema (User, Case, Note, Task, CalendarEvent, Payment) |
 | `20260527051415_add_documents_litigation_rls` | 2026-05-27 | Document model, Indian litigation fields on Case, RLS on 6 matter tables |
 | `20260609030200_enable_rls_user_and_migrations` | 2026-06-09 | RLS on User + _prisma_migrations (default deny) |
-| `20260609113647_phase_3_1_schema_cleanup` | 2026-06-09 | `CaseStatus` enum (ACTIVE \| CLOSED), `MatterType` enum (LITIGATION \| ADVISORY \| PRE_LITIGATION), `caseNumber` field; drop legacy string fields (courtName, forum, matterId) |
-| `20260611142223_phase_3_2_5a_user_rls_and_auth_rpcs` | 2026-06-11 | `lawdger_app` NOLOGIN NOBYPASSRLS stub role; User owner-keyed SELECT + UPDATE policies (NULLIF-guarded GUC); `auth_find_user_by_email` + `auth_create_user` SECURITY DEFINER RPCs (EXECUTE granted to `lawdger_app` + `postgres`). Hand-authored — shadow DB workaround. |
-| `20260612204242_phase_3_0_1a_lawdger_app_grants_and_force_rls` | 2026-06-13 | `lawdger_app` promoted LOGIN + real password (manual post-apply step); SELECT/INSERT/UPDATE/DELETE GRANTs on 7 app tables; FORCE ROW LEVEL SECURITY on same 7 tables; embedded DO-block verification (role attrs + FORCE state + GRANT presence). Hand-authored — `prisma migrate resolve --applied`. |
-| `20260613085732_phase_3_0_1b_auth_update_password_rpc` | 2026-06-13 | `auth_update_password(p_email text, p_password text) RETURNS TABLE(id, email, updatedAt)` — third SECURITY DEFINER RPC completing the auth-path trio. plpgsql, `SET search_path = public, pg_temp`, OWNER postgres, EXECUTE granted to `lawdger_app` + `postgres`. DO-block verification embedded. Hand-authored. |
+| `20260609113647_phase_3_1_schema_cleanup` | 2026-06-09 | `CaseStatus` enum, `MatterType` enum, `caseNumber` field |
+| `20260611142223_phase_3_2_5a_user_rls_and_auth_rpcs` | 2026-06-11 | `lawdger_app` NOLOGIN stub; User owner-keyed policies; `auth_find_user_by_email` + `auth_create_user` SECURITY DEFINER RPCs |
+| `20260612204242_phase_3_0_1a_lawdger_app_grants_and_force_rls` | 2026-06-13 | `lawdger_app` LOGIN + GRANTs + FORCE RLS on 7 app tables |
+| `20260613085732_phase_3_0_1b_auth_update_password_rpc` | 2026-06-13 | `auth_update_password` SECURITY DEFINER RPC |
+| `20260619230018_add_task_is_urgent` | 2026-06-19 | `Task.isUrgent Boolean @default(false)`. Applied via Supabase MCP `execute_sql` + manual `_prisma_migrations` INSERT (pgbouncer pooler blocked `prisma migrate diff`). |
 
 ---
 
@@ -212,19 +235,22 @@ npm run smoke
 This runs in order:
 1. `smoke:tsc` — `tsc --noEmit`, no TypeScript errors
 2. `smoke:prisma` — `prisma validate`, schema sanity
-3. `smoke:rls` — `scripts/check-rls.ts`, RLS posture matches §6
+3. `smoke:rls` — `scripts/check-rls.ts`, RLS posture matches §6 (8 tables)
+4. `smoke:rls-runtime` — `scripts/check-rls-runtime.ts` orchestrates 4 verify scripts:
+   - `verify-isolation.ts` (4 checks)
+   - `verify-phase32-rls.ts` (6 checks — Case isolation)
+   - `verify-with-user-context.ts` (5 checks — withUserContext)
+   - `verify-phase4-rls.ts` (6 checks — Task isolation, added 4-A.3)
+
+   **Total: 17 RLS assertions.** Blocking mode — any FAIL exits 1.
 
 Any failure blocks the merge.
-
-> **Smoke verifies policy existence only — not runtime enforcement.** `smoke:rls` confirms the 8 policies are present; it does not verify they fire at runtime (the `postgres` superuser connection bypasses them). Known blindspot, documented for Phase 3.0.1 remediation.
-
-The three `scripts/verify-*.ts` files (`verify-isolation.ts`, `verify-phase32-rls.ts`, `verify-with-user-context.ts`) are **fully implemented**, not stubs. They are intentionally unwired from `npm run smoke` because they require the runtime connection to be `lawdger_app` (NOBYPASSRLS) to yield meaningful results. Under the current `postgres` superuser `DATABASE_URL`, the default-deny bare-client checks will produce misleading results (superuser bypasses RLS). They become runnable post-3.0.1 when `DATABASE_URL` is repointed.
 
 ---
 
 ## 8. Workflow Rules
 
-- **One feature per branch.** No direct commits to main except trivial doc/config.
+- **One feature per branch.** No direct commits to main except trivial doc/config (SOT updates exempt).
 - **One logical unit per commit.** Atomic, reversible.
 - **TSC clean** before every commit.
 - **Smoke clean** before every merge to main.
@@ -232,6 +258,9 @@ The three `scripts/verify-*.ts` files (`verify-isolation.ts`, `verify-phase32-rl
 - **No `any`.** Proper types.
 - **Every API route:** Zod-validated input.
 - **Every DB op:** through Prisma, never raw SQL in app code.
+- **No `Promise.all` over scoped Prisma ops.** Sequential awaits via `withServerUserContext`.
+- **Manual smoke + Chrome MCP empirical visual verification** mandatory before merge (Phase 3.5 hard rule).
+- **Verify-script cleanup hooks** scoped under `getPrismaForUser` GUC, never `baseClient`.
 
 ---
 
@@ -239,13 +268,15 @@ The three `scripts/verify-*.ts` files (`verify-isolation.ts`, `verify-phase32-rl
 
 | Tool | Purpose |
 |------|---------|
-| Claude Chat (Opus) | Architecture, prompt authorship |
+| Claude Chat (Opus 4.7) | Architecture, prompt authorship |
 | Claude Code (Sonnet 4.6 / Opus 4.7) | Execution |
 | `dotenv-cli` | Bridge `.env.local` → Prisma CLI |
 | `tsx` | Run TypeScript scripts directly |
-| Supabase MCP | Read-only DB inspection in Claude Code |
+| Supabase MCP | DB inspection + `execute_sql` migration fallback |
+| Chrome MCP | Empirical visual verification (CP4 standard) |
+| GitHub MCP | PR ops |
 | `next-themes` | Light / dark / system theme |
-| `dnd-kit` | Drag-and-drop for Tasks Kanban |
+| ~~`dnd-kit`~~ | Dropped in 4-A.2 TasksClient rewrite; deps remain in `package.json` (P9 cleanup). |
 
 ### CC prompt format (mandatory)
 
@@ -253,10 +284,12 @@ Every Claude Code prompt for Lawdger must include:
 - Model recommendation at top (Sonnet 4.6 default; Opus 4.7 for complex)
 - One-line reason for model choice
 - Hard constraints
-- Diagnostic before fix (read current state)
-- Single-file scope when possible
-- Incremental commits inside the session
-- Explicit "do NOT" list
+- Locked decisions
+- Pre-flight reads
+- Action steps with ⛔ hard-stop checkpoints
+- Verification
+- Explicit "DO NOT" list
+- STOP and Report at final checkpoint
 
 ---
 
@@ -264,21 +297,26 @@ Every Claude Code prompt for Lawdger must include:
 
 ### Larger debt (sequenced)
 
-- **Runtime RLS enforcement: ✅ LIVE (local) — Vercel cutover deferred to Phase 9.** Full sequence: `lawdger_app` LOGIN + per-table GRANTs + FORCE RLS (3.0.1a ✅) + `auth_update_password` RPC (3.0.1b ✅) + `changePassword` contract uplift (3.0.1c ✅) + `smoke:rls-runtime` wrapper + local `DATABASE_URL` swap (3.0.1d ✅) + `changePassword` user-lookup RPC patch (3.0.1e ✅). Local `DATABASE_URL` repointed to `lawdger_app`; blocking smoke 15/15 PASS; manual smoke 10/10 PASS. Vercel production `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)** — production still runs on `postgres` (BYPASSRLS); `where: { userId }` defence-in-depth remains load-bearing in prod.
-- `taskActions` legacy half — own task ops still on bare `prisma`. Full contract uplift sequenced to **Phase 3.2.6** (post-3.0.1).
-- Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Full 3.2 contract sequenced to **Phase 3.2.6**.
-- `connection_limit` in `DATABASE_URL` stays at `5` under `lawdger_app`. Monitor post-cutover; bump to `10` if Prisma P2024 ("Timed out fetching a new connection") returns.
+- **Runtime RLS enforcement: ✅ LIVE (local) — Vercel cutover deferred to Phase 9.**
+- `taskActions` legacy half — own task ops (toggle/delete/create on bare `prisma`) still pre-3.2. `listAllTasks` 3.2-compliant additive shipped 4-A.2. Full contract uplift sequenced to **Phase 3.2.6**.
+- Drag-drop between Kanban columns — dropped in 4-A.2. Restoration committed to **3.2.6 sprint**, bound to legacy `updateTaskAssignee` 3.2-compliant uplift.
+- Task edit dialog + `doneThisWeek` optimistic stat fix — deferred to **Phase 4-A.4 micro-PR** (next).
+- Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Sequenced to **Phase 3.2.6**.
+- `connection_limit` in `DATABASE_URL` stays at `5` under `lawdger_app`. Monitor post-cutover; bump to `10` if Prisma P2024 returns.
 - `next-pwa` installed but unconfigured. Decision deferred to platform phase.
 
 ### Smaller debt — log + opportunistic
 
-- **User-table where-clause requirement** (3.2.5b-ii smoke discovery — **audit completed in 3.2.5c, clean**): 9 call sites against `prisma.user.*` exist in `src/`, all in `settingsActions.ts`, all carry explicit `where: { id }` on reads and writes. Auth path (`auth.ts`, `signup/actions.ts`, `changePassword`) routes through SECURITY DEFINER RPCs. Post-3.0.1d these `where: { id }` clauses are **belt-and-braces** — RLS is the primary isolation guarantee. **Going-forward rule retained:** every new scoped query against User SHOULD include explicit `where: { id }` as defence-in-depth.
-- ~~**Chat route module-load 500.** `src/app/api/chat/route.ts` 500s at import time with `"use server" file can only export async functions, found object` — caused by the `type NoteCategory` re-export from `noteActions.ts`.~~ **Resolved in 3.5.1-h** — `NOTE_CATEGORIES` const + `NoteCategory` type extracted to `src/actions/noteActions.types.ts` (no `"use server"`); `noteActions.ts` and `chat/route.ts` now import from the side-car module. Phase 4 Pillar C scope completed inline (pulled forward to unblock CaseDetail server actions).
-- **`prisma/seed.ts` upsert with `update: {}`.** On re-seed, existing users' password (and any other field) never refreshes. Stale hashes block dev login after auth-shape changes. **One-line fix:** change `update: {}` to `update: { password, name }`. Trivial separate PR.
-- **`prisma/seed.ts` RLS bypass for seed runs.** Under `lawdger_app` + FORCE RLS, User INSERT/UPDATE policies deny the seed upsert (no `app.current_user_id` GUC set). Workaround: override `DATABASE_URL` at invocation time — `DATABASE_URL="$(grep ^DIRECT_URL .env.local | cut -d= -f2-)" npx prisma db seed` — substitutes the `postgres` superuser URL for the seed run only. Real fix (later): route user creation through `auth_create_user` RPC inside `seed.ts`, or instantiate a dedicated `PrismaClient` with `DIRECT_URL` inside the script.
-- **`prisma migrate resolve --applied` hangs under MCP / non-interactive session.** Root cause: `_prisma_migrations` has default-deny RLS; `lawdger_app` can't INSERT the migration row, so the command blocks waiting for a lock it can never acquire. Workaround: (a) run `dotenv -e .env.local -- npx prisma migrate resolve --applied <name>` directly in a terminal (not via Claude Code Bash); or (b) hand-author the migration SQL + register via `$queryRaw` INSERT into `_prisma_migrations` as `postgres` (pattern used in 3.0.1a and 3.0.1b). Do NOT attempt `migrate resolve` through Claude Code's Bash tool while `DATABASE_URL` points at `lawdger_app`.
-- Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — 109 commits behind main. Cleanup pending.
-- Dead `claude/*` branches (5× at SHA `3374d3d`). Prune pending.
+- **`.env.local` `DIRECT_URL` on pooler 6543** (Sahil's IPv4-only home network). Forces Supabase MCP detour for schema migrations. Fix at **P9 cutover** via Supabase IPv4 add-on or session-pooler endpoint.
+- **dnd-kit deps in `package.json`** despite TasksClient rewrite dropping imports. Audit + prune at **P9 cleanup**.
+- **Dark mode emulation via Chrome MCP** doesn't toggle Tailwind `.dark` class strategy. Out of scope until P9 or user-facing bug surfaces.
+- **User-table where-clause requirement:** going-forward rule — every new scoped query against User SHOULD include explicit `where: { id }` as defence-in-depth.
+- **`prisma/seed.ts` upsert with `update: {}`.** On re-seed, existing users' password never refreshes. One-line fix: change `update: {}` to `update: { password, name }`.
+- **`prisma/seed.ts` RLS bypass for seed runs.** Workaround: `DATABASE_URL="$(grep ^DIRECT_URL .env.local | cut -d= -f2-)" npx prisma db seed`. Real fix: route user creation through `auth_create_user` RPC inside seed script.
+- **`prisma migrate dev` broken** (shadow DB issue from migration `20260609030200`). All future schema changes use `migrate diff` + `migrate deploy`, OR the Supabase MCP `execute_sql` + manual `_prisma_migrations` INSERT detour documented in PR #16.
+- **`prisma migrate resolve --applied` hangs under MCP / non-interactive session.** Workaround: run directly in terminal, or hand-author + register via `execute_sql`.
+- Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — cleanup pending.
+- Dead `claude/*` branches — prune pending.
 
 ---
 
@@ -311,41 +349,45 @@ Every Claude Code prompt for Lawdger must include:
 |-------|--------|---------|
 | 3.1 | ✅ Done | Schema cleanup — enums, caseNumber, drop legacy fields |
 | 3.2 | ✅ Done | Server actions reconciliation — Zod, Result envelope, caseActions migrated |
-| 3.2.1 | ✅ Done | Scoped Prisma multi-query pattern (`withUserContext`, `connection_limit=5`) |
-| 3.2.5a | ✅ Done | Auth-path RLS RPCs (`auth_find_user_by_email`, `auth_create_user`) + User owner-keyed policies + `lawdger_app` NOLOGIN stub |
-| 3.2.5b-i | ✅ Done | Minimal scoped-Prisma swap for `calendarActions`, `dashboardActions`, `financeActions` + collapse of duplicate 6-query block from `dashboard/page.tsx` (action becomes canonical). No contract uplift. |
-| 3.2.5b-ii | ✅ Done | `settingsActions` full 3.2 contract (Zod + Result + scoped) for 4 of 5 functions; `SettingsClient` rewired to unwrap Result via `useActionState<ActionState, FormData>`. `changePassword` retained on legacy contract (deferred to 3.0.1). |
-| 3.2.5c | ✅ Done | Doc pass: corrected SOT §7/§10 stale "DEFERRED stubs" claim (scripts are fully implemented, unwired pending 3.0.1); User-table where-clause audit (clean, 9/9 call sites carry `where:{id}`); `PHASE_3_2_5_PLAN.md` archived. |
-| 3.2.6 | ⏸️ Sequenced | Full contract uplift (Zod + Result) for `calendarActions` / `dashboardActions` / `financeActions` + `taskActions` legacy half. Sequenced **after** 3.0.1. |
-| 3.0.1a | ✅ Done | `lawdger_app` LOGIN + real password (manual post-apply) + SELECT/INSERT/UPDATE/DELETE GRANTs on 7 app tables + FORCE ROW LEVEL SECURITY on same 7 tables. DB layer hardened. |
-| 3.0.1b | ✅ Done | `auth_update_password(p_email, p_password)` SECURITY DEFINER RPC — third auth-path RPC completing the trio. REVOKE/GRANT mirrors 3.2.5a. Reachable; consumed in 3.0.1c. |
-| 3.0.1c | ✅ Done | `settingsActions.changePassword` migrated to full 3.2 `Result<T>`/`ActionState` contract calling `auth_update_password` RPC. `SettingsClient` unwrap matches the other four actions. Pure TypeScript — no DB migration. |
-| 3.0.1d | ✅ Done | `scripts/check-rls-runtime.ts` wrapper + `smoke:rls-runtime` wired into `npm run smoke` (blocking mode). Local `.env.local` `DATABASE_URL` repointed to `lawdger_app`; `smoke:rls-runtime` 15/15 PASS; manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap + production smoke deferred to **Phase 9 (Platform + deploy)**. |
-| 3.0.1e | ✅ Done | `src/actions/settingsActions.ts` `changePassword` user-lookup patched — `prisma.user.findUnique({ where: { id } })` replaced with `$queryRaw` against `auth_find_user_by_email`; explicit `session.email` guard added. Discovered during 3.0.1 manual smoke Step 6 FAIL (same FORCE RLS root cause). PR #13. **Phase 3.0.1 closed.** |
-| 3.3+ | ⏸️ Deferred | Cases UI cleanup, New Matter dialog, CaseDetail real data |
-| 3.5 | ✅ Done | Cases UI hygiene — 5 layout gaps closed (3.5.1-a..g), CaseDetail layout consolidated (3.5.1-h: outer Timeline killed, content migrated into `CaseDetailClient.mainPaneContent`, page.tsx reduced to thin wrapper), **Phase 4 Pillar C pulled forward** (`NoteCategory` extracted to `noteActions.types.ts` to unblock Append Task + chat route). Append Task / toggle / delete CRUD verified end-to-end. |
+| 3.2.1 | ✅ Done | Scoped Prisma multi-query pattern |
+| 3.2.5a | ✅ Done | Auth-path RLS RPCs + User owner-keyed policies + `lawdger_app` NOLOGIN stub |
+| 3.2.5b-i | ✅ Done | Minimal scoped-Prisma swap for calendarActions / dashboardActions / financeActions |
+| 3.2.5b-ii | ✅ Done | `settingsActions` full 3.2 contract (4 of 5 functions) |
+| 3.2.5c | ✅ Done | Doc pass + User-table where-clause audit |
+| 3.2.6 | ⏸️ Sequenced | Full contract uplift for calendarActions / dashboardActions / financeActions + taskActions legacy half + drag-drop restoration (`updateTaskAssignee` uplift). Sequenced **after** Phase 4 Pillar B. |
+| 3.0.1a | ✅ Done | `lawdger_app` LOGIN + GRANTs + FORCE RLS |
+| 3.0.1b | ✅ Done | `auth_update_password` SECURITY DEFINER RPC |
+| 3.0.1c | ✅ Done | `changePassword` 3.2 contract migration |
+| 3.0.1d | ✅ Done | `smoke:rls-runtime` blocking; local `DATABASE_URL` → `lawdger_app` |
+| 3.0.1e | ✅ Done | `changePassword` user-lookup RPC patch. **Phase 3.0.1 closed.** |
+| 3.5 | ✅ Done | Cases UI hygiene — 5 layout gaps closed; CaseDetail layout consolidated; Phase 4 Pillar C pulled forward (`NoteCategory` extraction) |
+| **4-C** | ✅ Done | Pulled forward into 3.5.1-h. `NOTE_CATEGORIES` + `NoteCategory` extracted to `noteActions.types.ts`. |
+| **4-A** | ✅ Done | **PR #16 (main @ `fff9901`).** Killed `/tasks` SEED, wired to DB. 3-col Kanban (Unassigned / My Plate / Associates). `isUrgent` flag added (4-A.1 migration + 4-A.2 UI threading). CaseDetail Append Task carries urgent checkbox + docket pill. `listAllTasks` 3.2-compliant additive. `verify-phase4-rls.ts` (6 new RLS checks). |
+| **4-A.4** | ⏳ Next | Micro-PR. `updateCaseTask` server action + edit dialog on /tasks card click + `doneThisWeek` optimistic stat fix + extend `verify-phase4-rls.ts` with `updateCaseTask` cross-user check (→ 7/7 → 18 total RLS assertions). Branch: `phase-4-a.4-task-edit`. |
+| **4-B** | ⏸️ Sequenced | Auto-event pipeline for Next Date notes (entirely absent, not started). After 4-A.4. |
+| 5–9 | ⏸️ Sequenced | Dashboard real data → Finances → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
 
 ---
 
 ## 14. Rollback
 
-### 3.0.1d — runtime cutover (the only app-affecting rollback in 3.0.1)
+### 4-A — Phase 4 Pillar A (PR #16)
 
-**Failure mode A — local smoke fails before Vercel swap:**
-Revert `.env.local` `DATABASE_URL` to the `postgres` form. No production impact. Diagnose offline and re-attempt.
+**Failure mode A — TasksClient regression discovered post-merge:**
+1. `git revert <fff9901>` on a hotfix branch.
+2. Smoke + Chrome MCP visual verification.
+3. PR to main, fast-track merge.
+4. `isUrgent` column stays in schema (harmless if unused) — strict rollback requires also reverting migration `20260619230018_add_task_is_urgent` via `ALTER TABLE "Task" DROP COLUMN "isUrgent";` + `_prisma_migrations` row delete.
 
-**Failure mode B — Vercel swap deployed, app broken in prod:**
-1. Vercel dashboard → revert `DATABASE_URL` to the `postgres` form (the legacy line is kept commented in `.env.example` for reference).
-2. Trigger redeploy.
-3. App returns to working state on `postgres` (BYPASSRLS active, but functional). `where: { userId }` defence-in-depth holds.
-4. Root-cause offline before re-attempting.
+### 3.0.1d — runtime cutover
 
-**Failure mode C — data corruption suspected post-cutover:**
-1. Supabase dashboard → trigger PITR restore to the pre-swap checkpoint timestamp.
-2. Vercel `DATABASE_URL` → revert to `postgres`.
-3. Redeploy.
+**Failure mode A — local smoke fails before Vercel swap:** Revert `.env.local` `DATABASE_URL` to `postgres` form.
+
+**Failure mode B — Vercel swap deployed, app broken in prod:** Vercel → revert `DATABASE_URL` → redeploy. App returns to `postgres` (BYPASSRLS active, functional). `where: { userId }` holds.
+
+**Failure mode C — data corruption suspected post-cutover:** Supabase PITR restore + Vercel revert + redeploy.
 
 ### 3.0.1a → 3.0.1c rollback summary
-- **3.0.1a:** Revert migration via DROP GRANTs / `ALTER ROLE lawdger_app NOLOGIN` / `ALTER TABLE … NO FORCE RLS`. App on `postgres` throughout — no runtime impact during rollback.
-- **3.0.1b:** `DROP FUNCTION IF EXISTS public.auth_update_password(text, text);` + `DELETE FROM _prisma_migrations WHERE migration_name = '20260613085732_phase_3_0_1b_auth_update_password_rpc';`. Harmless even if rolled forward through 3.0.1c since `changePassword` would simply error on the missing RPC — revert 3.0.1c first.
-- **3.0.1c:** `git revert` the merge commit. `auth_update_password` RPC stays (harmless if unused). App reverts to legacy `changePassword`. No app downtime.
+- **3.0.1a:** Revert migration via DROP GRANTs / `ALTER ROLE lawdger_app NOLOGIN` / `ALTER TABLE … NO FORCE RLS`.
+- **3.0.1b:** `DROP FUNCTION IF EXISTS public.auth_update_password(text, text);` + `_prisma_migrations` row delete.
+- **3.0.1c:** `git revert` the merge commit. `auth_update_password` RPC stays (harmless if unused).
