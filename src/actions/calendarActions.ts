@@ -5,6 +5,7 @@ import {
   getServerScopedPrisma,
   withServerUserContext,
 } from "@/lib/session";
+import { CaseStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 export async function getCalendarEvents() {
@@ -92,8 +93,8 @@ export async function getCasesForSelect() {
   const userId = await requireUserId();
   const scoped = await getServerScopedPrisma();
   return scoped.case.findMany({
-    where: { userId, status: "ACTIVE" },
-    select: { id: true, title: true },
+    where: { userId, status: CaseStatus.ACTIVE },
+    select: { id: true, title: true, caseNumber: true },
     orderBy: { title: "asc" },
   });
 }

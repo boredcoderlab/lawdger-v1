@@ -1,14 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import {
   Activity,
+  AlertCircle,
   Briefcase,
   Calendar as CalendarIcon,
-  Check,
   CheckCircle2,
-  FileText,
-  Inbox,
   Plus,
   Search,
   Trash2,
@@ -16,231 +14,57 @@ import {
   X,
 } from "lucide-react";
 import {
-  closestCorners,
-  DndContext,
-  DragOverlay,
-  KeyboardSensor,
-  PointerSensor,
-  useDroppable,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragOverEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import {
   differenceInCalendarDays,
   format,
   isPast,
   isToday,
-  startOfWeek,
 } from "date-fns";
 import {
   PageLayout,
   DarkPaneHeaderTitle,
   ContentHeading,
 } from "@/components/ui/LayoutShell";
+import {
+  createCaseTask,
+  toggleCaseTaskStatus,
+  deleteCaseTask,
+  type TaskRow,
+} from "@/actions/taskActions";
+import { bucketTask } from "@/lib/task-bucket";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────────────────────────────
-type TaskPriority = "urgent" | "normal" | "low";
-type TaskColumn = "unassigned" | "my-plate" | "associates" | "clerks";
-
-type Task = {
-  id: string;
-  title: string;
-  caseName: string;
-  caseId: string;
-  dueDate: Date | null;
-  priority: TaskPriority;
-  column: TaskColumn;
-  notes: string;
-  completed: boolean;
+type Buckets = {
+  unassigned: TaskRow[];
+  myPlate: TaskRow[];
+  associates: TaskRow[];
 };
 
-type ItemsState = Record<TaskColumn, Task[]>;
-
-const KANBAN_COLUMNS: { id: Exclude<TaskColumn, "unassigned">; label: string }[] = [
-  { id: "my-plate", label: "My Plate" },
-  { id: "associates", label: "Associates" },
-  { id: "clerks", label: "Clerks & Filings" },
-];
-
-const COLUMN_ICON: Record<TaskColumn, React.ElementType> = {
-  unassigned: Inbox,
-  "my-plate": Briefcase,
-  associates: Users,
-  clerks: FileText,
+type Stats = {
+  total: number;
+  dueToday: number;
+  overdue: number;
+  doneThisWeek: number;
 };
 
-const COLUMN_LABEL: Record<TaskColumn, string> = {
-  unassigned: "Unassigned",
+type CaseOption = { id: string; title: string; caseNumber: string | null };
+
+type AssignedColumnId = "my-plate" | "associates";
+
+const COLUMN_LABEL: Record<AssignedColumnId, string> = {
   "my-plate": "My Plate",
   associates: "Associates",
-  clerks: "Clerks & Filings",
 };
 
-// ──────────────────────────────────────────────────────────────────────────
-// Mock seed data
-// ──────────────────────────────────────────────────────────────────────────
-const today = new Date();
-const days = (n: number) => {
-  const d = new Date(today);
-  d.setDate(d.getDate() + n);
-  return d;
-};
-
-const SEED: ItemsState = {
-  unassigned: [
-    {
-      id: "u1",
-      title: "Voice: follow up with client re: settlement offer Mehta vs MCD",
-      caseName: "",
-      caseId: "",
-      dueDate: null,
-      priority: "normal",
-      column: "unassigned",
-      notes: "",
-      completed: false,
-    },
-    {
-      id: "u2",
-      title: "Capture: order copy received — verify clerical errors",
-      caseName: "",
-      caseId: "",
-      dueDate: null,
-      priority: "normal",
-      column: "unassigned",
-      notes: "",
-      completed: false,
-    },
-    {
-      id: "u3",
-      title: "Call: senior counsel availability for Friday hearing",
-      caseName: "",
-      caseId: "",
-      dueDate: null,
-      priority: "urgent",
-      column: "unassigned",
-      notes: "",
-      completed: false,
-    },
-  ],
-  "my-plate": [
-    {
-      id: "t1",
-      title: "Draft counter-affidavit — Reliance vs Future Retail",
-      caseName: "Reliance vs Future Retail",
-      caseId: "c-reliance",
-      dueDate: days(-2),
-      priority: "urgent",
-      column: "my-plate",
-      notes: "",
-      completed: false,
-    },
-    {
-      id: "t2",
-      title: "Prepare oral arguments on Section 9 application",
-      caseName: "Sharma vs Sharma (Arb.)",
-      caseId: "c-sharma",
-      dueDate: days(0),
-      priority: "urgent",
-      column: "my-plate",
-      notes: "",
-      completed: false,
-    },
-    {
-      id: "t3",
-      title: "Review trial court order — note grounds for appeal",
-      caseName: "TechCorp Suit — Civil 247/2024",
-      caseId: "c-techcorp",
-      dueDate: days(3),
-      priority: "normal",
-      column: "my-plate",
-      notes: "",
-      completed: false,
-    },
-  ],
-  associates: [
-    {
-      id: "t4",
-      title: "Research case law on Section 138 NI Act — territorial jurisdiction",
-      caseName: "HDFC Bank — Cheque Bounce Batch",
-      caseId: "c-hdfc",
-      dueDate: days(1),
-      priority: "normal",
-      column: "associates",
-      notes: "",
-      completed: false,
-    },
-    {
-      id: "t5",
-      title: "Draft rejoinder to written statement",
-      caseName: "Mehta Builders vs MCD",
-      caseId: "c-mehta",
-      dueDate: days(5),
-      priority: "normal",
-      column: "associates",
-      notes: "",
-      completed: false,
-    },
-  ],
-  clerks: [
-    {
-      id: "t7",
-      title: "File vakalatnama and process fee — DHC Bench V",
-      caseName: "Sharma Associates",
-      caseId: "c-sharma2",
-      dueDate: days(-1),
-      priority: "urgent",
-      column: "clerks",
-      notes: "",
-      completed: false,
-    },
-    {
-      id: "t8",
-      title: "Pay court fee and obtain receipt for plaint",
-      caseName: "TechCorp Suit — Civil 247/2024",
-      caseId: "c-techcorp",
-      dueDate: days(2),
-      priority: "normal",
-      column: "clerks",
-      notes: "",
-      completed: false,
-    },
-  ],
+const COLUMN_ICON: Record<AssignedColumnId, React.ElementType> = {
+  "my-plate": Briefcase,
+  associates: Users,
 };
 
 // ──────────────────────────────────────────────────────────────────────────
 // Utilities
 // ──────────────────────────────────────────────────────────────────────────
-const ALL_COLUMNS: TaskColumn[] = ["unassigned", "my-plate", "associates", "clerks"];
-
-function findColumnOf(items: ItemsState, id: string): TaskColumn | null {
-  if (ALL_COLUMNS.includes(id as TaskColumn)) return id as TaskColumn;
-  for (const col of ALL_COLUMNS) {
-    if (items[col].some((t) => t.id === id)) return col;
-  }
-  return null;
-}
-
-function findTask(items: ItemsState, id: string): Task | null {
-  for (const col of ALL_COLUMNS) {
-    const t = items[col].find((x) => x.id === id);
-    if (t) return t;
-  }
-  return null;
-}
-
 function dueLabel(d: Date | null): string {
   if (!d) return "No date";
   if (isToday(d)) return "Today";
@@ -260,668 +84,181 @@ function dueClasses(d: Date | null): string {
   return "text-lawdger-muted";
 }
 
-function priorityBorderClass(p: TaskPriority): string {
-  if (p === "urgent") return "border-l-destructive";
-  if (p === "normal") return "border-l-lawdger-gold";
-  return "border-l-lawdger-muted";
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Assigned Task Card (cream pane) — white surface, 3px left priority border
-// NOTE: bg-white is the single justified raw-color exception in this codebase.
-// Cards on the cream pane need to read as elevated against bg-lawdger-cream;
-// "white" is a CSS keyword (not a raw hex), used here only for that contrast.
-// ──────────────────────────────────────────────────────────────────────────
-function AssignedCard({
-  task,
-  hidden,
-  onClick,
-}: {
-  task: Task;
-  hidden: boolean;
-  onClick: (id: string) => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      onClick={() => onClick(task.id)}
-      className={[
-        hidden ? "hidden" : "block",
-        "group bg-white dark:bg-[var(--surface-2)] surface-inner rounded-xl shadow-sm dark:shadow-[0_14px_32px_-18px_rgba(0,0,0,0.7)]",
-        "border border-lawdger-border/15 dark:border-[var(--border)] border-l-[3px]",
-        priorityBorderClass(task.priority),
-        "p-4 cursor-pointer card-interactive",
-        "hover:shadow-md hover:-translate-y-px hover:border-lawdger-border/30 dark:hover:bg-[var(--surface-3)] dark:hover:border-[var(--border-strong)]",
-        "transition-all duration-150",
-      ].join(" ")}
-    >
-      {/* Fix 2: espresso ink, text-sm */}
-      <div className="text-sm font-medium text-lawdger-espresso dark:text-foreground leading-snug line-clamp-2">
-        {task.title}
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
-          {task.caseName || "No case"}
-        </span>
-        {dueLabel(task.dueDate) === "Overdue" ? (
-          <span className="chip chip-danger">Overdue</span>
-        ) : (
-          <span
-            className={`inline-flex items-center gap-1 text-xs font-medium ${dueClasses(
-              task.dueDate
-            )}`}
-          >
-            <CalendarIcon className="w-3 h-3" />
-            {dueLabel(task.dueDate)}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AssignedCardOverlay({ task }: { task: Task }) {
-  return (
-    <div
-      className={[
-        "rotate-2 bg-white dark:bg-[var(--surface-3)] rounded-xl shadow-xl shadow-lawdger-espresso/30 dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]",
-        "border border-lawdger-border/20 dark:border-[var(--border-strong)] border-l-[3px]",
-        priorityBorderClass(task.priority),
-        "p-4 w-full",
-      ].join(" ")}
-    >
-      <div className="text-sm font-medium text-lawdger-espresso dark:text-foreground leading-snug line-clamp-2">
-        {task.title}
-      </div>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[65%] truncate">
-          {task.caseName || "No case"}
-        </span>
-        {dueLabel(task.dueDate) === "Overdue" ? (
-          <span className="chip chip-danger">Overdue</span>
-        ) : (
-          <span
-            className={`inline-flex items-center gap-1 text-xs font-medium ${dueClasses(
-              task.dueDate
-            )}`}
-          >
-            <CalendarIcon className="w-3 h-3" />
-            {dueLabel(task.dueDate)}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Unassigned Task Card (dark pane) — cream-on-espresso compact
-// ──────────────────────────────────────────────────────────────────────────
-function UnassignedCard({
-  task,
-  hidden,
-  onClick,
-}: {
-  task: Task;
-  hidden: boolean;
-  onClick: (id: string) => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...listeners}
-      onClick={() => onClick(task.id)}
-      className={[
-        hidden ? "hidden" : "block",
-        "bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl p-3",
-        "cursor-pointer hover:border-lawdger-gold/40 hover:bg-lawdger-cream/15 dark:hover:bg-foreground/8",
-        "transition-colors duration-150",
-      ].join(" ")}
-    >
-      {/* Unassigned card: cream-on-espresso, 90% legibility */}
-      <div className="text-sm font-medium text-lawdger-cream/90 dark:text-foreground leading-snug line-clamp-2">
-        {task.title}
-      </div>
-      <div className="mt-2 flex items-center gap-1.5">
-        <span className="chip-on-dark is-meta">
-          {task.caseName || "Untriaged"}
-        </span>
-        {task.priority === "urgent" && (
-          <span className="w-1.5 h-1.5 rounded-full bg-destructive shadow-[0_0_6px_rgba(220,38,38,0.7)]" />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function UnassignedCardOverlay({ task }: { task: Task }) {
-  return (
-    <div className="rotate-2 bg-lawdger-cream/15 dark:bg-foreground/5 border border-lawdger-gold/40 rounded-xl p-3 shadow-xl shadow-lawdger-espresso/40 w-full">
-      <div className="font-sans text-[12.5px] font-medium text-lawdger-cream leading-snug line-clamp-2 tracking-normal">
-        {task.title}
-      </div>
-      <div className="mt-2">
-        <span className="chip-on-dark is-meta">
-          {task.caseName || "Untriaged"}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Kanban Column (cream pane)
-// ──────────────────────────────────────────────────────────────────────────
-function KanbanColumn({
-  id,
-  label,
-  tasks,
-  visibleIds,
-  hiddenIds,
-  onAdd,
-  onCardClick,
-  isLast = false,
-}: {
-  id: Exclude<TaskColumn, "unassigned">;
-  label: string;
-  tasks: Task[];
-  visibleIds: Set<string>;
-  hiddenIds: Set<string>;
-  onAdd: (col: TaskColumn) => void;
-  onCardClick: (id: string) => void;
-  isLast?: boolean;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  const Icon = COLUMN_ICON[id];
-  const visibleCount = tasks.filter((t) => visibleIds.has(t.id)).length;
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={[
-        "flex flex-col h-full min-h-0 rounded-2xl p-3 transition-colors",
-        // Fix 3: right border as column divider (except last column)
-        !isLast ? "border-r border-lawdger-border/15 dark:border-lawdger-border" : "",
-        // Fix 5: three depth layers — cream pane → column zone → card
-        isOver
-          ? "bg-lawdger-base/60 ring-1 ring-lawdger-gold/40"
-          : "bg-lawdger-base/40",
-      ].join(" ")}
-    >
-      {/* Fix 1: Header — serif heading, sentence case, stronger separator */}
-      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 dark:border-[var(--border)] shrink-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <Icon className="w-3.5 h-3.5 text-lawdger-espresso/50 dark:text-foreground-secondary shrink-0" />
-          <h3 className="font-serif font-bold text-lg lg:text-xl text-lawdger-espresso dark:text-foreground leading-tight tracking-tight">
-            {label}
-          </h3>
-          <span className="chip chip-neutral text-xs font-sans font-medium shrink-0">
-            {visibleCount}
-          </span>
-        </div>
-        <button
-          onClick={() => onAdd(id)}
-          aria-label={`Add task to ${label}`}
-          className="w-6 h-6 rounded-md text-lawdger-muted dark:text-foreground-secondary opacity-0 group-hover:opacity-100 hover:bg-lawdger-espresso/5 dark:hover:bg-[var(--surface-2)] hover:text-lawdger-espresso dark:hover:text-foreground flex items-center justify-center transition-opacity"
-          tabIndex={-1}
-        >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-2 pr-1">
-        <SortableContext
-          items={tasks.map((t) => t.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {tasks.map((t) => (
-            <AssignedCard
-              key={t.id}
-              task={t}
-              hidden={hiddenIds.has(t.id)}
-              onClick={onCardClick}
-            />
-          ))}
-        </SortableContext>
-
-        {visibleCount === 0 && (
-          <div className="flex-1 flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-dashed border-lawdger-border/25 dark:border-lawdger-border text-center px-4 py-6">
-            <p className="text-[10.5px] font-semibold uppercase tracking-widest text-lawdger-muted">
-              Drop tasks here
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Unassigned drop zone (dark pane) — contains quick-add + sortable list
-// ──────────────────────────────────────────────────────────────────────────
-function UnassignedZone({
-  tasks,
-  visibleIds,
-  hiddenIds,
-  onCardClick,
-  onQuickAdd,
-}: {
-  tasks: Task[];
-  visibleIds: Set<string>;
-  hiddenIds: Set<string>;
-  onCardClick: (id: string) => void;
-  onQuickAdd: (title: string) => void;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: "unassigned" });
-  const visibleCount = tasks.filter((t) => visibleIds.has(t.id)).length;
-
-  const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState("");
-
-  const submit = () => {
-    const v = draft.trim();
-    if (!v) return;
-    onQuickAdd(v);
-    setDraft("");
-    setAdding(false);
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={[
-        "flex flex-col min-h-0 flex-1 rounded-2xl transition-colors",
-        isOver
-          ? "bg-lawdger-cream/8 ring-1 ring-lawdger-gold/40"
-          : "bg-transparent",
-      ].join(" ")}
-    >
-      {/* Section header */}
-      <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lawdger-cream/50 dark:text-muted-foreground">
-            Unassigned
-          </p>
-          <span className="inline-flex items-center justify-center min-w-[20px] h-[18px] rounded-full bg-lawdger-cream/10 dark:bg-[var(--surface-2)] text-lawdger-cream/80 dark:text-foreground text-[10px] font-bold px-1.5">
-            {visibleCount}
-          </span>
-        </div>
-        <button
-          onClick={() => setAdding((v) => !v)}
-          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/60 dark:text-foreground-secondary hover:text-lawdger-gold dark:hover:text-[var(--gold-text)] transition-colors"
-        >
-          <Plus className="w-3 h-3" />
-          Quick Add
-        </button>
-      </div>
-
-      {/* Inline quick-add */}
-      {adding && (
-        <div className="mb-2 shrink-0 flex items-center gap-2 bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/15 dark:border-lawdger-border rounded-xl px-3 py-2">
-          <input
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submit();
-              if (e.key === "Escape") {
-                setDraft("");
-                setAdding(false);
-              }
-            }}
-            placeholder="Capture a task…"
-            className="flex-1 bg-transparent text-[12.5px] text-lawdger-cream placeholder:text-lawdger-cream/30 focus:outline-none"
-          />
-          <button
-            onClick={submit}
-            disabled={!draft.trim()}
-            aria-label="Add task"
-            className="w-6 h-6 rounded-md bg-lawdger-gold/20 hover:bg-lawdger-gold/30 disabled:opacity-30 text-lawdger-gold flex items-center justify-center transition-colors"
-          >
-            <Check className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* List */}
-      <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-2 pr-1">
-        <SortableContext
-          items={tasks.map((t) => t.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {tasks.map((t) => (
-            <UnassignedCard
-              key={t.id}
-              task={t}
-              hidden={hiddenIds.has(t.id)}
-              onClick={onCardClick}
-            />
-          ))}
-        </SortableContext>
-
-        {visibleCount === 0 && (
-          <div className="flex flex-col items-center justify-center py-6 gap-2">
-            <CheckCircle2 className="w-4 h-4 text-lawdger-cream/30 dark:text-foreground/30" />
-            <p className="text-[10.5px] font-semibold text-lawdger-cream/40 dark:text-foreground/40 text-center">
-              All caught up — no unassigned tasks
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+function caseChipLabel(c: { title: string; caseNumber: string | null }) {
+  return c.caseNumber ? `${c.title} · ${c.caseNumber}` : c.title;
 }
 
 // ──────────────────────────────────────────────────────────────────────────
 // Main Component
 // ──────────────────────────────────────────────────────────────────────────
-export default function TasksClient() {
-  const [items, setItems] = useState<ItemsState>(SEED);
-  const [activeId, setActiveId] = useState<string | null>(null);
+export default function TasksClient({
+  buckets: initialBuckets,
+  stats: initialStats,
+  cases,
+  userName,
+  error: initialError,
+}: {
+  buckets: Buckets;
+  stats: Stats;
+  cases: CaseOption[];
+  userName: string | null;
+  error?: string;
+}) {
+  const [unassigned, setUnassigned] = useState<TaskRow[]>(initialBuckets.unassigned);
+  const [myPlate, setMyPlate] = useState<TaskRow[]>(initialBuckets.myPlate);
+  const [associates, setAssociates] = useState<TaskRow[]>(initialBuckets.associates);
+  const [stats, setStats] = useState<Stats>(initialStats);
   const [search, setSearch] = useState("");
+  const [errorMsg, setErrorMsg] = useState<string | null>(initialError ?? null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
-  // modal state
-  const [modalMode, setModalMode] = useState<"closed" | "create" | "edit">(
-    "closed"
-  );
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [createDefaultColumn, setCreateDefaultColumn] =
-    useState<TaskColumn>("my-plate");
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  // ── derived ─────────────────────────────────────────────────────────────
   const allTasks = useMemo(
-    () => ALL_COLUMNS.flatMap((k) => items[k]),
-    [items]
+    () => [...unassigned, ...myPlate, ...associates],
+    [unassigned, myPlate, associates],
   );
 
-  const kanbanTasks = useMemo(
-    () => [...items["my-plate"], ...items.associates, ...items.clerks],
-    [items]
-  );
-
-  const stats = useMemo(() => {
-    const tracked = kanbanTasks; // exclude unassigned from "pending"
-    const pending = tracked.filter((t) => !t.completed);
-    const todayList = pending.filter((t) => t.dueDate && isToday(t.dueDate));
-    const overdue = pending.filter(
-      (t) => t.dueDate && isPast(t.dueDate) && !isToday(t.dueDate)
-    );
-    const weekStart = startOfWeek(new Date());
-    const doneThisWeek = allTasks.filter(
-      (t) => t.completed && t.dueDate && t.dueDate >= weekStart
-    );
-    return {
-      pending: pending.length,
-      today: todayList.length,
-      overdue: overdue.length,
-      doneThisWeek: doneThisWeek.length,
-    };
-  }, [kanbanTasks, allTasks]);
-
-  const uniqueCases = useMemo(() => {
-    const seen = new Map<string, string>();
-    for (const t of allTasks) {
-      if (t.caseId) seen.set(t.caseId, t.caseName);
-    }
-    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }));
-  }, [allTasks]);
-
-  // ── search filter ───────────────────────────────────────────────────────
   const visibleIds = useMemo(() => {
     const q = search.trim().toLowerCase();
+    if (!q) return null;
     const s = new Set<string>();
     for (const t of allTasks) {
-      if (!q || `${t.title} ${t.caseName}`.toLowerCase().includes(q)) {
-        s.add(t.id);
-      }
+      const hay = `${t.description} ${t.case.title} ${t.case.caseNumber ?? ""}`.toLowerCase();
+      if (hay.includes(q)) s.add(t.id);
     }
     return s;
   }, [allTasks, search]);
 
-  const hiddenIds = useMemo(() => {
-    const s = new Set<string>();
-    for (const t of allTasks) if (!visibleIds.has(t.id)) s.add(t.id);
-    return s;
-  }, [allTasks, visibleIds]);
+  const isVisible = (id: string) => visibleIds === null || visibleIds.has(id);
 
-  // ── dnd handlers ────────────────────────────────────────────────────────
-  const handleDragStart = (e: DragStartEvent) => {
-    setActiveId(String(e.active.id));
-  };
+  const detailTask =
+    detailTaskId ? allTasks.find((t) => t.id === detailTaskId) ?? null : null;
 
-  const handleDragOver = (e: DragOverEvent) => {
-    const { active, over } = e;
-    if (!over) return;
-    const activeId = String(active.id);
-    const overId = String(over.id);
-    if (activeId === overId) return;
-
-    const activeCol = findColumnOf(items, activeId);
-    const overCol = findColumnOf(items, overId);
-    if (!activeCol || !overCol || activeCol === overCol) return;
-
-    setItems((prev) => {
-      const activeList = [...prev[activeCol]];
-      const overList = [...prev[overCol]];
-      const activeIdx = activeList.findIndex((t) => t.id === activeId);
-      if (activeIdx === -1) return prev;
-
-      const [moved] = activeList.splice(activeIdx, 1);
-      moved.column = overCol;
-
-      const overIdx =
-        overId === overCol
-          ? overList.length
-          : overList.findIndex((t) => t.id === overId);
-      const insertAt = overIdx === -1 ? overList.length : overIdx;
-      overList.splice(insertAt, 0, moved);
-
-      return {
-        ...prev,
-        [activeCol]: activeList,
-        [overCol]: overList,
-      };
-    });
-  };
-
-  const handleDragEnd = (e: DragEndEvent) => {
-    const { active, over } = e;
-    setActiveId(null);
-    if (!over) return;
-    const activeId = String(active.id);
-    const overId = String(over.id);
-
-    const activeCol = findColumnOf(items, activeId);
-    const overCol = findColumnOf(items, overId);
-    if (!activeCol || !overCol) return;
-
-    if (activeCol === overCol) {
-      const list = items[activeCol];
-      const oldIdx = list.findIndex((t) => t.id === activeId);
-      const newIdx = list.findIndex((t) => t.id === overId);
-      if (oldIdx === -1 || newIdx === -1 || oldIdx === newIdx) return;
-      setItems((prev) => ({
-        ...prev,
-        [activeCol]: arrayMove(prev[activeCol], oldIdx, newIdx),
-      }));
-    }
-  };
-
-  const handleDragCancel = () => setActiveId(null);
-
-  // ── task ops ────────────────────────────────────────────────────────────
-  const handleQuickAdd = (title: string) => {
-    const newTask: Task = {
-      id: `t-${Date.now()}`,
-      title,
-      caseName: "",
-      caseId: "",
-      dueDate: null,
-      priority: "normal",
-      column: "unassigned",
-      notes: "",
-      completed: false,
+  // ── snapshot / rollback ─────────────────────────────────────────────────
+  type Snapshot = { unassigned: TaskRow[]; myPlate: TaskRow[]; associates: TaskRow[]; stats: Stats };
+  function snapshot(): Snapshot {
+    return {
+      unassigned: [...unassigned],
+      myPlate: [...myPlate],
+      associates: [...associates],
+      stats: { ...stats },
     };
-    setItems((prev) => ({
-      ...prev,
-      unassigned: [newTask, ...prev.unassigned],
+  }
+  function rollback(snap: Snapshot) {
+    setUnassigned(snap.unassigned);
+    setMyPlate(snap.myPlate);
+    setAssociates(snap.associates);
+    setStats(snap.stats);
+  }
+
+  // ── mutations (optimistic + rollback) ───────────────────────────────────
+  async function handleToggle(task: TaskRow) {
+    const snap = snapshot();
+    const newStatus = task.status === "pending" ? "completed" : "pending";
+    const updated: TaskRow = { ...task, status: newStatus, updatedAt: new Date() };
+    const replace = (arr: TaskRow[]) => arr.map((t) => (t.id === task.id ? updated : t));
+    setUnassigned(replace);
+    setMyPlate(replace);
+    setAssociates(replace);
+    setStats((s) => ({
+      ...s,
+      total: newStatus === "completed" ? Math.max(0, s.total - 1) : s.total + 1,
     }));
-  };
-
-  const openCreate = (col: TaskColumn = "my-plate") => {
-    setCreateDefaultColumn(col);
-    setEditingId(null);
-    setModalMode("create");
-  };
-
-  const openEdit = (id: string) => {
-    setEditingId(id);
-    setModalMode("edit");
-  };
-
-  const closeModal = () => {
-    setModalMode("closed");
-    setEditingId(null);
-  };
-
-  const handleSave = (data: {
-    id: string | null;
-    title: string;
-    caseId: string;
-    caseName: string;
-    dueDate: Date | null;
-    priority: TaskPriority;
-    column: TaskColumn;
-    notes: string;
-  }) => {
-    if (data.id) {
-      const editId: string = data.id;
-      // edit: find + update; if column changed, move between buckets
-      setItems((prev) => {
-        const next: ItemsState = {
-          unassigned: [...prev.unassigned],
-          "my-plate": [...prev["my-plate"]],
-          associates: [...prev.associates],
-          clerks: [...prev.clerks],
-        };
-        let currentCol: TaskColumn | null = null;
-        for (const col of ALL_COLUMNS) {
-          if (next[col].some((t) => t.id === editId)) {
-            currentCol = col;
-            break;
-          }
-        }
-        if (!currentCol) return prev;
-
-        const updated: Task = {
-          id: editId,
-          title: data.title,
-          caseName: data.caseName,
-          caseId: data.caseId,
-          dueDate: data.dueDate,
-          priority: data.priority,
-          column: data.column,
-          notes: data.notes,
-          completed:
-            next[currentCol].find((t) => t.id === editId)?.completed ?? false,
-        };
-
-        if (currentCol === data.column) {
-          next[currentCol] = next[currentCol].map((t) =>
-            t.id === editId ? updated : t
-          );
-        } else {
-          next[currentCol] = next[currentCol].filter((t) => t.id !== editId);
-          next[data.column] = [updated, ...next[data.column]];
-        }
-        return next;
-      });
-    } else {
-      // create
-      const newTask: Task = {
-        id: `t-${Date.now()}`,
-        title: data.title,
-        caseName: data.caseName,
-        caseId: data.caseId,
-        dueDate: data.dueDate,
-        priority: data.priority,
-        column: data.column,
-        notes: data.notes,
-        completed: false,
-      };
-      setItems((prev) => ({
-        ...prev,
-        [data.column]: [newTask, ...prev[data.column]],
-      }));
-    }
-    closeModal();
-  };
-
-  const handleDelete = (id: string) => {
-    setItems((prev) => {
-      const next: ItemsState = {
-        unassigned: prev.unassigned.filter((t) => t.id !== id),
-        "my-plate": prev["my-plate"].filter((t) => t.id !== id),
-        associates: prev.associates.filter((t) => t.id !== id),
-        clerks: prev.clerks.filter((t) => t.id !== id),
-      };
-      return next;
+    startTransition(async () => {
+      const result = await toggleCaseTaskStatus(task.id, task.status, task.caseId);
+      if (!result.ok) {
+        rollback(snap);
+        setErrorMsg(result.error);
+      } else {
+        setErrorMsg(null);
+      }
     });
-    closeModal();
-  };
+  }
 
-  const activeTask = activeId ? findTask(items, activeId) : null;
-  const editingTask = editingId ? findTask(items, editingId) : null;
+  async function handleDelete(task: TaskRow) {
+    const snap = snapshot();
+    const filter = (arr: TaskRow[]) => arr.filter((t) => t.id !== task.id);
+    setUnassigned(filter);
+    setMyPlate(filter);
+    setAssociates(filter);
+    setDetailTaskId(null);
+    startTransition(async () => {
+      const result = await deleteCaseTask(task.id, task.caseId);
+      if (!result.ok) {
+        rollback(snap);
+        setErrorMsg(result.error);
+      } else {
+        setErrorMsg(null);
+      }
+    });
+  }
 
-  // ──────────────────────────────────────────────────────────────────────
-  // Render
-  // ──────────────────────────────────────────────────────────────────────
+  async function handleCreate(input: {
+    caseId: string;
+    description: string;
+    dueDate?: Date;
+    isUrgent: boolean;
+  }) {
+    const snap = snapshot();
+    const caseInfo = cases.find((c) => c.id === input.caseId);
+    if (!caseInfo) {
+      setErrorMsg("Case not found");
+      return;
+    }
+    const tempId = `optimistic-${Date.now()}`;
+    const optimistic: TaskRow = {
+      id: tempId,
+      description: input.description,
+      status: "pending",
+      dueDate: input.dueDate ?? null,
+      assignee: "Unassigned",
+      isUrgent: input.isUrgent,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      caseId: input.caseId,
+      case: {
+        id: caseInfo.id,
+        title: caseInfo.title,
+        caseNumber: caseInfo.caseNumber,
+      },
+    };
+    const target = bucketTask({ assignee: optimistic.assignee }, userName);
+    if (target === "unassigned") setUnassigned((arr) => [optimistic, ...arr]);
+    else if (target === "my-plate") setMyPlate((arr) => [optimistic, ...arr]);
+    else setAssociates((arr) => [optimistic, ...arr]);
+    setCreateOpen(false);
+
+    startTransition(async () => {
+      const result = await createCaseTask({
+        caseId: input.caseId,
+        description: input.description,
+        dueDate: input.dueDate,
+        isUrgent: input.isUrgent,
+      });
+      if (!result.ok) {
+        rollback(snap);
+        setErrorMsg(result.error);
+      } else {
+        setErrorMsg(null);
+        const realId = result.data.id;
+        const swap = (arr: TaskRow[]) =>
+          arr.map((t) => (t.id === tempId ? { ...t, id: realId } : t));
+        setUnassigned(swap);
+        setMyPlate(swap);
+        setAssociates(swap);
+      }
+    });
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <DndContext
-      id="tasks-kanban"
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-    >
+    <>
       <PageLayout
         pageTitle="Tasks"
         headerAction={
           <button
-            onClick={() => openCreate("my-plate")}
+            onClick={() => setCreateOpen(true)}
             className="btn-gold px-5 py-2.5 text-[11px] tracking-widest uppercase shadow-md"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -937,10 +274,9 @@ export default function TasksClient() {
         }
         darkPaneContent={
           <div className="flex flex-col gap-5 h-full min-h-0">
-            {/* Compact 2x2 stat grid */}
             <div className="grid grid-cols-2 gap-2 shrink-0">
-              <StatTile label="Total" value={stats.pending} />
-              <StatTile label="Due Today" value={stats.today} accent="gold" />
+              <StatTile label="Total" value={stats.total} />
+              <StatTile label="Due Today" value={stats.dueToday} accent="gold" />
               <StatTile
                 label="Overdue"
                 value={stats.overdue}
@@ -949,7 +285,6 @@ export default function TasksClient() {
               <StatTile label="Done / Wk" value={stats.doneThisWeek} />
             </div>
 
-            {/* Quick search */}
             <div className="relative shrink-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-lawdger-cream/40 dark:text-foreground/40" />
               <input
@@ -961,13 +296,11 @@ export default function TasksClient() {
               />
             </div>
 
-            {/* Unassigned section */}
             <UnassignedZone
-              tasks={items.unassigned}
-              visibleIds={visibleIds}
-              hiddenIds={hiddenIds}
-              onCardClick={openEdit}
-              onQuickAdd={handleQuickAdd}
+              tasks={unassigned}
+              isVisible={isVisible}
+              onCardClick={setDetailTaskId}
+              onQuickAdd={() => setCreateOpen(true)}
             />
           </div>
         }
@@ -975,57 +308,330 @@ export default function TasksClient() {
           <>
             <ContentHeading>Active Assignments</ContentHeading>
             <span className="chip chip-neutral text-xs font-sans font-medium shrink-0">
-              {kanbanTasks.length} tracked
+              {myPlate.length + associates.length} tracked
             </span>
           </>
         }
         mainPaneContent={
-          // Phase 3h: no inner wrapper, no negative margin. The cream pane's
-          // inner padding (pl-2 lg:pl-3 from LayoutShell) places the first
-          // column ~8–12px from the pane's left edge — deep inside the
-          // glassmorphism strip, visible against the espresso bleed-through.
-          // Each KanbanColumn owns its own h-full overflow-y-auto list, so
-          // the grid itself does not scroll — columns scroll individually.
-          <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-3 px-2 lg:px-3 pb-2 min-h-0">
-            {KANBAN_COLUMNS.map((c, idx) => (
+          <div className="h-full flex flex-col min-h-0">
+            {errorMsg && (
+              <div
+                role="alert"
+                className="mb-3 mx-2 lg:mx-3 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-[12.5px] text-destructive"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <p className="flex-1">{errorMsg}</p>
+                <button
+                  onClick={() => setErrorMsg(null)}
+                  aria-label="Dismiss error"
+                  className="p-1 rounded-full hover:bg-destructive/10"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-3 px-2 lg:px-3 pb-2 min-h-0">
               <KanbanColumn
-                key={c.id}
-                id={c.id}
-                label={c.label}
-                tasks={items[c.id]}
-                visibleIds={visibleIds}
-                hiddenIds={hiddenIds}
-                onAdd={openCreate}
-                onCardClick={openEdit}
-                isLast={idx === KANBAN_COLUMNS.length - 1}
+                id="my-plate"
+                tasks={myPlate}
+                userName={userName}
+                isVisible={isVisible}
+                onCardClick={setDetailTaskId}
+                onToggle={handleToggle}
+                onDelete={handleDelete}
+                isLast={false}
               />
-            ))}
+              <KanbanColumn
+                id="associates"
+                tasks={associates}
+                userName={userName}
+                isVisible={isVisible}
+                onCardClick={setDetailTaskId}
+                onToggle={handleToggle}
+                onDelete={handleDelete}
+                isLast={true}
+              />
+            </div>
           </div>
         }
       />
 
-      <DragOverlay>
-        {activeTask ? (
-          activeTask.column === "unassigned" ? (
-            <UnassignedCardOverlay task={activeTask} />
-          ) : (
-            <AssignedCardOverlay task={activeTask} />
-          )
-        ) : null}
-      </DragOverlay>
+      {createOpen && (
+        <CreateTaskDialog
+          cases={cases}
+          onClose={() => setCreateOpen(false)}
+          onCreate={handleCreate}
+        />
+      )}
 
-      {modalMode !== "closed" && (
-        <TaskDetailModal
-          mode={modalMode}
-          task={editingTask}
-          defaultColumn={createDefaultColumn}
-          cases={uniqueCases}
-          onClose={closeModal}
-          onSave={handleSave}
+      {detailTask && (
+        <TaskDetailDialog
+          task={detailTask}
+          onClose={() => setDetailTaskId(null)}
+          onToggle={handleToggle}
           onDelete={handleDelete}
         />
       )}
-    </DndContext>
+    </>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Kanban Column (cream pane, read-only render)
+// ──────────────────────────────────────────────────────────────────────────
+function KanbanColumn({
+  id,
+  tasks,
+  userName,
+  isVisible,
+  onCardClick,
+  onToggle,
+  onDelete,
+  isLast,
+}: {
+  id: AssignedColumnId;
+  tasks: TaskRow[];
+  userName: string | null;
+  isVisible: (id: string) => boolean;
+  onCardClick: (id: string) => void;
+  onToggle: (t: TaskRow) => void;
+  onDelete: (t: TaskRow) => void;
+  isLast: boolean;
+}) {
+  const Icon = COLUMN_ICON[id];
+  const label = COLUMN_LABEL[id];
+  const visibleTasks = tasks.filter((t) => isVisible(t.id));
+  const showMyPlateHint =
+    id === "my-plate" && visibleTasks.length === 0 && (!userName || !userName.trim());
+
+  return (
+    <div
+      className={[
+        "flex flex-col h-full min-h-0 rounded-2xl p-3 transition-colors",
+        !isLast ? "border-r border-lawdger-border/15 dark:border-lawdger-border" : "",
+        "bg-lawdger-base/40",
+      ].join(" ")}
+    >
+      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 dark:border-[var(--border)] shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon className="w-3.5 h-3.5 text-lawdger-espresso/50 dark:text-foreground-secondary shrink-0" />
+          <h3 className="font-serif font-bold text-lg lg:text-xl text-lawdger-espresso dark:text-foreground leading-tight tracking-tight">
+            {label}
+          </h3>
+          <span className="chip chip-neutral text-xs font-sans font-medium shrink-0">
+            {visibleTasks.length}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-2 pr-1">
+        {visibleTasks.map((t) => (
+          <AssignedCard
+            key={t.id}
+            task={t}
+            onClick={onCardClick}
+            onToggle={onToggle}
+            onDelete={onDelete}
+          />
+        ))}
+
+        {visibleTasks.length === 0 && (
+          <div className="flex-1 flex flex-col items-center justify-center min-h-[100px] rounded-xl border border-dashed border-lawdger-border/25 dark:border-lawdger-border text-center px-4 py-6">
+            {showMyPlateHint ? (
+              <p className="text-[12px] text-muted-foreground">
+                Set your name in Settings to route tasks to your plate.
+              </p>
+            ) : (
+              <p className="text-[10.5px] font-semibold uppercase tracking-widest text-lawdger-muted">
+                No tasks here
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Assigned Task Card (cream pane)
+// ──────────────────────────────────────────────────────────────────────────
+function AssignedCard({
+  task,
+  onClick,
+  onToggle,
+  onDelete,
+}: {
+  task: TaskRow;
+  onClick: (id: string) => void;
+  onToggle: (t: TaskRow) => void;
+  onDelete: (t: TaskRow) => void;
+}) {
+  const completed = task.status === "completed";
+  return (
+    <div
+      onClick={() => onClick(task.id)}
+      className={[
+        "group relative bg-white dark:bg-[var(--surface-2)] surface-inner rounded-xl shadow-sm dark:shadow-[0_14px_32px_-18px_rgba(0,0,0,0.7)]",
+        "border border-lawdger-border/15 dark:border-[var(--border)]",
+        "p-4 cursor-pointer card-interactive",
+        "hover:shadow-md hover:-translate-y-px hover:border-lawdger-border/30 dark:hover:bg-[var(--surface-3)] dark:hover:border-[var(--border-strong)]",
+        "transition-all duration-150",
+      ].join(" ")}
+    >
+      {task.isUrgent && <UrgentPill className="absolute right-3 top-3" />}
+      <div className="flex items-start gap-3 pr-16">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle(task);
+          }}
+          aria-label={completed ? "Mark pending" : "Mark complete"}
+          className={[
+            "mt-0.5 h-4 w-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors",
+            completed
+              ? "bg-lawdger-gold border-lawdger-gold"
+              : "border-lawdger-border/40 hover:border-lawdger-gold",
+          ].join(" ")}
+        >
+          {completed && <CheckCircle2 className="h-3 w-3 text-lawdger-cream" />}
+        </button>
+        <div className="flex-1 min-w-0">
+          <div
+            className={[
+              "text-sm font-medium leading-snug line-clamp-2",
+              completed
+                ? "text-lawdger-muted line-through"
+                : "text-lawdger-espresso dark:text-foreground",
+            ].join(" ")}
+          >
+            {task.description}
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <span className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[60%] truncate">
+              {caseChipLabel(task.case)}
+            </span>
+            {dueLabel(task.dueDate) === "Overdue" ? (
+              <span className="chip chip-danger">Overdue</span>
+            ) : (
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-medium ${dueClasses(task.dueDate)}`}
+              >
+                <CalendarIcon className="w-3 h-3" />
+                {dueLabel(task.dueDate)}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(task);
+        }}
+        aria-label="Delete task"
+        className="absolute right-3 bottom-3 p-1.5 rounded-md text-lawdger-muted/0 group-hover:text-lawdger-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Unassigned Zone (dark pane)
+// ──────────────────────────────────────────────────────────────────────────
+function UnassignedZone({
+  tasks,
+  isVisible,
+  onCardClick,
+  onQuickAdd,
+}: {
+  tasks: TaskRow[];
+  isVisible: (id: string) => boolean;
+  onCardClick: (id: string) => void;
+  onQuickAdd: () => void;
+}) {
+  const visibleTasks = tasks.filter((t) => isVisible(t.id));
+  return (
+    <div className="flex flex-col min-h-0 flex-1 rounded-2xl">
+      <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lawdger-cream/50 dark:text-muted-foreground">
+            Unassigned
+          </p>
+          <span className="inline-flex items-center justify-center min-w-[20px] h-[18px] rounded-full bg-lawdger-cream/10 dark:bg-[var(--surface-2)] text-lawdger-cream/80 dark:text-foreground text-[10px] font-bold px-1.5">
+            {visibleTasks.length}
+          </span>
+        </div>
+        <button
+          onClick={onQuickAdd}
+          className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-lawdger-cream/60 dark:text-foreground-secondary hover:text-lawdger-gold dark:hover:text-[var(--gold-text)] transition-colors"
+        >
+          <Plus className="w-3 h-3" />
+          Quick Add
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto scrollbar-hide flex flex-col gap-2 pr-1">
+        {visibleTasks.map((t) => (
+          <UnassignedCard key={t.id} task={t} onClick={onCardClick} />
+        ))}
+
+        {visibleTasks.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-6 gap-2">
+            <CheckCircle2 className="w-4 h-4 text-lawdger-cream/30 dark:text-foreground/30" />
+            <p className="text-[10.5px] font-semibold text-lawdger-cream/40 dark:text-foreground/40 text-center">
+              All caught up — no unassigned tasks
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UnassignedCard({
+  task,
+  onClick,
+}: {
+  task: TaskRow;
+  onClick: (id: string) => void;
+}) {
+  return (
+    <div
+      onClick={() => onClick(task.id)}
+      className={[
+        "relative bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl p-3",
+        "cursor-pointer hover:border-lawdger-gold/40 hover:bg-lawdger-cream/15 dark:hover:bg-foreground/8",
+        "transition-colors duration-150",
+      ].join(" ")}
+    >
+      {task.isUrgent && <UrgentPill className="absolute right-2 top-2" />}
+      <div className="text-sm font-medium text-lawdger-cream/90 dark:text-foreground leading-snug line-clamp-2 pr-16">
+        {task.description}
+      </div>
+      <div className="mt-2 flex items-center gap-1.5">
+        <span className="chip-on-dark is-meta">{caseChipLabel(task.case)}</span>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Urgent pill — gold accent, reused across cards + dialogs.
+// ──────────────────────────────────────────────────────────────────────────
+function UrgentPill({ className }: { className?: string }) {
+  return (
+    <span
+      className={[
+        "inline-flex items-center rounded-full bg-lawdger-gold/15 dark:bg-[var(--surface-inset)] text-[9px] font-bold uppercase tracking-widest px-2 py-0.5",
+        className ?? "",
+      ].join(" ")}
+      style={{ color: "var(--gold-text, var(--accent-gold))" }}
+    >
+      Urgent
+    </span>
   );
 }
 
@@ -1045,8 +651,8 @@ function StatTile({
     accent === "gold"
       ? "text-lawdger-gold"
       : accent === "red"
-      ? "text-destructive"
-      : "text-lawdger-cream dark:text-foreground";
+        ? "text-destructive"
+        : "text-lawdger-cream dark:text-foreground";
   return (
     <div className="bg-lawdger-cream/8 dark:bg-[var(--surface-2)] border border-lawdger-cream/12 dark:border-[var(--border)] rounded-xl px-3 py-2.5 h-[78px] flex flex-col justify-between">
       <div className="flex items-center justify-between">
@@ -1057,70 +663,43 @@ function StatTile({
           <span className="w-1.5 h-1.5 rounded-full bg-destructive shadow-[0_0_6px_rgba(220,38,38,0.7)]" />
         )}
       </div>
-      <p className={`text-[1.6rem] font-bold leading-none ${valueColor}`}>
-        {value}
-      </p>
+      <p className={`text-[1.6rem] font-bold leading-none ${valueColor}`}>{value}</p>
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Task Detail Modal — create + edit modes
+// Create Task Dialog
 // ──────────────────────────────────────────────────────────────────────────
-function TaskDetailModal({
-  mode,
-  task,
-  defaultColumn,
+function CreateTaskDialog({
   cases,
   onClose,
-  onSave,
-  onDelete,
+  onCreate,
 }: {
-  mode: "create" | "edit";
-  task: Task | null;
-  defaultColumn: TaskColumn;
-  cases: { id: string; name: string }[];
+  cases: CaseOption[];
   onClose: () => void;
-  onSave: (data: {
-    id: string | null;
-    title: string;
+  onCreate: (input: {
     caseId: string;
-    caseName: string;
-    dueDate: Date | null;
-    priority: TaskPriority;
-    column: TaskColumn;
-    notes: string;
+    description: string;
+    dueDate?: Date;
+    isUrgent: boolean;
   }) => void;
-  onDelete: (id: string) => void;
 }) {
-  const [title, setTitle] = useState(task?.title ?? "");
-  const [caseId, setCaseId] = useState(task?.caseId ?? cases[0]?.id ?? "");
-  const [dueStr, setDueStr] = useState(
-    task?.dueDate ? format(task.dueDate, "yyyy-MM-dd") : ""
-  );
-  const [priority, setPriority] = useState<TaskPriority>(
-    task?.priority ?? "normal"
-  );
-  const [column, setColumn] = useState<TaskColumn>(
-    task?.column ?? defaultColumn
-  );
-  const [notes, setNotes] = useState(task?.notes ?? "");
+  const [caseId, setCaseId] = useState("");
+  const [description, setDescription] = useState("");
+  const [dueStr, setDueStr] = useState("");
+  const [isUrgent, setIsUrgent] = useState(false);
+
+  const canSubmit = caseId !== "" && description.trim() !== "";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const caseName =
-      cases.find((c) => c.id === caseId)?.name ??
-      task?.caseName ??
-      "";
-    onSave({
-      id: task?.id ?? null,
-      title: title.trim(),
+    if (!canSubmit) return;
+    onCreate({
       caseId,
-      caseName,
-      dueDate: dueStr ? new Date(dueStr) : null,
-      priority,
-      column,
-      notes,
+      description: description.trim(),
+      dueDate: dueStr ? new Date(dueStr) : undefined,
+      isUrgent,
     });
   };
 
@@ -1130,28 +709,124 @@ function TaskDetailModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-lawdger-cream dark:bg-[var(--surface-3)] rounded-2xl shadow-2xl border border-lawdger-border/20 dark:border-[var(--border-strong)] overflow-hidden"
+        className="w-full max-w-xl bg-lawdger-cream dark:bg-[var(--surface-3)] rounded-2xl shadow-2xl border border-lawdger-border/20 dark:border-[var(--border-strong)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header w/ priority left border accent */}
-        <div
-          className={[
-            "flex justify-between items-start px-6 py-5 border-l-[3px]",
-            priorityBorderClass(priority),
-            "border-b border-lawdger-border/10 dark:border-lawdger-border",
-          ].join(" ")}
-        >
+        <div className="flex justify-between items-start px-6 py-5 border-b border-lawdger-border/10 dark:border-lawdger-border">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-lawdger-muted mb-1">
+              New Task
+            </p>
+            <h2 className="font-serif text-[1.4rem] font-bold text-lawdger-espresso dark:text-foreground leading-none">
+              Capture an action item
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="p-2 rounded-full hover:bg-lawdger-espresso/5 text-lawdger-muted hover:text-lawdger-espresso dark:hover:text-foreground transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="p-6 space-y-5">
+          <Field label="Case (required)">
+            <select
+              value={caseId}
+              onChange={(e) => setCaseId(e.target.value)}
+              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground focus:outline-none focus:border-lawdger-gold/50"
+              required
+            >
+              <option value="">— Select a case —</option>
+              {cases.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {caseChipLabel(c)}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Description">
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Action item…"
+              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground placeholder:text-lawdger-muted focus:outline-none focus:border-lawdger-gold/50"
+              autoFocus
+              required
+            />
+          </Field>
+
+          <Field label="Due Date (optional)">
+            <input
+              type="date"
+              value={dueStr}
+              onChange={(e) => setDueStr(e.target.value)}
+              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground focus:outline-none focus:border-lawdger-gold/50"
+            />
+          </Field>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isUrgent}
+              onChange={(e) => setIsUrgent(e.target.checked)}
+              className="h-4 w-4 rounded border-lawdger-border/40 text-lawdger-gold focus:ring-lawdger-gold/30"
+            />
+            <span className="text-[12.5px] font-medium text-lawdger-espresso dark:text-foreground">
+              Mark as urgent
+            </span>
+          </label>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="btn-gold px-6 py-2.5 rounded-lg text-[11px] tracking-widest uppercase disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Create Task
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Task Detail Dialog
+// ──────────────────────────────────────────────────────────────────────────
+function TaskDetailDialog({
+  task,
+  onClose,
+  onToggle,
+  onDelete,
+}: {
+  task: TaskRow;
+  onClose: () => void;
+  onToggle: (t: TaskRow) => void;
+  onDelete: (t: TaskRow) => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-lawdger-espresso/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-xl bg-lawdger-cream dark:bg-[var(--surface-3)] rounded-2xl shadow-2xl border border-lawdger-border/20 dark:border-[var(--border-strong)] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-start px-6 py-5 border-b border-lawdger-border/10 dark:border-lawdger-border">
           <div className="flex-1 pr-4">
             <p className="text-[10px] font-bold uppercase tracking-widest text-lawdger-muted mb-2">
-              {mode === "create" ? "New Task" : "Edit Task"}
+              Task
             </p>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Task title…"
-              className="w-full bg-transparent text-[18px] font-semibold text-lawdger-espresso dark:text-foreground placeholder:text-lawdger-muted focus:outline-none"
-              autoFocus
-            />
+            <h2 className="font-serif text-[1.2rem] font-bold text-lawdger-espresso dark:text-foreground leading-snug">
+              {task.description}
+            </h2>
+            {task.isUrgent && <UrgentPill className="mt-2" />}
           </div>
           <button
             onClick={onClose}
@@ -1162,105 +837,40 @@ function TaskDetailModal({
           </button>
         </div>
 
-        <form onSubmit={submit} className="p-6 space-y-5">
-          {/* Case */}
-          <Field label="Case">
-            <select
-              value={caseId}
-              onChange={(e) => setCaseId(e.target.value)}
-              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground focus:outline-none focus:border-lawdger-gold/50"
-            >
-              <option value="">— No case —</option>
-              {cases.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </Field>
+        <div className="p-6 space-y-3 text-[13px]">
+          <Row label="Case" value={caseChipLabel(task.case)} />
+          <Row label="Status" value={task.status} />
+          <Row label="Assignee" value={task.assignee} />
+          <Row
+            label="Due Date"
+            value={task.dueDate ? format(task.dueDate, "d MMM yyyy") : "—"}
+          />
 
-          {/* Due date */}
-          <Field label="Due Date">
-            <input
-              type="date"
-              value={dueStr}
-              onChange={(e) => setDueStr(e.target.value)}
-              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground focus:outline-none focus:border-lawdger-gold/50"
-            />
-          </Field>
-
-          {/* Priority segmented */}
-          <Field label="Priority">
-            <SegmentedControl
-              value={priority}
-              onChange={(v) => setPriority(v as TaskPriority)}
-              options={[
-                { value: "urgent", label: "Urgent" },
-                { value: "normal", label: "Normal" },
-                { value: "low", label: "Low" },
-              ]}
-            />
-          </Field>
-
-          {/* Column segmented */}
-          <Field label="Column / Assignee">
-            <SegmentedControl
-              value={column}
-              onChange={(v) => setColumn(v as TaskColumn)}
-              options={[
-                { value: "unassigned", label: "Unassigned" },
-                { value: "my-plate", label: "My Plate" },
-                { value: "associates", label: "Associates" },
-                { value: "clerks", label: "Clerks" },
-              ]}
-            />
-          </Field>
-
-          {/* Notes */}
-          <Field label="Notes">
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional context…"
-              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground placeholder:text-lawdger-muted focus:outline-none focus:border-lawdger-gold/50 min-h-[120px] resize-y"
-            />
-          </Field>
-
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-2">
-            {mode === "edit" && task ? (
-              <button
-                type="button"
-                onClick={() => onDelete(task.id)}
-                className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-destructive/70 hover:text-destructive transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                Delete
-              </button>
-            ) : (
-              <span />
-            )}
+          <div className="flex items-center justify-between pt-4 border-t border-lawdger-border/10">
             <button
-              type="submit"
-              disabled={!title.trim()}
-              className="btn-gold px-6 py-2.5 rounded-lg text-[11px] tracking-widest uppercase"
+              onClick={() => onDelete(task)}
+              className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-destructive/70 hover:text-destructive transition-colors"
             >
-              {mode === "create" ? "Create Task" : "Save Changes"}
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete
+            </button>
+            <button
+              onClick={() => {
+                onToggle(task);
+                onClose();
+              }}
+              className="btn-gold px-5 py-2 rounded-lg text-[11px] tracking-widest uppercase"
+            >
+              {task.status === "pending" ? "Mark Complete" : "Mark Pending"}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
       <p className="text-[10px] font-bold uppercase tracking-widest text-lawdger-muted mb-2">
@@ -1271,35 +881,15 @@ function Field({
   );
 }
 
-function SegmentedControl<T extends string>({
-  value,
-  onChange,
-  options,
-}: {
-  value: T;
-  onChange: (v: T) => void;
-  options: { value: T; label: string }[];
-}) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="inline-flex rounded-lg bg-lawdger-base dark:bg-[var(--surface-inset)] p-1 border border-lawdger-border/20 dark:border-[var(--border)] w-full">
-      {options.map((opt) => (
-        <button
-          type="button"
-          key={opt.value}
-          onClick={() => onChange(opt.value)}
-          className={[
-            "flex-1 px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-widest transition-colors",
-            value === opt.value
-              ? "bg-lawdger-espresso text-lawdger-cream dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] dark:border dark:border-[rgba(212,175,55,0.28)]"
-              : "text-lawdger-espresso/60 dark:text-foreground-secondary hover:text-lawdger-espresso dark:hover:text-foreground",
-          ].join(" ")}
-        >
-          {opt.label}
-        </button>
-      ))}
+    <div className="flex items-center justify-between gap-4">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-lawdger-muted">
+        {label}
+      </p>
+      <p className="text-[13px] font-medium text-lawdger-espresso dark:text-foreground truncate">
+        {value}
+      </p>
     </div>
   );
 }
-
-// Silence unused-import warnings for icons we may use later
-void COLUMN_LABEL;

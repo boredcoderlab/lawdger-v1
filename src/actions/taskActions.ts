@@ -155,12 +155,14 @@ const createCaseTaskSchema = z.object({
   caseId: z.string().min(1, "caseId required"),
   description: z.string().min(1, "Description required"),
   dueDate: z.coerce.date().optional(),
+  isUrgent: z.boolean().default(false),
 });
 
 export async function createCaseTask(input: {
   caseId: string;
   description: string;
   dueDate?: Date;
+  isUrgent?: boolean;
 }): Promise<Result<{ id: string }>> {
   const parsed = createCaseTaskSchema.safeParse(input);
   if (!parsed.success) {
@@ -184,6 +186,7 @@ export async function createCaseTask(input: {
       description: parsed.data.description,
       dueDate: parsed.data.dueDate ?? null,
       status: "pending",
+      isUrgent: parsed.data.isUrgent,
     },
     select: { id: true },
   });
@@ -252,4 +255,54 @@ export async function deleteCaseTask(
   revalidatePath(`/cases/${parsed.data.caseId}`);
   revalidatePath("/tasks");
   return { ok: true, data: { id: parsed.data.id } };
+}
+
+// ─── Phase 4-A — global listAllTasks (3.2-compliant) ─────────────────────────
+
+const listAllTasksSchema = z.object({}).strict();
+
+export type TaskRow = {
+  id: string;
+  description: string;
+  status: string;
+  dueDate: Date | null;
+  assignee: string;
+  isUrgent: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  caseId: string;
+  case: { id: string; title: string; caseNumber: string | null };
+};
+
+export async function listAllTasks(): Promise<Result<TaskRow[]>> {
+  const parsed = listAllTasksSchema.safeParse({});
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const user = await getServerUser();
+  const db = await getServerScopedPrisma();
+
+  const rows = await db.task.findMany({
+    where: { userId: user.id },
+    select: {
+      id: true,
+      description: true,
+      status: true,
+      dueDate: true,
+      assignee: true,
+      isUrgent: true,
+      createdAt: true,
+      updatedAt: true,
+      caseId: true,
+      case: { select: { id: true, title: true, caseNumber: true } },
+    },
+    orderBy: [
+      { isUrgent: "desc" },
+      { dueDate: { sort: "asc", nulls: "last" } },
+      { createdAt: "desc" },
+    ],
+  });
+
+  return { ok: true, data: rows };
 }
