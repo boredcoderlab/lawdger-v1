@@ -31,7 +31,7 @@ import { getPrismaForUser } from "../src/lib/prisma-rls"
 import { prisma as baseClient } from "../src/lib/prisma"
 
 const USER_A_EMAIL = "jainsahil2897@gmail.com"
-const USER_B_EMAIL = "userB@test.local"
+const USER_B_EMAIL = "userb@test.local"
 
 // Stable, predictable description so the cleanup query is unambiguous.
 const PROBE_DESCRIPTION = "[verify-phase4-rls] probe task — userA owned"
@@ -194,6 +194,23 @@ async function main(): Promise<number> {
     bCaseOwnerCheck
       ? `LEAK: B can see A's case ${JSON.stringify(bCaseOwnerCheck)}`
       : "returned null — createCaseTask would short-circuit with {ok:false}",
+  )
+
+  // ─── Check 7: updateCaseTask pattern — cross-user owner-check → null ──────
+  // Mirrors the exact findFirst used inside updateCaseTask before the update:
+  //   db.task.findFirst({ where: { id: taskId, case: { userId: user.id } } })
+  // Under userB's scoped client the probe task is invisible (RLS) AND the
+  // case relation join also denies it. Action must return {ok:false,error:"NOT_FOUND"}.
+  const bUpdateOwnerCheck = await dbB.task.findFirst({
+    where: { id: probe.id, case: { userId: userB.id } },
+    select: { id: true },
+  })
+  record(
+    "7. updateCaseTask owner-check: scoped(B) findFirst on A's task (via case.userId) → null",
+    bUpdateOwnerCheck === null,
+    bUpdateOwnerCheck
+      ? `LEAK: B can see A's task ${JSON.stringify(bUpdateOwnerCheck)}`
+      : "returned null — updateCaseTask would short-circuit with {ok:false,error:'NOT_FOUND'}",
   )
 
   console.log("")

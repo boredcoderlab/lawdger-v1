@@ -31,7 +31,7 @@ import { prisma as baseClient } from "../src/lib/prisma"
 import { withUserContext } from "../src/lib/prisma-rls"
 
 const USER_A_EMAIL = "jainsahil2897@gmail.com"
-const USER_B_EMAIL = "userB@test.local"
+const USER_B_EMAIL = "userb@test.local"
 
 type Check = { name: string; pass: boolean; detail: string }
 const checks: Check[] = []
