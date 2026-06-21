@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import {
   Activity,
@@ -264,9 +265,13 @@ export default function TasksClient({
       },
     };
     const target = bucketTask({ assignee: optimistic.assignee }, userName);
-    if (target === "unassigned") setUnassigned((arr) => [optimistic, ...arr]);
-    else if (target === "my-plate") setMyPlate((arr) => [optimistic, ...arr]);
-    else setAssociates((arr) => [optimistic, ...arr]);
+    const nextUnassigned = target === "unassigned" ? [optimistic, ...unassigned] : unassigned;
+    const nextMyPlate = target === "my-plate" ? [optimistic, ...myPlate] : myPlate;
+    const nextAssociates = target === "associates" ? [optimistic, ...associates] : associates;
+    setUnassigned(nextUnassigned);
+    setMyPlate(nextMyPlate);
+    setAssociates(nextAssociates);
+    setStats(deriveStats(nextUnassigned, nextMyPlate, nextAssociates));
     setCreateOpen(false);
 
     startTransition(async () => {
@@ -600,12 +605,13 @@ function AssignedCard({
             {task.description}
           </div>
           <div className="mt-3 flex items-center justify-between gap-2">
-            <span
+            <Link
+              href={`/cases/${task.caseId}`}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[60%] truncate"
             >
               {caseChipLabel(task.case)}
-            </span>
+            </Link>
             {dueLabel(task.dueDate) === "Overdue" ? (
               <span className="chip chip-danger">Overdue</span>
             ) : (
