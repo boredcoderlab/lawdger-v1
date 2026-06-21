@@ -306,3 +306,63 @@ export async function listAllTasks(): Promise<Result<TaskRow[]>> {
 
   return { ok: true, data: rows };
 }
+
+// ─── Phase 4-A.4 — updateCaseTask ────────────────────────────────────────────
+
+const updateCaseTaskSchema = z.object({
+  taskId: z.string().uuid(),
+  description: z.string().trim().min(1).max(500),
+  assignee: z.string().trim().min(1).max(100),
+  dueDate: z.coerce.date().nullable(),
+  isUrgent: z.boolean(),
+});
+
+export type UpdateCaseTaskInput = z.infer<typeof updateCaseTaskSchema>;
+
+export async function updateCaseTask(
+  input: UpdateCaseTaskInput,
+): Promise<Result<TaskRow>> {
+  const parsed = updateCaseTaskSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  try {
+    const user = await getServerUser();
+    const db = await getServerScopedPrisma();
+
+    const existing = await db.task.findFirst({
+      where: { id: parsed.data.taskId, case: { userId: user.id } },
+      select: { id: true },
+    });
+    if (!existing) return { ok: false, error: "NOT_FOUND" };
+
+    const updated = await db.task.update({
+      where: { id: parsed.data.taskId },
+      data: {
+        description: parsed.data.description,
+        assignee: parsed.data.assignee,
+        dueDate: parsed.data.dueDate,
+        isUrgent: parsed.data.isUrgent,
+      },
+      select: {
+        id: true,
+        description: true,
+        status: true,
+        dueDate: true,
+        assignee: true,
+        isUrgent: true,
+        createdAt: true,
+        updatedAt: true,
+        caseId: true,
+        case: { select: { id: true, title: true, caseNumber: true } },
+      },
+    });
+
+    revalidatePath("/tasks");
+    return { ok: true, data: updated };
+  } catch (e) {
+    console.error("[updateCaseTask]", e);
+    return { ok: false, error: "INTERNAL_ERROR" };
+  }
+}
