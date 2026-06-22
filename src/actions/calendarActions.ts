@@ -23,6 +23,7 @@ export async function createCalendarEvent(data: {
   hearingDate: Date;
   description?: string;
   caseId: string;
+  noteId?: string;
 }) {
   const userId = await requireUserId();
 
@@ -43,6 +44,7 @@ export async function createCalendarEvent(data: {
         title: data.title,
         hearingDate: data.hearingDate,
         description: data.description ?? null,
+        ...(data.noteId !== undefined && { noteId: data.noteId }),
       },
     });
   });

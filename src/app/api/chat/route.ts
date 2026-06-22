@@ -154,6 +154,11 @@ const TOOLS: LLMTool[] = [
           enum: ["General Note", "Client Update", "Next Date", "Task"],
           description: "Note category.",
         },
+        nextDate: {
+          type: "string",
+          description:
+            "ISO 8601 date (YYYY-MM-DD) extracted from user input. Include ONLY when category is 'Next Date' AND user mentioned a specific date. Omit otherwise.",
+        },
       },
       required: ["caseId", "cleanContent", "category"],
     },
@@ -336,6 +341,7 @@ async function executeTool(
     hearingDate: string;
     cleanContent: string;
     category: NoteCategory;
+    nextDate: string | undefined;
     amount: number;
     status: string;
     taskId: string;
@@ -423,6 +429,7 @@ async function executeTool(
         cleanContent: args.cleanContent,
         category: args.category,
         source: "manual",
+        nextDate: args.nextDate,
       });
       if (!result.ok) return { result: result.error };
       return { result: "Note created.", action: `✅ Added note (${args.category})` };
