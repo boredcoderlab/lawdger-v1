@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-21 (Phase 4-A.4 closed — task edit dialog + doneThisWeek fix + RLS check 7; main @ `45084ac`)
+**Last updated:** 2026-06-21 (Phase 4-A.5+A.6 closed — handleCreate stat fix + case-chip link; main @ `e7aae6d`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,7 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `45084ac` (Phase 4-A.4 — PR #17)
+- **Current main sha:** `e7aae6d` (Phase 4-A.5+A.6 — PR #18)
 
 ---
 
@@ -124,7 +124,7 @@ Verified by `npm run smoke:rls`.
 
 ### Current Runtime Isolation Posture
 
-> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **17/17 PASS** confirmed (post-4-A.3: +6 Phase 4 Task RLS checks). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
+> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **22/22 PASS** confirmed (post-4-A.4: +7 Phase 4 Task RLS checks). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
 
 - 8 tables have RLS **ENABLED**; 7 app tables also have **FORCE ROW LEVEL SECURITY** (as of 3.0.1a). `_prisma_migrations` has ENABLED only.
 - `lawdger_app` is a **fully hardened LOGIN role**: real password (in `.env.local` as `LAWDGER_APP_DB_PASSWORD`), NOBYPASSRLS, SELECT/INSERT/UPDATE/DELETE GRANTs on all 7 app tables, subject to FORCE RLS.
@@ -240,9 +240,9 @@ This runs in order:
    - `verify-isolation.ts` (4 checks)
    - `verify-phase32-rls.ts` (6 checks — Case isolation)
    - `verify-with-user-context.ts` (5 checks — withUserContext)
-   - `verify-phase4-rls.ts` (6 checks — Task isolation, added 4-A.3)
+   - `verify-phase4-rls.ts` (7 checks — Task isolation, added 4-A.3; check 7 added 4-A.4)
 
-   **Total: 17 RLS assertions.** Blocking mode — any FAIL exits 1.
+   **Total: 22 RLS assertions.** Blocking mode — any FAIL exits 1.
 
 Any failure blocks the merge.
 
@@ -300,7 +300,6 @@ Every Claude Code prompt for Lawdger must include:
 - **Runtime RLS enforcement: ✅ LIVE (local) — Vercel cutover deferred to Phase 9.**
 - `taskActions` legacy half — own task ops (toggle/delete/create on bare `prisma`) still pre-3.2. `listAllTasks` 3.2-compliant additive shipped 4-A.2. Full contract uplift sequenced to **Phase 3.2.6**.
 - Drag-drop between Kanban columns — dropped in 4-A.2. Restoration committed to **3.2.6 sprint**, bound to legacy `updateTaskAssignee` 3.2-compliant uplift.
-- `handleCreate` stat staleness — same `doneThisWeek` pattern as A.4 fix; deferred to **Phase 4-A.5 micro-PR** (~10 lines).
 - Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Sequenced to **Phase 3.2.6**.
 - `connection_limit` in `DATABASE_URL` stays at `5` under `lawdger_app`. Monitor post-cutover; bump to `10` if Prisma P2024 returns.
 - `next-pwa` installed but unconfigured. Decision deferred to platform phase.
@@ -364,14 +363,22 @@ Every Claude Code prompt for Lawdger must include:
 | **4-C** | ✅ Done | Pulled forward into 3.5.1-h. `NOTE_CATEGORIES` + `NoteCategory` extracted to `noteActions.types.ts`. |
 | **4-A** | ✅ Done | **PR #16 (main @ `fff9901`).** Killed `/tasks` SEED, wired to DB. 3-col Kanban (Unassigned / My Plate / Associates). `isUrgent` flag added (4-A.1 migration + 4-A.2 UI threading). CaseDetail Append Task carries urgent checkbox + docket pill. `listAllTasks` 3.2-compliant additive. `verify-phase4-rls.ts` (6 new RLS checks). |
 | **4-A.4** | ✅ Done | **PR #17 (main @ `45084ac`).** `updateCaseTask` server action (Zod, owner-check via `case.userId` join, `Result<TaskRow>`). `EditTaskDialog` two-tap flow (AssignedCard → TaskDetailDialog → Edit → EditTaskDialog). Optimistic re-bucketing with `structuredClone` snapshot/rollback. `doneThisWeek` staleness fixed in `handleToggle` + `handleDelete` (deriveStats helper). `verify-phase4-rls.ts` check 7 added. `USER_B_EMAIL` case fixed in all 4 verify scripts. Smoke: tsc + 8-table RLS + 22 runtime assertions (7/7 phase-4). |
-| **4-A.5** | ⏳ Next | Micro-PR. `handleCreate` `doneThisWeek` staleness fix (~10 lines, same pattern as A.4 CP3). Branch: `phase-4-a.5-create-stat-fix`. |
-| **4-A.6** | ⏳ Queued | Micro-PR. Case-chip in AssignedCard → real `/cases/[id]` link (~5 lines). Branch: `phase-4-a.6-case-chip-link`. |
+| **4-A.5** | ✅ Done | **PR #18 (main @ `e7aae6d`).** `handleCreate` `doneThisWeek` staleness fixed — explicit next-arrays computed before `setStats(deriveStats(...))`, matching A.4 `handleToggle`/`handleDelete` pattern. |
+| **4-A.6** | ✅ Done | **PR #18 (main @ `e7aae6d`).** Case-chip in `AssignedCard` → `<Link href="/cases/[caseId]">` with `stopPropagation`. `UnassignedCard` chip scoped out (different markup, no toggle surface). |
 | **4-B** | ⏸️ Sequenced | Auto-event pipeline for Next Date notes (entirely absent, not started). After 4-A.5 + 4-A.6. |
 | 5–9 | ⏸️ Sequenced | Dashboard real data → Finances → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
 
 ---
 
 ## 14. Rollback
+
+### 4-A.5+A.6 — handleCreate stat fix + case-chip link (PR #18)
+
+**Failure mode — regression post-merge:**
+1. `git revert e7aae6d` on a hotfix branch.
+2. `npm run smoke` + Chrome MCP visual check.
+3. PR to main, fast-track merge.
+4. No schema changes — DB rollback not required.
 
 ### 4-A.4 — Task edit dialog (PR #17)
 
