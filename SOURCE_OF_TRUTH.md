@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-21 (Phase 4-A.5+A.6 closed — handleCreate stat fix + case-chip link; main @ `e7aae6d`)
+**Last updated:** 2026-06-23 (Phase 4-B backend closed — auto-event pipeline for Next Date notes; main @ `f1d43c5`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,7 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `e7aae6d` (Phase 4-A.5+A.6 — PR #18)
+- **Current main sha:** `f1d43c5` (Phase 4-B backend — PR #19)
 
 ---
 
@@ -114,9 +114,9 @@ MUST call `auth()` in its handler. There is no automatic protection.
 | `User` | ✅ | ✅ | 2 (`User_self_select`, `User_self_update`) | Owner-keyed via `current_setting('app.current_user_id', true)`. Runtime-enforced as of 3.0.1d (runtime role = `lawdger_app`, NOBYPASSRLS). Auth pre-session path uses `auth_find_user_by_email` / `auth_create_user` / `auth_update_password` SECURITY DEFINER RPCs. |
 | `_prisma_migrations` | ✅ | ❌ | 0 (default deny) | Infra table — FORCE deliberately omitted; postgres BYPASSRLS covers migration runner; `lawdger_app` has no GRANTs on this table. |
 | `Case` | ✅ | ✅ | 1 (`Case_isolation`) | userId scoped |
-| `Note` | ✅ | ✅ | 1 (`Note_isolation`) | userId scoped |
+| `Note` | ✅ | ✅ | 1 (`Note_isolation`) | userId scoped. `nextDate DateTime?` added 4-B (auto-event branch input). |
 | `Task` | ✅ | ✅ | 1 (`Task_isolation`) | userId scoped. `isUrgent Boolean @default(false)` added 4-A.1. |
-| `CalendarEvent` | ✅ | ✅ | 1 (`CalendarEvent_isolation`) | userId scoped |
+| `CalendarEvent` | ✅ | ✅ | 1 (`CalendarEvent_isolation`) | userId scoped. `noteId String? @unique` added 4-B (one-to-one Note↔Event linkage; DB-enforced). |
 | `Payment` | ✅ | ✅ | 1 (`Payment_isolation`) | userId scoped |
 | `Document` | ✅ | ✅ | 1 (`Document_isolation`) | userId scoped |
 
@@ -124,7 +124,7 @@ Verified by `npm run smoke:rls`.
 
 ### Current Runtime Isolation Posture
 
-> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **22/22 PASS** confirmed (post-4-A.4: +7 Phase 4 Task RLS checks). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
+> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **27/27 PASS** confirmed (post-4-B: +5 Pillar B CalendarEvent/noteId/cascade/past-date assertions). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
 
 - 8 tables have RLS **ENABLED**; 7 app tables also have **FORCE ROW LEVEL SECURITY** (as of 3.0.1a). `_prisma_migrations` has ENABLED only.
 - `lawdger_app` is a **fully hardened LOGIN role**: real password (in `.env.local` as `LAWDGER_APP_DB_PASSWORD`), NOBYPASSRLS, SELECT/INSERT/UPDATE/DELETE GRANTs on all 7 app tables, subject to FORCE RLS.
@@ -172,9 +172,9 @@ makes unscoped `deleteMany` match zero rows silently.
 | File | Status | Notes |
 |------|--------|-------|
 | `src/actions/caseActions.ts` | ✅ Migrated | Zod, scoped Prisma, `where: { userId }`, `Result<T>` envelope |
-| `src/actions/noteActions.ts` | ✅ Migrated | New in 3.2 — split from caseActions |
+| `src/actions/noteActions.ts` | ✅ Migrated (upgraded 4-B) | New in 3.2 — split from caseActions. **4-B:** both `createNote` and `deleteNote` upgraded `getServerScopedPrisma` → `withServerUserContext` for atomic note↔event linkage. `createNote` auto-creates linked `CalendarEvent` inline (NOT via `createCalendarEvent` action) when category=`"Next Date"` AND `nextDate >= startOfTodayIST()`. `deleteNote` cascades event-then-note in one tx. |
 | `src/actions/taskActions.ts` | ⚠️ Partial | `listAllTasks` 3.2-compliant additive (4-A.2). Case-task helpers scoped. Own task ops (legacy L28–150) still use bare `prisma`. Full contract uplift sequenced to **3.2.6**. |
-| `src/actions/calendarActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped patterns. `getCasesForSelect` extended with `caseNumber` in 4-A.2. **No Zod/Result yet** — contract uplift sequenced to 3.2.6. `where: { userId }` retained as defence-in-depth. |
+| `src/actions/calendarActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped patterns. `getCasesForSelect` extended with `caseNumber` in 4-A.2. `createCalendarEvent` gained optional `noteId?: string` param in 4-B (backward-compat; only future explicit callers exercise it — `createNote` issues `tx.calendarEvent.create` directly inline for atomicity). **No Zod/Result yet** — contract uplift sequenced to 3.2.6. `where: { userId }` retained as defence-in-depth. |
 | `src/actions/dashboardActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` + 6-query `Promise.all` → single `withServerUserContext` interactive tx with sequential awaits. Page-level duplicate queries collapsed; `dashboard/page.tsx` now thin consumer of `getDashboardData()`. Contract uplift sequenced to 3.2.6. |
 | `src/actions/financeActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped; `assertCaseAccess` helper inlined into `createPayment`'s `withServerUserContext` tx. Contract uplift sequenced to 3.2.6. |
 | `src/actions/settingsActions.ts` | ✅ Full contract (3.2.5b-ii + 3.0.1c + 3.0.1e) | All five functions on 3.2 contract. |
@@ -221,6 +221,7 @@ makes unscoped `deleteMany` match zero rows silently.
 | `20260612204242_phase_3_0_1a_lawdger_app_grants_and_force_rls` | 2026-06-13 | `lawdger_app` LOGIN + GRANTs + FORCE RLS on 7 app tables |
 | `20260613085732_phase_3_0_1b_auth_update_password_rpc` | 2026-06-13 | `auth_update_password` SECURITY DEFINER RPC |
 | `20260619230018_add_task_is_urgent` | 2026-06-19 | `Task.isUrgent Boolean @default(false)`. Applied via Supabase MCP `execute_sql` + manual `_prisma_migrations` INSERT (pgbouncer pooler blocked `prisma migrate diff`). |
+| `20260622000000_phase_4_b_auto_event_pipeline` | 2026-06-22 | `Note.nextDate DateTime?` + `CalendarEvent.noteId String? @unique`. Both additive, both nullable. Applied via Supabase MCP `apply_migration` + manual `_prisma_migrations` INSERT (checksum `6a2aff8b…`, row id `53d7eb8a-…`). |
 
 ---
 
@@ -236,13 +237,14 @@ This runs in order:
 1. `smoke:tsc` — `tsc --noEmit`, no TypeScript errors
 2. `smoke:prisma` — `prisma validate`, schema sanity
 3. `smoke:rls` — `scripts/check-rls.ts`, RLS posture matches §6 (8 tables)
-4. `smoke:rls-runtime` — `scripts/check-rls-runtime.ts` orchestrates 4 verify scripts:
+4. `smoke:rls-runtime` — `scripts/check-rls-runtime.ts` orchestrates 5 verify scripts:
    - `verify-isolation.ts` (4 checks)
    - `verify-phase32-rls.ts` (6 checks — Case isolation)
    - `verify-with-user-context.ts` (5 checks — withUserContext)
    - `verify-phase4-rls.ts` (7 checks — Task isolation, added 4-A.3; check 7 added 4-A.4)
+   - `verify-pillar-b-rls.ts` (5 checks — CalendarEvent isolation + noteId fail-closed + cascade + past-date skip, added 4-B)
 
-   **Total: 22 RLS assertions.** Blocking mode — any FAIL exits 1.
+   **Total: 27 RLS assertions.** Blocking mode — any FAIL exits 1.
 
 Any failure blocks the merge.
 
@@ -365,12 +367,28 @@ Every Claude Code prompt for Lawdger must include:
 | **4-A.4** | ✅ Done | **PR #17 (main @ `45084ac`).** `updateCaseTask` server action (Zod, owner-check via `case.userId` join, `Result<TaskRow>`). `EditTaskDialog` two-tap flow (AssignedCard → TaskDetailDialog → Edit → EditTaskDialog). Optimistic re-bucketing with `structuredClone` snapshot/rollback. `doneThisWeek` staleness fixed in `handleToggle` + `handleDelete` (deriveStats helper). `verify-phase4-rls.ts` check 7 added. `USER_B_EMAIL` case fixed in all 4 verify scripts. Smoke: tsc + 8-table RLS + 22 runtime assertions (7/7 phase-4). |
 | **4-A.5** | ✅ Done | **PR #18 (main @ `e7aae6d`).** `handleCreate` `doneThisWeek` staleness fixed — explicit next-arrays computed before `setStats(deriveStats(...))`, matching A.4 `handleToggle`/`handleDelete` pattern. |
 | **4-A.6** | ✅ Done | **PR #18 (main @ `e7aae6d`).** Case-chip in `AssignedCard` → `<Link href="/cases/[caseId]">` with `stopPropagation`. `UnassignedCard` chip scoped out (different markup, no toggle surface). |
-| **4-B** | ⏸️ Sequenced | Auto-event pipeline for Next Date notes (entirely absent, not started). After 4-A.5 + 4-A.6. |
+| **4-B (backend)** | ✅ Done | **PR #19 (main @ `f1d43c5`).** Auto-event pipeline backend for Next Date notes (B.1 + B.2). `Note.nextDate` + `CalendarEvent.noteId @unique` schema migration. `createNote` auto-creates linked event inline when category="Next Date" AND `nextDate >= startOfTodayIST()`; `deleteNote` cascades event-then-note. Both upgraded to `withServerUserContext` for atomicity. Gemini `create_note` tool gains optional `nextDate` param with "ONLY when category is 'Next Date'" guard. `verify-pillar-b-rls.ts` (+5 RLS assertions, 22→27 total). |
+| **4-B.3** | ⏸️ Sequenced | UI polish on backend pipeline. Three substantive items: (a) calendar chip detects UTC-midnight `hearingDate` → renders "All day" instead of "5:30 IST"; (b) note-delete UI affordance on case-detail timeline; (c) date-hint in note display (show `nextDate` if populated) + past-date banner. Storage stays UTC midnight — display-layer fix only. |
+| **4-A.7** | ⏸️ Sequenced | CaseDetailClient edit dialog (deferred from A.4 queue). Independent surface from 4-B.3. |
+| **`updateNote` + note-edit UI** | ⏸️ Sequenced | Note lifecycle gap. Currently no edit path; users delete + recreate. Deferred per 4-B locked scope. |
 | 5–9 | ⏸️ Sequenced | Dashboard real data → Finances → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
 
 ---
 
 ## 14. Rollback
+
+### 4-B — Auto-event pipeline backend (PR #19)
+
+**Failure mode A — auto-event regression discovered post-merge:**
+1. `git revert f1d43c5` on a hotfix branch.
+2. Schema columns stay (`Note.nextDate`, `CalendarEvent.noteId`) — additive nullable, harmless. Strict revert requires dropping the migration: `ALTER TABLE "Note" DROP COLUMN "nextDate"; DROP INDEX "CalendarEvent_noteId_key"; ALTER TABLE "CalendarEvent" DROP COLUMN "noteId";` + `_prisma_migrations` row delete for `20260622000000_phase_4_b_auto_event_pipeline`.
+3. Existing rows with non-null values: zero (pre-merge data has all nulls; only Pillar B flow populated either column).
+4. `npm run smoke` + Chrome MCP visual check.
+5. PR to main, fast-track merge.
+
+**Failure mode B — `withServerUserContext` upgrade introduces tx-timeout regression in `createNote`/`deleteNote`:**
+1. Same revert path as Failure mode A.
+2. Investigate `prisma.$transaction` `{ maxWait: 5_000, timeout: 15_000 }` headroom under load — bump if needed before re-merging.
 
 ### 4-A.5+A.6 — handleCreate stat fix + case-chip link (PR #18)
 
