@@ -51,6 +51,10 @@ function toDisplayTime(date: Date): string {
   return format(date, "hh:mm aa").toUpperCase();
 }
 
+function formatChipTime(date: Date): string {
+  return date.getTime() % 86_400_000 === 0 ? "All day" : format(date, "h:mm a");
+}
+
 function buildDateFromDayAndTime(day: Date, timeStr: string): Date {
   try {
     return parse(timeStr, "hh:mm aa", day);
@@ -326,7 +330,7 @@ export default function CalendarClient({
         </span>
       </div>
       <div className="flex items-center gap-3 mt-1.5 opacity-80 text-[10px] font-medium text-orange-400/80">
-        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{toDisplayTime(ev.hearingDate)}</span>
+        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatChipTime(ev.hearingDate)}</span>
         {ev.case?.title && <span className="flex items-center gap-1 truncate"><MapPin className="h-3 w-3" />{ev.case.title}</span>}
       </div>
     </div>
@@ -582,7 +586,7 @@ export default function CalendarClient({
                               onDragStart={(e) => { e.stopPropagation(); setDraggedId(ev.id); }}
                               onClick={() => openEditHearing(ev)}
                               className={`text-[10px] font-bold px-2 py-1.5 rounded-lg truncate border cursor-pointer ${EVENT_COLOR} bg-orange-500/10`}>
-                              {format(ev.hearingDate, "h:mm")} {ev.title}
+                              {formatChipTime(ev.hearingDate)} {ev.title}
                             </div>
                           ))}
                           {dayTasks.map((t) => {
