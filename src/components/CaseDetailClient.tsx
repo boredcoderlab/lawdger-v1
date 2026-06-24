@@ -13,7 +13,7 @@ import {
   startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, parse,
 } from "date-fns";
 import { updateCase, updateCaseStatus, type CaseWithChildren } from "@/actions/caseActions";
-import { createNote } from "@/actions/noteActions";
+import { createNote, deleteNote } from "@/actions/noteActions";
 import {
   createCaseTask,
   deleteCaseTask,
@@ -60,7 +60,7 @@ const CATEGORY_COLOR: Record<string, { dot: string; badge: string }> = {
 };
 
 type TimelineItem =
-  | { kind: "note";  id: string; date: Date; content: string; category: string }
+  | { kind: "note";  id: string; date: Date; content: string; category: string; nextDate?: Date | null }
   | { kind: "task";  id: string; date: Date; description: string; status: string; dueDate: Date | null }
   | { kind: "event"; id: string; date: Date; title: string; description: string | null };
 
@@ -206,6 +206,9 @@ export default function CaseDetailClient({
   const [noteOpen,       setNoteOpen]       = useState(false);
   const [noteContent,    setNoteContent]    = useState("");
   const [noteSubmitting, setNoteSubmitting] = useState(false);
+  const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
+  const [deletingNoteId,      setDeletingNoteId]      = useState<string | null>(null);
+  const [errorMsg,            setErrorMsg]            = useState<string | null>(null);
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,6 +232,7 @@ export default function CaseDetailClient({
       date: n.createdAt,
       content: n.cleanContent,
       category: n.category,
+      nextDate: n.nextDate,
     })),
     ...caseData.tasks.map((t) => ({
       kind: "task" as const,
@@ -514,6 +518,12 @@ export default function CaseDetailClient({
 
               {/* ── Activity Timeline ─────────────────────────────────── */}
               <div>
+                {errorMsg && (
+                  <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 mb-4 text-[13px] font-medium text-destructive">
+                    <span>{errorMsg}</span>
+                    <button onClick={() => setErrorMsg(null)} className="shrink-0 text-destructive/70 hover:text-destructive transition-colors"><X className="h-4 w-4" /></button>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-6 pb-2 border-b border-primary/10">
                   <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3">
                     <span className="inline-block h-2 w-2 rounded-full bg-primary shadow-[0_0_10px_rgba(200,150,62,0.5)]" />
@@ -596,21 +606,67 @@ export default function CaseDetailClient({
                       }
 
                       const colors = CATEGORY_COLOR[item.category] ?? CATEGORY_COLOR["General Note"];
+                      const isConfirming = confirmDeleteNoteId === item.id;
+                      const isDeleting   = deletingNoteId === item.id;
                       return (
-                        <div key={item.id} className="relative pl-8">
+                        <div key={item.id} className="relative pl-8 group">
                           <div className={`absolute -left-2 top-2.5 h-4 w-4 rounded-full border-2 border-background ${colors.dot}`} />
-                          <div className="rounded-2xl border border-primary/10 bg-white/80 dark:bg-card/60 backdrop-blur-md px-5 py-4 shadow-sm hover:border-primary/20 transition-colors">
+                          <div className="relative rounded-2xl border border-primary/10 bg-white/80 dark:bg-card/60 backdrop-blur-md px-5 py-4 shadow-sm hover:border-primary/20 transition-colors">
                             <div className="flex items-start justify-between gap-4 mb-2">
-                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${colors.badge}`}>
-                                {item.category}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest shrink-0">
-                                {format(item.date, "d MMM yyyy")}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${colors.badge}`}>
+                                  {item.category}
+                                </span>
+                                {item.category === "Next Date" && (
+                                  item.nextDate != null
+                                    ? <span className="text-[10px] text-muted-foreground font-medium">· {formatIndianDate(item.nextDate)}</span>
+                                    : <span className="text-[10px] text-muted-foreground/60 font-medium">· date not set</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                                  {format(item.date, "d MMM yyyy")}
+                                </span>
+                                <button
+                                  onClick={() => setConfirmDeleteNoteId(item.id)}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                  aria-label="Delete note"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
                             <p className="text-[13px] font-medium text-foreground leading-relaxed">
                               {item.content}
                             </p>
+                            {isConfirming && (
+                              <div className="absolute inset-0 rounded-2xl flex flex-col items-center justify-center gap-3 bg-card/95 backdrop-blur-sm border border-destructive/30 px-5 py-4">
+                                <p className="text-[12px] font-bold text-destructive uppercase tracking-widest">Delete this note?</p>
+                                <p className="text-[11px] text-muted-foreground text-center">This also removes any linked calendar event.</p>
+                                <div className="flex gap-2">
+                                  <button
+                                    disabled={isDeleting}
+                                    onClick={async () => {
+                                      setDeletingNoteId(item.id);
+                                      const result = await deleteNote(item.id, caseId);
+                                      setDeletingNoteId(null);
+                                      setConfirmDeleteNoteId(null);
+                                      if (!result.ok) setErrorMsg(result.error);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg text-[11px] font-bold border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
+                                  >
+                                    {isDeleting ? "Deleting…" : "Confirm delete"}
+                                  </button>
+                                  <button
+                                    disabled={isDeleting}
+                                    onClick={() => setConfirmDeleteNoteId(null)}
+                                    className="px-3 py-1.5 rounded-lg text-[11px] font-bold border border-primary/20 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
