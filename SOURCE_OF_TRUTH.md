@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-23 (Phase 4-B backend closed — auto-event pipeline for Next Date notes; main @ `f1d43c5`)
+**Last updated:** 2026-06-25 (Phase 4 B.3 closed — UI polish for auto-event pipeline; main @ `cdf0600`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,7 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `f1d43c5` (Phase 4-B backend — PR #19)
+- **Current main sha:** `cdf0600` (Phase 4 B.3 UI polish — PR #20)
 
 ---
 
@@ -368,7 +368,7 @@ Every Claude Code prompt for Lawdger must include:
 | **4-A.5** | ✅ Done | **PR #18 (main @ `e7aae6d`).** `handleCreate` `doneThisWeek` staleness fixed — explicit next-arrays computed before `setStats(deriveStats(...))`, matching A.4 `handleToggle`/`handleDelete` pattern. |
 | **4-A.6** | ✅ Done | **PR #18 (main @ `e7aae6d`).** Case-chip in `AssignedCard` → `<Link href="/cases/[caseId]">` with `stopPropagation`. `UnassignedCard` chip scoped out (different markup, no toggle surface). |
 | **4-B (backend)** | ✅ Done | **PR #19 (main @ `f1d43c5`).** Auto-event pipeline backend for Next Date notes (B.1 + B.2). `Note.nextDate` + `CalendarEvent.noteId @unique` schema migration. `createNote` auto-creates linked event inline when category="Next Date" AND `nextDate >= startOfTodayIST()`; `deleteNote` cascades event-then-note. Both upgraded to `withServerUserContext` for atomicity. Gemini `create_note` tool gains optional `nextDate` param with "ONLY when category is 'Next Date'" guard. `verify-pillar-b-rls.ts` (+5 RLS assertions, 22→27 total). |
-| **4-B.3** | ⏸️ Sequenced | UI polish on backend pipeline. Three substantive items: (a) calendar chip detects UTC-midnight `hearingDate` → renders "All day" instead of "5:30 IST"; (b) note-delete UI affordance on case-detail timeline; (c) date-hint in note display (show `nextDate` if populated) + past-date banner. Storage stays UTC midnight — display-layer fix only. |
+| **4-B.3** | ✅ Done | **PR #20 (main @ `cdf0600`).** UI polish for auto-event pipeline. (a) `formatChipTime()` helper in CalendarClient — UTC-midnight detection → "All day" chip in Day + Month views; timed manual events unaffected. (b) Note-delete UI affordance in CaseDetailClient — hover trash icon + inline confirm overlay + `deleteNote` cascade wired; `errorMsg` banner on failure. (c) Next Date date hint — `nextDate` field added to `TimelineItem` note variant; renders `"Next Date · DD Mon YYYY"` or `"· date not set"` (muted) next to category badge. Storage stays UTC midnight — display-layer fix only. Carry-forward: (1) past-date warning banner deferred to global toast/notification phase; (2) `updateNote` + note-edit UI — standalone micro-PR; (3) 4-A.7 task-edit dialog — standalone post-B.3; (4) Day view all-day row — TIME_SLOTS 9AM–5PM hardcoded, all-day events invisible; fix in Calendar polish phase. |
 | **4-A.7** | ⏸️ Sequenced | CaseDetailClient edit dialog (deferred from A.4 queue). Independent surface from 4-B.3. |
 | **`updateNote` + note-edit UI** | ⏸️ Sequenced | Note lifecycle gap. Currently no edit path; users delete + recreate. Deferred per 4-B locked scope. |
 | 5–9 | ⏸️ Sequenced | Dashboard real data → Finances → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
