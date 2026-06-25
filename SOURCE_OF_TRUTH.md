@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-25 (Phase 4 C.1 closed — updateNote + note-edit modal; main @ `dcfb4f9`)
+**Last updated:** 2026-06-26 (Phase 4 A.7 closed — task-edit modal; main @ `4421565`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,7 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `dcfb4f9` (Phase 4 C.1 — updateNote + edit modal — PR #21)
+- **Current main sha:** `4421565` (Phase 4 A.7 — task-edit modal — PR #22)
 
 ---
 
@@ -124,7 +124,7 @@ Verified by `npm run smoke:rls`.
 
 ### Current Runtime Isolation Posture
 
-> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **23/23 PASS** confirmed (count corrected 27→23 at 4-C.1; per-script breakdown audit pending — see §7). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
+> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **23/23 PASS** confirmed across **5 verify scripts** (count was 27/5, corrected to 23/5 at 4-A.7 CP-8 — prior 4-C.1 SOT flip incorrectly said 23/4; see §7). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
 
 - 8 tables have RLS **ENABLED**; 7 app tables also have **FORCE ROW LEVEL SECURITY** (as of 3.0.1a). `_prisma_migrations` has ENABLED only.
 - `lawdger_app` is a **fully hardened LOGIN role**: real password (in `.env.local` as `LAWDGER_APP_DB_PASSWORD`), NOBYPASSRLS, SELECT/INSERT/UPDATE/DELETE GRANTs on all 7 app tables, subject to FORCE RLS.
@@ -173,7 +173,7 @@ makes unscoped `deleteMany` match zero rows silently.
 |------|--------|-------|
 | `src/actions/caseActions.ts` | ✅ Migrated | Zod, scoped Prisma, `where: { userId }`, `Result<T>` envelope |
 | `src/actions/noteActions.ts` | ✅ Migrated (upgraded 4-C.1) | New in 3.2 — split from caseActions. **4-B:** both `createNote` and `deleteNote` upgraded `getServerScopedPrisma` → `withServerUserContext` for atomic note↔event linkage. `createNote` auto-creates linked `CalendarEvent` inline (NOT via `createCalendarEvent` action) when category=`"Next Date"` AND `nextDate >= startOfTodayIST()`. `deleteNote` cascades event-then-note in one tx. **4-C.1:** `updateNote` added — Zod + superRefine (conditional `nextDate`), owner-chain `case.findFirst` → `note.findFirst`, 8-row transition matrix for note↔CalendarEvent re-sync (update/delete/create/no-op per old-cat × new-cat × date future-ness). `verify-phase4-c1-update-rls.ts` deferred (+3 assertions — next RLS hardening batch). |
-| `src/actions/taskActions.ts` | ⚠️ Partial | `listAllTasks` 3.2-compliant additive (4-A.2). Case-task helpers scoped. Own task ops (legacy L28–150) still use bare `prisma`. Full contract uplift sequenced to **3.2.6**. |
+| `src/actions/taskActions.ts` | ⚠️ Partial | `listAllTasks` 3.2-compliant additive (4-A.2). Case-task helpers scoped. Own task ops (legacy L28–150) still use bare `prisma`. Full contract uplift sequenced to **3.2.6**. **4-A.7:** updateCaseTask UI wiring — added `revalidatePath(\`/cases/${caseId}\`)` at L362 (fixes stale SSR in CaseDetailClient after task edit; /tasks revalidate retained). |
 | `src/actions/calendarActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped patterns. `getCasesForSelect` extended with `caseNumber` in 4-A.2. `createCalendarEvent` gained optional `noteId?: string` param in 4-B (backward-compat; only future explicit callers exercise it — `createNote` issues `tx.calendarEvent.create` directly inline for atomicity). **No Zod/Result yet** — contract uplift sequenced to 3.2.6. `where: { userId }` retained as defence-in-depth. |
 | `src/actions/dashboardActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` + 6-query `Promise.all` → single `withServerUserContext` interactive tx with sequential awaits. Page-level duplicate queries collapsed; `dashboard/page.tsx` now thin consumer of `getDashboardData()`. Contract uplift sequenced to 3.2.6. |
 | `src/actions/financeActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped; `assertCaseAccess` helper inlined into `createPayment`'s `withServerUserContext` tx. Contract uplift sequenced to 3.2.6. |
@@ -244,7 +244,7 @@ This runs in order:
    - `verify-phase4-rls.ts` (7 checks — Task isolation, added 4-A.3; check 7 added 4-A.4)
    - `verify-pillar-b-rls.ts` (5 checks — CalendarEvent isolation + noteId fail-closed + cascade + past-date skip, added 4-B)
 
-   **Total: 23 RLS assertions across 4 scripts** (⚠️ corrected 27/5→23/4 at 4-C.1 — per-script breakdown audit pending; listed counts above are pre-correction). `verify-phase4-c1-update-rls.ts` will add +3 at next RLS hardening batch. Blocking mode — any FAIL exits 1.
+   **Total: 23 RLS assertions across 5 scripts** (corrected 27→23 at 4-C.1; prior SOT flip mistakenly said 4 scripts — actual is 5: isolation/phase32-rls/with-user-context/phase4-rls/pillar-b-rls). Two pending: `verify-phase4-c1-update-rls.ts` (updateNote, +3) and `verify-phase4-a7-update-task-rls.ts` (updateCaseTask, similar shape) — next RLS hardening batch. Blocking mode — any FAIL exits 1.
 
 Any failure blocks the merge.
 
@@ -370,7 +370,8 @@ Every Claude Code prompt for Lawdger must include:
 | **4-B (backend)** | ✅ Done | **PR #19 (main @ `f1d43c5`).** Auto-event pipeline backend for Next Date notes (B.1 + B.2). `Note.nextDate` + `CalendarEvent.noteId @unique` schema migration. `createNote` auto-creates linked event inline when category="Next Date" AND `nextDate >= startOfTodayIST()`; `deleteNote` cascades event-then-note. Both upgraded to `withServerUserContext` for atomicity. Gemini `create_note` tool gains optional `nextDate` param with "ONLY when category is 'Next Date'" guard. `verify-pillar-b-rls.ts` (+5 RLS assertions, 22→27 total). |
 | **4-B.3** | ✅ Done | **PR #20 (main @ `cdf0600`).** UI polish for auto-event pipeline. (a) `formatChipTime()` helper in CalendarClient — UTC-midnight detection → "All day" chip in Day + Month views; timed manual events unaffected. (b) Note-delete UI affordance in CaseDetailClient — hover trash icon + inline confirm overlay + `deleteNote` cascade wired; `errorMsg` banner on failure. (c) Next Date date hint — `nextDate` field added to `TimelineItem` note variant; renders `"Next Date · DD Mon YYYY"` or `"· date not set"` (muted) next to category badge. Storage stays UTC midnight — display-layer fix only. Carry-forward: (1) past-date warning banner deferred to global toast/notification phase; (2) `updateNote` + note-edit UI — standalone micro-PR; (3) 4-A.7 task-edit dialog — standalone post-B.3; (4) Day view all-day row — TIME_SLOTS 9AM–5PM hardcoded, all-day events invisible; fix in Calendar polish phase. |
 | **4-C.1** | ✅ Done | **PR #21 (main @ `dcfb4f9`).** `updateNote` server action + note-edit modal. Zod + superRefine, owner-chain pre-flight, 8-row note↔event transition matrix (update/delete/create/no-op). Pencil affordance (hover, left of trash). No schema changes. Carry-forward: `verify-phase4-c1-update-rls.ts` (+3 assertions — next RLS batch); past-date warning banner (post-toast layer). |
-| **4-A.7** | ⏸️ Next | CaseDetailClient task-edit dialog (deferred from A.4 queue). Independent surface — now head of queue post-4-C.1. |
+| **4-A.7** | ✅ Done | **PR #22 (main @ `4421565`).** Task-edit modal in CaseDetailClient — Pencil affordance (hover, left of trash, mirrors 4-C.1). 4 editable fields: description, assignee, dueDate, isUrgent. `updateCaseTask` L362 revalidate patch (+`/cases/${caseId}`) — fixes stale SSR. Local Task type widened with assignee. Append-only on UI (create-task modal untouched). Carry-forward: assignee field in create-task modal (micro-PR); `verify-phase4-a7-update-task-rls.ts` (next RLS batch). |
+| **Dashboard real data** | ⏸️ Next | Phase 5 start — kill DashboardClient mock, wire to `getDashboardData()` over real DB. Sonnet/Opus TBD based on blast radius (likely Opus). |
 | 5–9 | ⏸️ Sequenced | Dashboard real data → Finances → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
 
 ---
