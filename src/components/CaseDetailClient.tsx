@@ -19,6 +19,7 @@ import {
   createCaseTask,
   deleteCaseTask,
   toggleCaseTaskStatus,
+  updateCaseTask,
 } from "@/actions/taskActions";
 import { CaseStatus, MatterType } from "@prisma/client";
 import { CASE_TYPES, type CaseType } from "@/lib/case-constants";
@@ -30,6 +31,7 @@ type Task = {
   id: string;
   description: string;
   status: string;
+  assignee: string;
   dueDate: Date | null;
   isUrgent: boolean;
   createdAt: Date;
@@ -193,6 +195,50 @@ export default function CaseDetailClient({
     setTaskSubmitting(false);
   };
 
+  const openEditTask = (task: Task) => {
+    setEditingTaskId(task.id);
+    setEditTaskDesc(task.description);
+    setEditTaskAssignee(task.assignee);
+    setEditTaskDueDate(task.dueDate);
+    setEditTaskIsUrgent(task.isUrgent);
+    setEditTaskError(null);
+    if (task.dueDate) setEditTaskPickerMonth(task.dueDate);
+    setEditTaskOpen(true);
+  };
+
+  const closeEditTask = () => {
+    setEditTaskOpen(false);
+    setEditingTaskId(null);
+    setEditTaskDesc("");
+    setEditTaskAssignee("");
+    setEditTaskDueDate(null);
+    setEditTaskIsUrgent(false);
+    setEditTaskError(null);
+    setEditTaskDatePickerOpen(false);
+  };
+
+  const handleEditTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTaskId) return;
+    if (!editTaskDesc.trim()) return;
+    if (!editTaskAssignee.trim()) return;
+    setEditTaskSubmitting(true);
+    setEditTaskError(null);
+    const result = await updateCaseTask({
+      taskId: editingTaskId,
+      description: editTaskDesc.trim(),
+      assignee: editTaskAssignee.trim(),
+      dueDate: editTaskDueDate,
+      isUrgent: editTaskIsUrgent,
+    });
+    setEditTaskSubmitting(false);
+    if (!result.ok) {
+      setEditTaskError(result.error ?? "Failed to update task");
+      return;
+    }
+    closeEditTask();
+  };
+
   const getDueLabel = (date: Date | null) => {
     if (!date) return null;
     if (isToday(date))    return { label: "Today",    cls: "text-orange-600 dark:text-orange-400" };
@@ -221,6 +267,18 @@ export default function CaseDetailClient({
   const [editError,           setEditError]           = useState<string | null>(null);
   const [editDatePickerOpen,  setEditDatePickerOpen]  = useState(false);
   const [editPickerMonth,     setEditPickerMonth]     = useState(new Date());
+
+  // 4-A.7: task edit modal state
+  const [editTaskOpen, setEditTaskOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTaskDesc, setEditTaskDesc] = useState("");
+  const [editTaskAssignee, setEditTaskAssignee] = useState("");
+  const [editTaskDueDate, setEditTaskDueDate] = useState<Date | null>(null);
+  const [editTaskIsUrgent, setEditTaskIsUrgent] = useState(false);
+  const [editTaskSubmitting, setEditTaskSubmitting] = useState(false);
+  const [editTaskError, setEditTaskError] = useState<string | null>(null);
+  const [editTaskDatePickerOpen, setEditTaskDatePickerOpen] = useState(false);
+  const [editTaskPickerMonth, setEditTaskPickerMonth] = useState(new Date());
 
   const openEditNote = (item: TimelineItem & { kind: "note" }) => {
     setEditingNoteId(item.id);
@@ -824,6 +882,13 @@ export default function CaseDetailClient({
                               )}
                             </div>
                             <button
+                              onClick={() => openEditTask(task)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary dark:hover:text-[var(--gold-text)]"
+                              aria-label="Edit task"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                            <button
                               onClick={() => deleteCaseTask(task.id, caseId)}
                               className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                             >
@@ -969,6 +1034,162 @@ export default function CaseDetailClient({
                   className="btn-gold w-full py-4 rounded-xl font-bold uppercase tracking-widest text-[12px] disabled:opacity-60"
                 >
                   {taskSubmitting ? "Writing to Docket…" : "Add to Docket"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Task Modal (4-A.7) ───────────────────────── */}
+      {editTaskOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-background rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-visible relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center p-6 bg-white dark:bg-[var(--surface-2)] border-b border-primary/10 dark:border-[var(--border)]">
+              <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-foreground leading-none">Edit Task</h2>
+              <button
+                onClick={closeEditTask}
+                className="text-foreground/40 hover:text-foreground transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditTask} className="p-8 space-y-6">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Action Item Description
+                </label>
+                <textarea
+                  required
+                  autoFocus
+                  rows={3}
+                  value={editTaskDesc}
+                  onChange={(e) => setEditTaskDesc(e.target.value)}
+                  className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground resize-none"
+                  placeholder="e.g. Draft reply affidavit"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Assignee
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTaskAssignee}
+                  onChange={(e) => setEditTaskAssignee(e.target.value)}
+                  className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
+                  placeholder="My Plate / Associates / Clerks & Filings / or custom"
+                />
+              </div>
+
+              <div className="relative">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Target Deadline <span className="normal-case font-medium tracking-normal text-primary/60">(optional)</span>
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditTaskDatePickerOpen(!editTaskDatePickerOpen)}
+                    className="flex-1 bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] transition-all text-left flex justify-between items-center shadow-sm"
+                  >
+                    <span className={editTaskDueDate ? "text-foreground font-bold" : "text-muted-foreground/60"}>
+                      {editTaskDueDate ? format(editTaskDueDate, "d MMMM yyyy") : "Open Deadline"}
+                    </span>
+                    <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
+                  </button>
+                  {editTaskDueDate && (
+                    <button
+                      type="button"
+                      onClick={() => { setEditTaskDueDate(null); setEditTaskDatePickerOpen(false); }}
+                      className="px-3 py-3 rounded-xl border border-primary/10 dark:border-[var(--border)] text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5 transition-colors shadow-sm"
+                      aria-label="Clear deadline"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
+                {editTaskDatePickerOpen && (
+                  <div className="absolute top-full left-0 mt-2 p-5 bg-card border border-white/10 rounded-[1.5rem] shadow-2xl z-50 w-[300px] backdrop-blur-3xl">
+                    <div className="flex justify-between items-center mb-5 border-b border-primary/10 pb-3">
+                      <button type="button" onClick={() => setEditTaskPickerMonth(subMonths(editTaskPickerMonth, 1))} className="p-1.5 hover:bg-white/40 rounded-full transition-colors bg-white/5">
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <span className="font-serif text-[16px] font-bold">{format(editTaskPickerMonth, "MMMM yyyy")}</span>
+                      <button type="button" onClick={() => setEditTaskPickerMonth(addMonths(editTaskPickerMonth, 1))} className="p-1.5 hover:bg-white/40 rounded-full transition-colors bg-white/5">
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center mb-3">
+                      {["S","M","T","W","T","F","S"].map((d, i) => (
+                        <div key={i} className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{d}</div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-[13px] font-medium">
+                      {eachDayOfInterval({
+                        start: startOfWeek(startOfMonth(editTaskPickerMonth)),
+                        end:   endOfWeek(endOfMonth(editTaskPickerMonth)),
+                      }).map((day, i) => {
+                        const selected = !!editTaskDueDate && format(editTaskDueDate, "yyyy-MM-dd") === format(day, "yyyy-MM-dd");
+                        const inMonth  = isSameMonth(day, editTaskPickerMonth);
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => { setEditTaskDueDate(day); setEditTaskDatePickerOpen(false); }}
+                            className={`p-2 rounded-full h-9 flex items-center justify-center transition-colors ${
+                              selected ? "bg-primary text-primary-foreground dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] shadow-[0_0_15px_rgba(200,150,62,0.4)] dark:shadow-none" : inMonth ? "hover:bg-primary/10 text-foreground" : "text-muted-foreground/30 hover:bg-white/5"
+                            }`}
+                          >
+                            {format(day, "d")}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={editTaskIsUrgent}
+                    onChange={(e) => setEditTaskIsUrgent(e.target.checked)}
+                    className="h-4 w-4 rounded border-primary/30 text-primary focus:ring-primary/30"
+                  />
+                  <span className="text-[12.5px] font-medium text-foreground">
+                    Mark as urgent
+                  </span>
+                </label>
+              </div>
+
+              {editTaskError && (
+                <p className="text-[12px] font-medium text-destructive">{editTaskError}</p>
+              )}
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={closeEditTask}
+                  disabled={editTaskSubmitting}
+                  className="flex-1 py-4 rounded-xl font-bold uppercase tracking-widest text-[12px] border border-primary/20 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    editTaskSubmitting ||
+                    !editTaskDesc.trim() ||
+                    !editTaskAssignee.trim()
+                  }
+                  className="btn-gold flex-1 py-4 rounded-xl font-bold uppercase tracking-widest text-[12px] disabled:opacity-60"
+                >
+                  {editTaskSubmitting ? "Saving…" : "Save Changes"}
                 </button>
               </div>
             </form>

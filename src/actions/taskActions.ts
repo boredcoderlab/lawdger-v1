@@ -360,6 +360,7 @@ export async function updateCaseTask(
     });
 
     revalidatePath("/tasks");
+    revalidatePath(`/cases/${updated.caseId}`);
     return { ok: true, data: updated };
   } catch (e) {
     console.error("[updateCaseTask]", e);
