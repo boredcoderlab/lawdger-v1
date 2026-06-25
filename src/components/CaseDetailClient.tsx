@@ -13,7 +13,8 @@ import {
   startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, parse,
 } from "date-fns";
 import { updateCase, updateCaseStatus, type CaseWithChildren } from "@/actions/caseActions";
-import { createNote, deleteNote } from "@/actions/noteActions";
+import { createNote, deleteNote, updateNote } from "@/actions/noteActions";
+import { NOTE_CATEGORIES, type NoteCategory } from "@/actions/noteActions.types";
 import {
   createCaseTask,
   deleteCaseTask,
@@ -209,6 +210,60 @@ export default function CaseDetailClient({
   const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
   const [deletingNoteId,      setDeletingNoteId]      = useState<string | null>(null);
   const [errorMsg,            setErrorMsg]            = useState<string | null>(null);
+
+  // ── Note edit modal ─────────────────────────────────────────────────────────
+  const [editNoteOpen,        setEditNoteOpen]        = useState(false);
+  const [editingNoteId,       setEditingNoteId]       = useState<string | null>(null);
+  const [editContent,         setEditContent]         = useState("");
+  const [editCategory,        setEditCategory]        = useState<NoteCategory>("General Note");
+  const [editNextDate,        setEditNextDate]        = useState<Date | null>(null);
+  const [editSubmitting,      setEditSubmitting]      = useState(false);
+  const [editError,           setEditError]           = useState<string | null>(null);
+  const [editDatePickerOpen,  setEditDatePickerOpen]  = useState(false);
+  const [editPickerMonth,     setEditPickerMonth]     = useState(new Date());
+
+  const openEditNote = (item: TimelineItem & { kind: "note" }) => {
+    setEditingNoteId(item.id);
+    setEditContent(item.content);
+    setEditCategory(item.category as NoteCategory);
+    setEditNextDate(item.nextDate ?? null);
+    setEditPickerMonth(item.nextDate ?? new Date());
+    setEditError(null);
+    setEditDatePickerOpen(false);
+    setEditNoteOpen(true);
+  };
+
+  const closeEditNote = () => {
+    setEditNoteOpen(false);
+    setEditingNoteId(null);
+    setEditContent("");
+    setEditCategory("General Note");
+    setEditNextDate(null);
+    setEditError(null);
+    setEditDatePickerOpen(false);
+  };
+
+  const handleEditNote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingNoteId) return;
+    if (!editContent.trim()) return;
+    if (editCategory === "Next Date" && !editNextDate) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    const result = await updateNote({
+      id: editingNoteId,
+      caseId,
+      cleanContent: editContent.trim(),
+      category: editCategory,
+      nextDate: editCategory === "Next Date" ? editNextDate : null,
+    });
+    setEditSubmitting(false);
+    if (!result.ok) {
+      setEditError(result.error);
+      return;
+    }
+    closeEditNote();
+  };
 
   const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -628,6 +683,13 @@ export default function CaseDetailClient({
                                   {format(item.date, "d MMM yyyy")}
                                 </span>
                                 <button
+                                  onClick={() => openEditNote(item)}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary dark:hover:text-[var(--gold-text)]"
+                                  aria-label="Edit note"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
                                   onClick={() => setConfirmDeleteNoteId(item.id)}
                                   className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
                                   aria-label="Delete note"
@@ -907,6 +969,143 @@ export default function CaseDetailClient({
                   className="btn-gold w-full py-4 rounded-xl font-bold uppercase tracking-widest text-[12px] disabled:opacity-60"
                 >
                   {taskSubmitting ? "Writing to Docket…" : "Add to Docket"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Edit Note Modal ──────────────────────────────── */}
+      {editNoteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+          <div className="bg-background rounded-[1.5rem] shadow-[0_0_50px_rgba(0,0,0,0.5)] w-full max-w-md overflow-visible relative border border-white/60 dark:border-primary/20 animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center p-6 bg-white dark:bg-[var(--surface-2)] border-b border-primary/10 dark:border-[var(--border)]">
+              <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-foreground leading-none">Edit Note</h2>
+              <button
+                onClick={closeEditNote}
+                className="text-foreground/40 hover:text-foreground transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditNote} className="p-8 space-y-6">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Note Content
+                </label>
+                <textarea
+                  required
+                  autoFocus
+                  rows={4}
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground resize-none"
+                  placeholder="Note content"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Category
+                </label>
+                <select
+                  value={editCategory}
+                  onChange={(e) => {
+                    const next = e.target.value as NoteCategory;
+                    setEditCategory(next);
+                    if (next !== "Next Date") setEditDatePickerOpen(false);
+                  }}
+                  className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] focus:ring-1 focus:ring-primary transition-all shadow-sm text-foreground"
+                >
+                  {NOTE_CATEGORIES.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {editCategory === "Next Date" && (
+                <div className="relative">
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                    Next Date
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setEditDatePickerOpen(!editDatePickerOpen)}
+                    className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:border-primary dark:focus:border-[var(--gold)] transition-all text-left flex justify-between items-center shadow-sm"
+                  >
+                    <span className={editNextDate ? "text-foreground font-bold" : "text-muted-foreground/60"}>
+                      {editNextDate ? format(editNextDate, "d MMMM yyyy") : "Pick a date"}
+                    </span>
+                    <CalendarIcon className="h-4 w-4 text-primary shrink-0" />
+                  </button>
+
+                  {editDatePickerOpen && (
+                    <div className="absolute top-full left-0 mt-2 p-5 bg-card border border-white/10 rounded-[1.5rem] shadow-2xl z-50 w-[300px] backdrop-blur-3xl">
+                      <div className="flex justify-between items-center mb-5 border-b border-primary/10 pb-3">
+                        <button type="button" onClick={() => setEditPickerMonth(subMonths(editPickerMonth, 1))} className="p-1.5 hover:bg-white/40 rounded-full transition-colors bg-white/5">
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <span className="font-serif text-[16px] font-bold">{format(editPickerMonth, "MMMM yyyy")}</span>
+                        <button type="button" onClick={() => setEditPickerMonth(addMonths(editPickerMonth, 1))} className="p-1.5 hover:bg-white/40 rounded-full transition-colors bg-white/5">
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 text-center mb-3">
+                        {["S","M","T","W","T","F","S"].map((d, i) => (
+                          <div key={i} className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{d}</div>
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 text-[13px] font-medium">
+                        {eachDayOfInterval({
+                          start: startOfWeek(startOfMonth(editPickerMonth)),
+                          end:   endOfWeek(endOfMonth(editPickerMonth)),
+                        }).map((day, i) => {
+                          const selected = !!editNextDate && format(editNextDate, "yyyy-MM-dd") === format(day, "yyyy-MM-dd");
+                          const inMonth  = isSameMonth(day, editPickerMonth);
+                          return (
+                            <button
+                              key={i}
+                              type="button"
+                              onClick={() => { setEditNextDate(day); setEditDatePickerOpen(false); }}
+                              className={`p-2 rounded-full h-9 flex items-center justify-center transition-colors ${
+                                selected ? "bg-primary text-primary-foreground dark:bg-[var(--surface-3)] dark:text-[var(--gold-text)] shadow-[0_0_15px_rgba(200,150,62,0.4)] dark:shadow-none" : inMonth ? "hover:bg-primary/10 text-foreground" : "text-muted-foreground/30 hover:bg-white/5"
+                              }`}
+                            >
+                              {format(day, "d")}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {editError && (
+                <p className="text-[12px] font-medium text-destructive">{editError}</p>
+              )}
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={closeEditNote}
+                  disabled={editSubmitting}
+                  className="flex-1 py-4 rounded-xl font-bold uppercase tracking-widest text-[12px] border border-primary/20 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={
+                    editSubmitting ||
+                    !editContent.trim() ||
+                    (editCategory === "Next Date" && !editNextDate)
+                  }
+                  className="btn-gold flex-1 py-4 rounded-xl font-bold uppercase tracking-widest text-[12px] disabled:opacity-60"
+                >
+                  {editSubmitting ? "Saving…" : "Save Changes"}
                 </button>
               </div>
             </form>
