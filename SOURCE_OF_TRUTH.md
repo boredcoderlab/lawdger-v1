@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-26 (5.1 closed — dashboard real data; main @ `5c505df`)
+**Last updated:** 2026-06-27 (5.2a closed — payment rls verify + header empty-state fix; main @ `7ac0157`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,7 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `5c505df` (Phase 5.1 — dashboard real data — PR #23)
+- **Current main sha:** `7ac0157` (Phase 5.2a — payment rls verify + header empty-state fix — PR #24)
 
 ---
 
@@ -124,7 +124,7 @@ Verified by `npm run smoke:rls`.
 
 ### Current Runtime Isolation Posture
 
-> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **23/23 PASS** confirmed across **5 verify scripts** (count was 27/5, corrected to 23/5 at 4-A.7 CP-8 — prior 4-C.1 SOT flip incorrectly said 23/4; see §7). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
+> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **28/28 PASS** confirmed across **6 verify scripts** (count was 27/5, corrected to 23/5 at 4-A.7 CP-8 — prior 4-C.1 SOT flip incorrectly said 23/4; bumped to 28/6 at 5.2a with `verify-phase52-finances-rls.ts` +5 Payment assertions; see §7). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
 
 - 8 tables have RLS **ENABLED**; 7 app tables also have **FORCE ROW LEVEL SECURITY** (as of 3.0.1a). `_prisma_migrations` has ENABLED only.
 - `lawdger_app` is a **fully hardened LOGIN role**: real password (in `.env.local` as `LAWDGER_APP_DB_PASSWORD`), NOBYPASSRLS, SELECT/INSERT/UPDATE/DELETE GRANTs on all 7 app tables, subject to FORCE RLS.
@@ -244,8 +244,9 @@ This runs in order:
    - `verify-with-user-context.ts` (5 checks — withUserContext)
    - `verify-phase4-rls.ts` (7 checks — Task isolation, added 4-A.3; check 7 added 4-A.4)
    - `verify-pillar-b-rls.ts` (5 checks — CalendarEvent isolation + noteId fail-closed + cascade + past-date skip, added 4-B)
+   - `verify-phase52-finances-rls.ts` (5 checks — Payment isolation: SELECT iso + cross-user SELECT/UPDATE/DELETE fail-closed + INSERT mismatched-userId blocked by `WITH CHECK`, added 5.2a)
 
-   **Total: 23 RLS assertions across 5 scripts** (corrected 27→23 at 4-C.1; prior SOT flip mistakenly said 4 scripts — actual is 5: isolation/phase32-rls/with-user-context/phase4-rls/pillar-b-rls). Two pending: `verify-phase4-c1-update-rls.ts` (updateNote, +3) and `verify-phase4-a7-update-task-rls.ts` (updateCaseTask, similar shape) — next RLS hardening batch. Blocking mode — any FAIL exits 1.
+   **Total: 28 RLS assertions across 6 scripts** (corrected 27→23 at 4-C.1; prior SOT flip mistakenly said 4 scripts — actual is 5: isolation/phase32-rls/with-user-context/phase4-rls/pillar-b-rls; bumped to 28/6 at 5.2a with `verify-phase52-finances-rls.ts` +5). Two pending: `verify-phase4-c1-update-rls.ts` (updateNote, +3) and `verify-phase4-a7-update-task-rls.ts` (updateCaseTask, similar shape) — next RLS hardening batch. Blocking mode — any FAIL exits 1.
 
 Any failure blocks the merge.
 
@@ -306,6 +307,9 @@ Every Claude Code prompt for Lawdger must include:
 - Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Sequenced to **Phase 3.2.6**.
 - `connection_limit` in `DATABASE_URL` stays at `5` under `lawdger_app`. Monitor post-cutover; bump to `10` if Prisma P2024 returns.
 - `next-pwa` installed but unconfigured. Decision deferred to platform phase.
+- **`Payment.amount: Float` → `Int` paise migration.** Float introduces FP rounding for currency. Resolve in **schema-cleanup pass** with destructive backfill (multiply by 100, cast to Int). Coordinated with `formatINR` extraction at 5.2b.
+- **`Payment.status: String` → `PaymentStatus` enum.** Currently free-text `"pending" | "paid"` with no DB-level constraint. Enum sequenced to **Phase 3.2.6** (financeActions contract uplift bundle).
+- **`updateCaseAgreedFee` shape.** Uses `getServerScopedPrisma` + `updateMany` (fail-closed via where-clause, not owner-chain precheck). Functional but inconsistent with `withServerUserContext` + owner-check pattern used elsewhere. Uplift sequenced to **Phase 3.2.6**.
 
 ### Smaller debt — log + opportunistic
 
@@ -320,6 +324,10 @@ Every Claude Code prompt for Lawdger must include:
 - Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — cleanup pending.
 - **`Case.nextHearingDate` schema debt** — column is form-driven only (written on case create/update via form), NOT synced with `CalendarEvent` mutations (no write in `calendarActions` create/update/delete, no write in `noteActions` auto-event create from "Next Date" or 4-C.1 re-sync, no write on case-delete cascade). Phase 5.1 routed around via `groupBy` on `CalendarEvent`. Resolve in schema-cleanup pass: either (i) drop column + remove from case form, OR (ii) backfill on every calendar mutation path.
 - **Recent Documents real wiring deferred to Phase 6** — Phase 5.1 ships honest empty state. Wire to `Document` table when Inbox/upload flow lands.
+- **`Payment.case` lacks `onDelete` cascade clause** — Prisma default Restrict. Deleting a Case with payments throws FK violation. Resolve with case-delete flow when that ships.
+- **`FinancesClient.tsx` L28 `useState(() => Date.now())`.** `now` captured at mount; stale on long-lived sessions (affects `forgottenDues` daysInactive computation). Minor — resolves when 5.2b moves `forgottenDues` computation server-side.
+- **`forgottenDues` 60-day threshold hardcoded in `FinancesClient`.** Codify as `STAGNANT_DAYS` const when moving server-side at 5.2b.
+- **`verify-phase52-finances-rls.ts` A5 cosmetic.** `insertErrMsg` logs as empty string due to Prisma error string leading newline (`e.message.split("\n")[0]` returns `""`). Assertion correctness unaffected. Optional fix: `.trim()` before split.
 - Dead `claude/*` branches — prune pending.
 
 ---
@@ -375,8 +383,10 @@ Every Claude Code prompt for Lawdger must include:
 | **4-C.1** | ✅ Done | **PR #21 (main @ `dcfb4f9`).** `updateNote` server action + note-edit modal. Zod + superRefine, owner-chain pre-flight, 8-row note↔event transition matrix (update/delete/create/no-op). Pencil affordance (hover, left of trash). No schema changes. Carry-forward: `verify-phase4-c1-update-rls.ts` (+3 assertions — next RLS batch); past-date warning banner (post-toast layer). |
 | **4-A.7** | ✅ Done | **PR #22 (main @ `4421565`).** Task-edit modal in CaseDetailClient — Pencil affordance (hover, left of trash, mirrors 4-C.1). 4 editable fields: description, assignee, dueDate, isUrgent. `updateCaseTask` L362 revalidate patch (+`/cases/${caseId}`) — fixes stale SSR. Local Task type widened with assignee. Append-only on UI (create-task modal untouched). Carry-forward: assignee field in create-task modal (micro-PR); `verify-phase4-a7-update-task-rls.ts` (next RLS batch). |
 | **5.1 (Dashboard real data)** | ✅ Done | **PR #23 (main @ `5c505df`).** All 4 dashboard tiles wired to real DB. IST timezone fix on `todayEvents` range. Mock fallbacks killed: `displayEvents` dummy (Today), Upcoming Dates dummy empty-state, Recent Documents hardcoded array (→ honest empty state, Phase 6 wires to real Document table), Active Cases hardcoded array (→ real `allCases` filtered `ACTIVE`, capped 3, "View all" → /cases). Next Up scoped to future-today events; "In Xm" chip via `formatDistanceToNow` (server-rendered, accepted stale-by-minutes tradeoff). `nextHearingDate` per case via `groupBy` on `CalendarEvent` (`Case.nextHearingDate` column is form-driven schema debt — see §10 Carry-forward). Date utils extraction: `endOfTodayIST` + `istDateKey` + `formatIndianDate` added to `src/lib/date.ts`, 3 consumers switched to shared import. |
-| **5.2 (Finances real data)** | ⏸️ Next | Phase 5 continuation — kill `FinancesClient` mock, wire to real fee tracking. Per handoff §5. |
-| 5.2–9 | ⏸️ Sequenced | Finances real data → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
+| **5.2 (Finances)** | ✅ Recon | **Recon revealed no FinancesClient mock to kill — data pipeline already live.** Rescoped into 5.2a (P0 hardening) + 5.2b (polish). |
+| **5.2a (Payment RLS verify + header bug)** | ✅ Done | **PR #24 (main @ `7ac0157`).** `verify-phase52-finances-rls.ts` (+5 Payment RLS assertions: SELECT iso + cross-user SELECT/UPDATE/DELETE fail-closed + INSERT mismatched-userId blocked by `WITH CHECK`). Header "Log Payment" button `disabled={cases.length === 0}` (was silently no-op when zero cases). Deferred to 5.2b: server-side aggregation, `formatINR` → `src/lib/format.ts`, `revalidatePath` on payment mutations, Zod on financeActions (or subsumed by 3.2.6). |
+| **5.2b (Finances polish)** | ⏸️ Next | Server-side aggregation (move `totalExpected`/`totalReceived`/`forgottenDues` server-side); `formatINR` extraction to `src/lib/format.ts` (third-consumer trigger); `revalidatePath` on `createPayment`/`deletePayment`; Zod on financeActions if 3.2.6 doesn't subsume. |
+| 5.2b–9 | ⏸️ Sequenced | Finances polish (5.2b) → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
 
 ---
 
