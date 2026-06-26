@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-26 (Phase 4 A.7 closed — task-edit modal; main @ `4421565`)
+**Last updated:** 2026-06-26 (5.1 closed — dashboard real data; main @ `5c505df`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,7 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `4421565` (Phase 4 A.7 — task-edit modal — PR #22)
+- **Current main sha:** `5c505df` (Phase 5.1 — dashboard real data — PR #23)
 
 ---
 
@@ -175,7 +175,8 @@ makes unscoped `deleteMany` match zero rows silently.
 | `src/actions/noteActions.ts` | ✅ Migrated (upgraded 4-C.1) | New in 3.2 — split from caseActions. **4-B:** both `createNote` and `deleteNote` upgraded `getServerScopedPrisma` → `withServerUserContext` for atomic note↔event linkage. `createNote` auto-creates linked `CalendarEvent` inline (NOT via `createCalendarEvent` action) when category=`"Next Date"` AND `nextDate >= startOfTodayIST()`. `deleteNote` cascades event-then-note in one tx. **4-C.1:** `updateNote` added — Zod + superRefine (conditional `nextDate`), owner-chain `case.findFirst` → `note.findFirst`, 8-row transition matrix for note↔CalendarEvent re-sync (update/delete/create/no-op per old-cat × new-cat × date future-ness). `verify-phase4-c1-update-rls.ts` deferred (+3 assertions — next RLS hardening batch). |
 | `src/actions/taskActions.ts` | ⚠️ Partial | `listAllTasks` 3.2-compliant additive (4-A.2). Case-task helpers scoped. Own task ops (legacy L28–150) still use bare `prisma`. Full contract uplift sequenced to **3.2.6**. **4-A.7:** updateCaseTask UI wiring — added `revalidatePath(\`/cases/${caseId}\`)` at L362 (fixes stale SSR in CaseDetailClient after task edit; /tasks revalidate retained). |
 | `src/actions/calendarActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped patterns. `getCasesForSelect` extended with `caseNumber` in 4-A.2. `createCalendarEvent` gained optional `noteId?: string` param in 4-B (backward-compat; only future explicit callers exercise it — `createNote` issues `tx.calendarEvent.create` directly inline for atomicity). **No Zod/Result yet** — contract uplift sequenced to 3.2.6. `where: { userId }` retained as defence-in-depth. |
-| `src/actions/dashboardActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` + 6-query `Promise.all` → single `withServerUserContext` interactive tx with sequential awaits. Page-level duplicate queries collapsed; `dashboard/page.tsx` now thin consumer of `getDashboardData()`. Contract uplift sequenced to 3.2.6. |
+| `src/actions/dashboardActions.ts` | ✅ Migrated (5.1) | Single-shot reads for dashboard tiles: `todayEvents` + `upcomingEvents` (`CalendarEvent`, IST-aware range via `startOfTodayIST`/`endOfTodayIST`), `pendingTasks` (`Task`, `status=pending`, `take:10`), `allCases` with `nextHearingDate` (computed via `groupBy` on `CalendarEvent` — `Case.nextHearingDate` column is form-driven schema debt, routed around), `totalCases` (`status=ACTIVE`), `totalTasks` (`status=pending`). Owner-scoped via `requireUserId()`. Mock fallbacks killed. Contract uplift (Zod/Result) sequenced to 3.2.6. |
+| `src/lib/date.ts` | ✅ Shared util (5.1) | `startOfTodayIST` (pre-5.1) + `endOfTodayIST`, `istDateKey`, `formatIndianDate` extracted 5.1 (third-consumer trigger fired). `istDateKey` output changed `DD/MM/YYYY` → `YYYY-MM-DD`; all 6 consumer sites verified key-use only (no render uses), swap invisible at runtime. `formatIndianDate` uses `day:"numeric"` + explicit `Asia/Kolkata` timezone. |
 | `src/actions/financeActions.ts` | ✅ Scoped (3.2.5b-i) | Bare `prisma` → scoped; `assertCaseAccess` helper inlined into `createPayment`'s `withServerUserContext` tx. Contract uplift sequenced to 3.2.6. |
 | `src/actions/settingsActions.ts` | ✅ Full contract (3.2.5b-ii + 3.0.1c + 3.0.1e) | All five functions on 3.2 contract. |
 | `src/auth.ts` + signup actions | ✅ Migrated (3.2.5a) | Use `prisma.$queryRaw` → `auth_find_user_by_email` / `auth_create_user` SECURITY DEFINER RPCs. |
@@ -317,6 +318,8 @@ Every Claude Code prompt for Lawdger must include:
 - **`prisma migrate dev` broken** (shadow DB issue from migration `20260609030200`). All future schema changes use `migrate diff` + `migrate deploy`, OR the Supabase MCP `execute_sql` + manual `_prisma_migrations` INSERT detour documented in PR #16.
 - **`prisma migrate resolve --applied` hangs under MCP / non-interactive session.** Workaround: run directly in terminal, or hand-author + register via `execute_sql`.
 - Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — cleanup pending.
+- **`Case.nextHearingDate` schema debt** — column is form-driven only (written on case create/update via form), NOT synced with `CalendarEvent` mutations (no write in `calendarActions` create/update/delete, no write in `noteActions` auto-event create from "Next Date" or 4-C.1 re-sync, no write on case-delete cascade). Phase 5.1 routed around via `groupBy` on `CalendarEvent`. Resolve in schema-cleanup pass: either (i) drop column + remove from case form, OR (ii) backfill on every calendar mutation path.
+- **Recent Documents real wiring deferred to Phase 6** — Phase 5.1 ships honest empty state. Wire to `Document` table when Inbox/upload flow lands.
 - Dead `claude/*` branches — prune pending.
 
 ---
@@ -371,8 +374,9 @@ Every Claude Code prompt for Lawdger must include:
 | **4-B.3** | ✅ Done | **PR #20 (main @ `cdf0600`).** UI polish for auto-event pipeline. (a) `formatChipTime()` helper in CalendarClient — UTC-midnight detection → "All day" chip in Day + Month views; timed manual events unaffected. (b) Note-delete UI affordance in CaseDetailClient — hover trash icon + inline confirm overlay + `deleteNote` cascade wired; `errorMsg` banner on failure. (c) Next Date date hint — `nextDate` field added to `TimelineItem` note variant; renders `"Next Date · DD Mon YYYY"` or `"· date not set"` (muted) next to category badge. Storage stays UTC midnight — display-layer fix only. Carry-forward: (1) past-date warning banner deferred to global toast/notification phase; (2) `updateNote` + note-edit UI — standalone micro-PR; (3) 4-A.7 task-edit dialog — standalone post-B.3; (4) Day view all-day row — TIME_SLOTS 9AM–5PM hardcoded, all-day events invisible; fix in Calendar polish phase. |
 | **4-C.1** | ✅ Done | **PR #21 (main @ `dcfb4f9`).** `updateNote` server action + note-edit modal. Zod + superRefine, owner-chain pre-flight, 8-row note↔event transition matrix (update/delete/create/no-op). Pencil affordance (hover, left of trash). No schema changes. Carry-forward: `verify-phase4-c1-update-rls.ts` (+3 assertions — next RLS batch); past-date warning banner (post-toast layer). |
 | **4-A.7** | ✅ Done | **PR #22 (main @ `4421565`).** Task-edit modal in CaseDetailClient — Pencil affordance (hover, left of trash, mirrors 4-C.1). 4 editable fields: description, assignee, dueDate, isUrgent. `updateCaseTask` L362 revalidate patch (+`/cases/${caseId}`) — fixes stale SSR. Local Task type widened with assignee. Append-only on UI (create-task modal untouched). Carry-forward: assignee field in create-task modal (micro-PR); `verify-phase4-a7-update-task-rls.ts` (next RLS batch). |
-| **Dashboard real data** | ⏸️ Next | Phase 5 start — kill DashboardClient mock, wire to `getDashboardData()` over real DB. Sonnet/Opus TBD based on blast radius (likely Opus). |
-| 5–9 | ⏸️ Sequenced | Dashboard real data → Finances → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
+| **5.1 (Dashboard real data)** | ✅ Done | **PR #23 (main @ `5c505df`).** All 4 dashboard tiles wired to real DB. IST timezone fix on `todayEvents` range. Mock fallbacks killed: `displayEvents` dummy (Today), Upcoming Dates dummy empty-state, Recent Documents hardcoded array (→ honest empty state, Phase 6 wires to real Document table), Active Cases hardcoded array (→ real `allCases` filtered `ACTIVE`, capped 3, "View all" → /cases). Next Up scoped to future-today events; "In Xm" chip via `formatDistanceToNow` (server-rendered, accepted stale-by-minutes tradeoff). `nextHearingDate` per case via `groupBy` on `CalendarEvent` (`Case.nextHearingDate` column is form-driven schema debt — see §10 Carry-forward). Date utils extraction: `endOfTodayIST` + `istDateKey` + `formatIndianDate` added to `src/lib/date.ts`, 3 consumers switched to shared import. |
+| **5.2 (Finances real data)** | ⏸️ Next | Phase 5 continuation — kill `FinancesClient` mock, wire to real fee tracking. Per handoff §5. |
+| 5.2–9 | ⏸️ Sequenced | Finances real data → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
 
 ---
 
