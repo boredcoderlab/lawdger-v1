@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import LawdgerLogo from "@/components/ui/LawdgerLogo";
 import {
-  ChevronRight, Bell, Send, ChevronLeft, FileText, Download
+  ChevronRight, Bell, Send, ChevronLeft
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,7 @@ type CaseItem = {
   title: string;
   clientName: string | null;
   status: string;
+  nextHearingDate: Date | null;
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -50,6 +52,11 @@ export default function DashboardClient({
   totalCases: number;
   totalTasks: number;
 }) {
+  const now = new Date();
+  const futureTodayEvents = todayEvents.filter(e => new Date(e.hearingDate) >= now);
+  const nextUp = futureTodayEvents[0] ?? null;
+  const onRadar = futureTodayEvents.slice(1, 4);
+
   const [query, setQuery] = useState("");
   const [chatQuery, setChatQuery] = useState("");
 
@@ -62,13 +69,6 @@ export default function DashboardClient({
     const matchedTasks = pendingTasks.filter(t => t.description.toLowerCase().includes(q));
     return { matchedCases, matchedEvents, matchedTasks };
   }, [query, allCases, todayEvents, upcomingEvents, pendingTasks]);
-
-  // Dummy events to fill the timeline if empty, so it looks like the mockup
-  const displayEvents = todayEvents.length > 0 ? todayEvents : [
-    { id: "dummy1", title: "Court Appearance", case: { title: "Cosx appearances" }, hearingDate: new Date(new Date().setHours(9, 0)) },
-    { id: "dummy2", title: "Client Consultation", case: { title: "" }, hearingDate: new Date(new Date().setHours(14, 0)) },
-    { id: "dummy3", title: "Deadline Reminders", case: { title: "Filings by 5:00 PM" }, hearingDate: new Date(new Date().setHours(16, 0)) }
-  ];
 
   return (
     <div className="relative flex flex-col flex-1 p-4 lg:px-8 lg:py-6 h-full overflow-hidden bg-background text-foreground font-sans z-0">
@@ -112,22 +112,22 @@ export default function DashboardClient({
               {/* Left: Next Up (Hero Event) */}
               <div className="flex flex-col">
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">Next Up</h3>
-                {displayEvents.length > 0 ? (
+                {nextUp ? (
                   <div className="flex flex-col p-6 rounded-[1.5rem] bg-lawdger-espresso dark:bg-[var(--surface-3)] text-lawdger-cream dark:text-foreground border border-white/5 dark:border-[rgba(255,240,220,0.06)] shadow-xl relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02]">
                     <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
                       <Bell className="w-16 h-16" />
                     </div>
                     <div className="relative z-10">
                       <span className="chip chip-neutral tracking-wider uppercase mb-4">
-                        In 45 mins
+                        {formatDistanceToNow(new Date(nextUp.hearingDate), { addSuffix: true })}
                       </span>
-                      <h4 className="text-[1.3rem] font-bold leading-tight mb-1">{displayEvents[0].title}</h4>
-                      <p className="text-[14px] text-lawdger-cream/80 dark:text-white/80 mb-6">{displayEvents[0].case.title}</p>
-                      
+                      <h4 className="text-[1.3rem] font-bold leading-tight mb-1">{nextUp.title}</h4>
+                      <p className="text-[14px] text-lawdger-cream/80 dark:text-white/80 mb-6">{nextUp.case.title}</p>
+
                       <div className="flex items-center justify-between mt-auto">
                         <div className="flex flex-col">
                           <span className="text-[12px] text-lawdger-cream/60 dark:text-white/60">Time</span>
-                          <span className="text-[16px] font-bold">{format(new Date(displayEvents[0].hearingDate), "h:mm a")}</span>
+                          <span className="text-[16px] font-bold">{format(new Date(nextUp.hearingDate), "h:mm a")}</span>
                         </div>
                         <ChevronRight className="h-6 w-6 opacity-70 group-hover:opacity-100 transition-opacity" />
                       </div>
@@ -135,7 +135,7 @@ export default function DashboardClient({
                   </div>
                 ) : (
                   <div className="flex-1 flex items-center justify-center rounded-[1.5rem] border-2 border-dashed border-foreground/20 text-foreground/60 p-6 text-center">
-                    Nothing pressing right now.
+                    No more events today.
                   </div>
                 )}
               </div>
@@ -144,7 +144,7 @@ export default function DashboardClient({
               <div className="flex flex-col">
                 <h3 className="text-[1.1rem] font-bold text-foreground mb-4">On the Radar</h3>
                 <div className="flex flex-col gap-3">
-                  {displayEvents.slice(1, 4).map((ev, idx) => (
+                  {onRadar.map((ev) => (
                     <div key={ev.id} className="flex items-center gap-4 p-3 rounded-2xl card-interactive bg-white/95 dark:bg-[var(--surface-2)] hover:bg-white dark:hover:bg-[var(--surface-3)] border border-white/50 dark:border-[var(--border)] shadow-sm hover:shadow-md transition-all cursor-pointer group">
                       <div className="flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-accent dark:bg-[var(--surface-2)] text-accent-foreground dark:text-[var(--gold-text)] font-bold shrink-0 shadow-sm border border-white/60 dark:border-[var(--border)]">
                         <span className="text-[14px] leading-none">{format(new Date(ev.hearingDate), "h")}</span>
@@ -159,8 +159,8 @@ export default function DashboardClient({
                       <ChevronRight className="h-5 w-5 text-foreground opacity-40 group-hover:opacity-100 transition-opacity shrink-0" />
                     </div>
                   ))}
-                  
-                  {displayEvents.length <= 1 && (
+
+                  {onRadar.length === 0 && (
                     <p className="text-[13px] text-muted-foreground italic mt-2">No other items scheduled for today.</p>
                   )}
                 </div>
@@ -190,26 +190,7 @@ export default function DashboardClient({
 
             <div className="space-y-4">
               {upcomingEvents.length === 0 ? (
-                // Dummy data to match mockup perfectly
-                [
-                  { date: "Nov 1st", title: "Trial Start", sub: "Nov 1st" },
-                  { date: "Nov 2nd", title: "Coneping", sub: "Nov 2nd" },
-                  { date: "Nov 3rd", title: "Client Remining", sub: "Nov 23rd" }
-                ].map((ev, i) => (
-                  <div key={i} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 dark:hover:bg-foreground/5 p-1.5 -mx-2 rounded-xl transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex flex-col items-center justify-center rounded-[0.8rem] h-[52px] w-[50px] shadow-sm ${i === 0 ? 'bg-lawdger-espresso text-lawdger-cream dark:bg-[var(--surface-2)] dark:text-[var(--gold-text)]' : 'bg-card border-[1.5px] border-border text-foreground'}`}>
-                        <span className="text-[11px] font-medium leading-tight">Nov</span>
-                        <span className="text-[14px] font-bold leading-tight">{i + 1}{i === 0 ? 'st' : i === 1 ? 'nd' : 'rd'}</span>
-                      </div>
-                      <div>
-                        <h4 className="text-[1rem] font-bold text-foreground group-hover:opacity-80 transition-opacity">{ev.title}</h4>
-                        <p className="text-[12px] text-muted-foreground">{ev.sub}</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                ))
+                <p className="text-[13px] text-muted-foreground italic">No upcoming dates.</p>
               ) : (
                 upcomingEvents.slice(0, 3).map((ev, i) => (
                   <div key={ev.id} className="flex items-center justify-between group cursor-pointer hover:bg-black/5 dark:hover:bg-foreground/5 p-1.5 -mx-2 rounded-xl transition-colors">
@@ -241,29 +222,10 @@ export default function DashboardClient({
               </button>
             </div>
 
-            <div className="space-y-3 overflow-y-auto min-h-0 pr-2">
-              {/* Dummy data for mockup presentation */}
-              {[
-                { title: "Bail Petition - Sharma", type: "PDF", size: "2.4 MB", time: "2 hrs ago" },
-                { title: "Affidavit of Evidence", type: "DOCX", size: "1.1 MB", time: "5 hrs ago" },
-                { title: "Court Order - Case 102", type: "PDF", size: "850 KB", time: "Yesterday" },
-                { title: "Legal Notice Draft", type: "DOCX", size: "14 KB", time: "Yesterday" }
-              ].map((doc, i) => (
-                <div key={i} className="flex items-center justify-between group cursor-pointer border-b border-border last:border-0 pb-3 last:pb-0">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-background/50 text-foreground group-hover:bg-background transition-colors shrink-0">
-                      <FileText className="w-5 h-5 opacity-70" />
-                    </div>
-                    <div className="pr-2">
-                      <h4 className="text-[14px] font-bold text-foreground truncate max-w-[150px] leading-tight">{doc.title}</h4>
-                      <p className="text-[12px] text-muted-foreground mt-0.5">{doc.type} • {doc.time}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-black/5 dark:hover:bg-foreground/8 transition-colors shrink-0">
-                    <Download className="h-4 w-4 text-foreground opacity-40 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                </div>
-              ))}
+            <div className="flex-1 flex items-center justify-center text-center px-4">
+              <p className="text-[13px] text-muted-foreground italic">
+                No documents yet — upload via Inbox (coming soon).
+              </p>
             </div>
           </div>
           
@@ -277,31 +239,42 @@ export default function DashboardClient({
         <div className="w-[65%] rounded-3xl bg-lawdger-espresso dark:bg-[#2C2520] border border-white/5 dark:border-[rgba(255,240,220,0.04)] p-6 shadow-xl dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,240,220,0.08)] min-h-[220px] flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <h2 className="text-[1.3rem] font-bold text-lawdger-cream dark:text-white">Active Cases</h2>
-            <button className="text-lawdger-cream dark:text-white opacity-50 hover:opacity-100 transition-opacity">
-              <span className="text-[1.5rem] leading-none tracking-widest pb-3">...</span>
-            </button>
+            <Link href="/cases" className="text-[12px] text-lawdger-cream/70 dark:text-white/70 hover:text-white transition-opacity">
+              View all →
+            </Link>
           </div>
 
           <div className="space-y-2 mt-4">
-            {/* Quick Actions / Active Cases List mimicking mockup */}
-            {[
-              { title: "Court Appearance #1", time: "9:00 AM - 12:00 PM", status: "Discovery Phase", dim: true },
-              { title: "Client Consultation #2", time: "2:00 PM - 2:00 PM", status: "Discovery Phase", dim: true },
-              { title: "Client Appearance #3", time: "3:00 PM - 5:00 PM", status: "Awaiting Verdict", dim: false }
-            ].map((item, i) => (
-              <div key={i} className="flex items-center justify-between bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl p-2 cursor-pointer group card-interactive hover:bg-lawdger-cream/15 dark:hover:bg-foreground/10 transition-colors duration-200">
-                <div>
-                  <h4 className="text-[14px] font-bold text-lawdger-cream dark:text-white group-hover:text-white">{item.title}</h4>
-                  <p className="text-[12px] text-lawdger-cream/50 dark:text-white/50">{item.time}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className={`chip-on-dark ${item.dim ? '' : 'is-attention'}`}>
-                    {item.status}
-                  </span>
-                  <ChevronRight className="h-4 w-4 text-lawdger-cream/50 dark:text-white/50 group-hover:text-white" />
-                </div>
-              </div>
-            ))}
+            {(() => {
+              const activeCases = allCases.filter(c => c.status === "ACTIVE").slice(0, 3);
+              if (activeCases.length === 0) {
+                return (
+                  <p className="text-[13px] text-lawdger-cream/60 dark:text-white/60 italic px-2">
+                    No active cases.
+                  </p>
+                );
+              }
+              return activeCases.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/cases/${c.id}`}
+                  className="flex items-center justify-between bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl p-2 cursor-pointer group card-interactive hover:bg-lawdger-cream/15 dark:hover:bg-foreground/10 transition-colors duration-200"
+                >
+                  <div>
+                    <h4 className="text-[14px] font-bold text-lawdger-cream dark:text-white group-hover:text-white">{c.title}</h4>
+                    <p className="text-[12px] text-lawdger-cream/50 dark:text-white/50">
+                      {c.nextHearingDate
+                        ? `Next hearing: ${format(new Date(c.nextHearingDate), "d MMM, h:mm a")}`
+                        : "No upcoming hearing"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="chip-on-dark">{c.status}</span>
+                    <ChevronRight className="h-4 w-4 text-lawdger-cream/50 dark:text-white/50 group-hover:text-white" />
+                  </div>
+                </Link>
+              ));
+            })()}
           </div>
         </div>
 
