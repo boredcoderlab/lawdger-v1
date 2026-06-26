@@ -24,6 +24,7 @@ import {
 import { CaseStatus, MatterType } from "@prisma/client";
 import { CASE_TYPES, type CaseType } from "@/lib/case-constants";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
+import { formatIndianDate } from "@/lib/date";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -75,13 +76,6 @@ const titleCaseStatus = (s: Status) =>
 
 const toDateInputValue = (d: Date | null) =>
   d ? new Date(d).toISOString().split("T")[0] : "";
-
-const formatIndianDate = (d: Date) =>
-  new Date(d).toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
 
 // ── Component ────────────────────────────────────────────────────────────────
 

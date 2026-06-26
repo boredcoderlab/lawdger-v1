@@ -3,17 +3,9 @@ import { listAllTasks, type TaskRow } from "@/actions/taskActions";
 import { getCasesForSelect } from "@/actions/calendarActions";
 import { getServerUser } from "@/lib/session";
 import { bucketTask } from "@/lib/task-bucket";
+import { istDateKey } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
-
-function istDateKey(d: Date): string {
-  return new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
-}
 
 export default async function TasksPage() {
   const user = await getServerUser();

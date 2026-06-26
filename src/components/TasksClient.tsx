@@ -34,6 +34,7 @@ import {
   type UpdateCaseTaskInput,
 } from "@/actions/taskActions";
 import { bucketTask } from "@/lib/task-bucket";
+import { istDateKey } from "@/lib/date";
 
 // ──────────────────────────────────────────────────────────────────────────
 // Types
@@ -89,15 +90,6 @@ function dueClasses(d: Date | null): string {
 
 function caseChipLabel(c: { title: string; caseNumber: string | null }) {
   return c.caseNumber ? `${c.title} · ${c.caseNumber}` : c.title;
-}
-
-function istDateKey(d: Date): string {
-  return new Intl.DateTimeFormat("en-IN", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(d);
 }
 
 // ──────────────────────────────────────────────────────────────────────────
