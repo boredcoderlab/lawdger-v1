@@ -65,7 +65,8 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
         pageTitle="Finances"
         headerAction={
           <button onClick={() => setModalCaseId(cases[0]?.id ?? null)}
-            className="btn-gold flex items-center gap-2 px-7 py-3 rounded-full font-bold tracking-widest uppercase text-[12px]">
+            disabled={cases.length === 0}
+            className="btn-gold flex items-center gap-2 px-7 py-3 rounded-full font-bold tracking-widest uppercase text-[12px] disabled:opacity-60">
             <Plus className="h-4 w-4" /> Log Payment
           </button>
         }
