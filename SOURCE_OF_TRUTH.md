@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-27 (Audit reconciliation @ 5.2b — 37 new findings + 4 §10 under-counts corrected; closed @ `082affb`)
+**Last updated:** 2026-06-27 (post-PR1 flip — N19/N20/N21 closed @ `12bbc3a`; PR2 next)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,7 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `082affb` (Phase 5.2b — server-side finances aggregation + formatINR extraction — PR #25)
+- **Current main sha:** `12bbc3a` (PR1 — auth boundary cleanup + transcribe 401 fix — PR #26)
 
 ---
 
@@ -360,9 +360,9 @@ Every Claude Code prompt for Lawdger must include:
 - **N18** — DashboardClient `now = new Date()` in fn body, re-evaluates every render; minor — post-3.2.6 component polish
 
 **Auth boundary**
-- **N19** — No `middleware.ts`; `auth.config.ts` `authorized()` callback is dead code with phantom matcher comment — PR1
-- **N20** — `/sandbox` unprotected; reachable logged-out; renders auth-context-assuming chrome — PR1 (gate or strip)
-- **N21** — `/api/voice/transcribe` returns 500 on unauth (`requireUserId` throws); `/api/chat` returns 401 JSON; semantic mismatch — PR1
+- **N19** — No `middleware.ts`; `auth.config.ts` `authorized()` callback is dead code with phantom matcher comment — ✅ PR #26 @ 12bbc3a
+- **N20** — `/sandbox` unprotected; reachable logged-out; renders auth-context-assuming chrome — ✅ PR #26 @ 12bbc3a
+- **N21** — `/api/voice/transcribe` returns 500 on unauth (`requireUserId` throws); `/api/chat` returns 401 JSON; semantic mismatch — ✅ PR #26 @ 12bbc3a
 - **N22** — No rate-limiting on `/api/voice/transcribe` or `/api/chat` (both spend Gemini credits) — Phase 9
 
 **Voice + LLM**
@@ -442,8 +442,8 @@ Every Claude Code prompt for Lawdger must include:
 | **5.2 (Finances)** | ✅ Recon | **Recon revealed no FinancesClient mock to kill — data pipeline already live.** Rescoped into 5.2a (P0 hardening) + 5.2b (polish). |
 | **5.2a (Payment RLS verify + header bug)** | ✅ Done | **PR #24 (main @ `7ac0157`).** `verify-phase52-finances-rls.ts` (+5 Payment RLS assertions: SELECT iso + cross-user SELECT/UPDATE/DELETE fail-closed + INSERT mismatched-userId blocked by `WITH CHECK`). Header "Log Payment" button `disabled={cases.length === 0}` (was silently no-op when zero cases). Deferred to 5.2b: server-side aggregation, `formatINR` → `src/lib/format.ts`, `revalidatePath` on payment mutations, Zod on financeActions (or subsumed by 3.2.6). |
 | **5.2b (Finances polish)** | ✅ Done | **PR #25 (main @ `082affb`).** Server-side aggregation in `getFinancesData` — returns `{ totals, forgottenDues, caseRows }` with per-row scalars, server-derived status (`FinanceStatus` union literal `"No Fee Set" \| "Paid" \| "Partial" \| "Unpaid"`), and fresh `Date.now()` per call (kills L28 `useState(() => Date.now())` captured-at-mount bug). `STAGNANT_DAYS = 60` hoisted to module const. `formatINR` extracted to `src/lib/format.ts` (third-consumer trigger fired); 4 call sites swapped (FinancesClient ×8, CaseDetailClient ×1, chat/route ×2). Single source of truth — `toLocaleString("en-IN")` exists only in `format.ts`. Existing `revalidatePath("/finances")` on all 3 mutators preserved. Zod / Result envelope / Payment.amount→paise / Payment.status enum deferred to 3.2.6 per scope discipline. All 5-step manual smoke walk PASS (fee edit `"No Fee Set"`→`"Unpaid"` / payment log → tiles `₹50k/₹20k/₹30k` + badge→`"Partial"` / 2nd payment → expand history sorted desc `[₹5,000, ₹20,000]` / forgotten-dues empty-state). Smoke 28/28 unchanged (no RLS surface touched). |
-| PR1 | ⏸️ Next | Auth boundary cleanup (N19/N20/N21) — strip `authorized()` dead code, gate-or-strip `/sandbox`, fix transcribe 401 |
-| PR2 | ⏸️ Sequenced | VoiceFAB strip (N23) — remove decorative FAB; voice lives on `/chat` only until rewire |
+| PR1 | ✅ Done | **PR #26 (main @ `12bbc3a`).** Deleted `src/proxy.ts` (phantom middleware, misnamed). Stripped `authorized()` callback + matcher comment from `auth.config.ts`. Deleted `/sandbox` route entirely (static demo, zero nav refs). `/api/voice/transcribe` now returns 401 JSON on unauth (mirrors `/api/chat`). Layout-guard at `(lawdger)/layout.tsx` remains sole page-route auth boundary. N19/N20/N21 closed. |
+| PR2 | ⏸️ Next | VoiceFAB strip (N23) — remove decorative FAB; voice lives on `/chat` only until rewire |
 | PR3 | ⏸️ Sequenced | LLM tool migration + `executeTool` Zod (N4/N24/N25/N26/N28/N10) — migrate to 3.2 `taskActions`, fix `caseId` bug, Zod-per-tool, add `caseType` to `create_case` |
 | PR4 | ⏸️ Sequenced | `revalidatePath` cross-table gap closure (N3) — invalidate downstream paths on mutations |
 | PR5 | ⏸️ Sequenced | User RLS verify script (N6) — model on `verify-phase52-finances-rls.ts`; wire into `smoke:rls-runtime` |
