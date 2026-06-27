@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-27 (5.2a closed — payment rls verify + header empty-state fix; main @ `7ac0157`)
+**Last updated:** 2026-06-27 (5.2b closed — server-side finances aggregation + formatINR extraction; main @ `082affb`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,7 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `7ac0157` (Phase 5.2a — payment rls verify + header empty-state fix — PR #24)
+- **Current main sha:** `082affb` (Phase 5.2b — server-side finances aggregation + formatINR extraction — PR #25)
 
 ---
 
@@ -325,8 +325,7 @@ Every Claude Code prompt for Lawdger must include:
 - **`Case.nextHearingDate` schema debt** — column is form-driven only (written on case create/update via form), NOT synced with `CalendarEvent` mutations (no write in `calendarActions` create/update/delete, no write in `noteActions` auto-event create from "Next Date" or 4-C.1 re-sync, no write on case-delete cascade). Phase 5.1 routed around via `groupBy` on `CalendarEvent`. Resolve in schema-cleanup pass: either (i) drop column + remove from case form, OR (ii) backfill on every calendar mutation path.
 - **Recent Documents real wiring deferred to Phase 6** — Phase 5.1 ships honest empty state. Wire to `Document` table when Inbox/upload flow lands.
 - **`Payment.case` lacks `onDelete` cascade clause** — Prisma default Restrict. Deleting a Case with payments throws FK violation. Resolve with case-delete flow when that ships.
-- **`FinancesClient.tsx` L28 `useState(() => Date.now())`.** `now` captured at mount; stale on long-lived sessions (affects `forgottenDues` daysInactive computation). Minor — resolves when 5.2b moves `forgottenDues` computation server-side.
-- **`forgottenDues` 60-day threshold hardcoded in `FinancesClient`.** Codify as `STAGNANT_DAYS` const when moving server-side at 5.2b.
+- **`CaseDetailClient.tsx` `value={info.agreedFee ? formatINR(parseFloat(info.agreedFee)) : null}`.** `info.agreedFee` is `string` from Prisma `Float?` serialization through this code path (form-state typing); `parseFloat` bridge before `formatINR` is type-debt — should be `number | null` end-to-end. Defer to **Phase 3.2.6** contract uplift.
 - **`verify-phase52-finances-rls.ts` A5 cosmetic.** `insertErrMsg` logs as empty string due to Prisma error string leading newline (`e.message.split("\n")[0]` returns `""`). Assertion correctness unaffected. Optional fix: `.trim()` before split.
 - Dead `claude/*` branches — prune pending.
 
@@ -385,8 +384,8 @@ Every Claude Code prompt for Lawdger must include:
 | **5.1 (Dashboard real data)** | ✅ Done | **PR #23 (main @ `5c505df`).** All 4 dashboard tiles wired to real DB. IST timezone fix on `todayEvents` range. Mock fallbacks killed: `displayEvents` dummy (Today), Upcoming Dates dummy empty-state, Recent Documents hardcoded array (→ honest empty state, Phase 6 wires to real Document table), Active Cases hardcoded array (→ real `allCases` filtered `ACTIVE`, capped 3, "View all" → /cases). Next Up scoped to future-today events; "In Xm" chip via `formatDistanceToNow` (server-rendered, accepted stale-by-minutes tradeoff). `nextHearingDate` per case via `groupBy` on `CalendarEvent` (`Case.nextHearingDate` column is form-driven schema debt — see §10 Carry-forward). Date utils extraction: `endOfTodayIST` + `istDateKey` + `formatIndianDate` added to `src/lib/date.ts`, 3 consumers switched to shared import. |
 | **5.2 (Finances)** | ✅ Recon | **Recon revealed no FinancesClient mock to kill — data pipeline already live.** Rescoped into 5.2a (P0 hardening) + 5.2b (polish). |
 | **5.2a (Payment RLS verify + header bug)** | ✅ Done | **PR #24 (main @ `7ac0157`).** `verify-phase52-finances-rls.ts` (+5 Payment RLS assertions: SELECT iso + cross-user SELECT/UPDATE/DELETE fail-closed + INSERT mismatched-userId blocked by `WITH CHECK`). Header "Log Payment" button `disabled={cases.length === 0}` (was silently no-op when zero cases). Deferred to 5.2b: server-side aggregation, `formatINR` → `src/lib/format.ts`, `revalidatePath` on payment mutations, Zod on financeActions (or subsumed by 3.2.6). |
-| **5.2b (Finances polish)** | ⏸️ Next | Server-side aggregation (move `totalExpected`/`totalReceived`/`forgottenDues` server-side); `formatINR` extraction to `src/lib/format.ts` (third-consumer trigger); `revalidatePath` on `createPayment`/`deletePayment`; Zod on financeActions if 3.2.6 doesn't subsume. |
-| 5.2b–9 | ⏸️ Sequenced | Finances polish (5.2b) → Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
+| **5.2b (Finances polish)** | ✅ Done | **PR #25 (main @ `082affb`).** Server-side aggregation in `getFinancesData` — returns `{ totals, forgottenDues, caseRows }` with per-row scalars, server-derived status (`FinanceStatus` union literal `"No Fee Set" \| "Paid" \| "Partial" \| "Unpaid"`), and fresh `Date.now()` per call (kills L28 `useState(() => Date.now())` captured-at-mount bug). `STAGNANT_DAYS = 60` hoisted to module const. `formatINR` extracted to `src/lib/format.ts` (third-consumer trigger fired); 4 call sites swapped (FinancesClient ×8, CaseDetailClient ×1, chat/route ×2). Single source of truth — `toLocaleString("en-IN")` exists only in `format.ts`. Existing `revalidatePath("/finances")` on all 3 mutators preserved. Zod / Result envelope / Payment.amount→paise / Payment.status enum deferred to 3.2.6 per scope discipline. All 5-step manual smoke walk PASS (fee edit `"No Fee Set"`→`"Unpaid"` / payment log → tiles `₹50k/₹20k/₹30k` + badge→`"Partial"` / 2nd payment → expand history sorted desc `[₹5,000, ₹20,000]` / forgotten-dues empty-state). Smoke 28/28 unchanged (no RLS surface touched). |
+| 6–9 | ⏸️ Sequenced | Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
 
 ---
 
