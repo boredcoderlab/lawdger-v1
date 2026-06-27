@@ -10,15 +10,17 @@ import { GoogleAIFileManager } from "@google/generative-ai/server";
 import { writeFileSync, unlinkSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { requireUserId } from "@/actions/requireUserId";
+import { auth } from "@/auth";
 
 const TRANSCRIBE_PROMPT = `Transcribe this audio exactly as spoken.
 The speaker may use English, Hindi, or a mix of both (Hinglish).
 Return ONLY the verbatim transcript — no summaries, no formatting, no extra text.`;
 
 export async function POST(req: NextRequest) {
-  // Auth check
-  await requireUserId();
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) {
