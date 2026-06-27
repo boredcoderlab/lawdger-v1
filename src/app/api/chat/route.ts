@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { llm } from "@/lib/llm";
+import { formatINR } from "@/lib/format";
 import type { LLMMessage, LLMTool } from "@/lib/llm/types";
 
 // ── Server actions used as tools ──────────────────────────────────────────────
@@ -443,7 +444,7 @@ async function executeTool(
       });
       return {
         result: "Payment recorded.",
-        action: `✅ Recorded payment: ₹${args.amount.toLocaleString("en-IN")}`,
+        action: `✅ Recorded payment: ${formatINR(args.amount)}`,
       };
     }
     case "update_task_status": {
@@ -481,7 +482,7 @@ async function executeTool(
       await updateCaseAgreedFee(args.caseId, args.agreedFee);
       return {
         result: "Agreed fee updated.",
-        action: `✅ Updated agreed fee to ₹${args.agreedFee.toLocaleString("en-IN")}`,
+        action: `✅ Updated agreed fee to ${formatINR(args.agreedFee)}`,
       };
     }
     case "delete_task": {

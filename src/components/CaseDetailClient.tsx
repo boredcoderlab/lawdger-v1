@@ -25,6 +25,7 @@ import { CaseStatus, MatterType } from "@prisma/client";
 import { CASE_TYPES, type CaseType } from "@/lib/case-constants";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 import { formatIndianDate } from "@/lib/date";
+import { formatINR } from "@/lib/format";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -464,7 +465,7 @@ export default function CaseDetailClient({
                   <InfoRow
                     icon={<IndianRupee className="h-4 w-4" />}
                     label="Agreed Fee Structure"
-                    value={info.agreedFee ? `₹${parseFloat(info.agreedFee).toLocaleString("en-IN")}` : null}
+                    value={info.agreedFee ? formatINR(parseFloat(info.agreedFee)) : null}
                   />
                   <MatterDetails caseData={caseData} />
                 </div>

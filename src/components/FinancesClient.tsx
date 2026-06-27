@@ -3,43 +3,31 @@
 import { useState } from "react";
 import Link from "next/link";
 import { IndianRupee, AlertCircle, Plus, Receipt, History, Send, X, Trash2, ChevronDown, ChevronUp } from "lucide-react";
-import { createPayment, updateCaseAgreedFee, deletePayment } from "@/actions/financeActions";
+import { createPayment, updateCaseAgreedFee, deletePayment, type FinancesData, type FinanceStatus } from "@/actions/financeActions";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
 import { format } from "date-fns";
+import { formatINR } from "@/lib/format";
 
-type Payment = { id: string; amount: number; status: string; dueDate: Date | null; createdAt: Date };
-type CaseWithPayments = {
-  id: string; title: string; clientName: string | null;
-  agreedFee: number | null; status: string;
-  payments: Payment[];
-};
-
-function fmt(n: number) {
-  return "₹" + n.toLocaleString("en-IN");
+function statusClass(status: FinanceStatus): string {
+  switch (status) {
+    case "Paid":
+      return "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20";
+    case "Partial":
+      return "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20";
+    case "Unpaid":
+      return "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20";
+    case "No Fee Set":
+      return "bg-black/5 dark:bg-white/5 text-muted-foreground border-white/10";
+  }
 }
 
-export default function FinancesClient({ cases }: { cases: CaseWithPayments[] }) {
+export default function FinancesClient({ totals, forgottenDues, caseRows }: FinancesData) {
   const [modalCaseId, setModalCaseId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editFeeId, setEditFeeId] = useState<string | null>(null);
   const [editFeeValue, setEditFeeValue] = useState("");
   const [expandedCaseId, setExpandedCaseId] = useState<string | null>(null);
-  const [now] = useState(() => Date.now());
-
-  const totalExpected = cases.reduce((s, c) => s + (c.agreedFee ?? 0), 0);
-  const totalReceived = cases.reduce((s, c) =>
-    s + c.payments.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount, 0), 0);
-  const totalBalance = totalExpected - totalReceived;
-
-  const forgottenDues = cases.filter((c) => {
-    const balance = (c.agreedFee ?? 0) - c.payments.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount, 0);
-    const lastActivity = c.payments.length > 0
-      ? Math.max(...c.payments.map((p) => new Date(p.createdAt).getTime()))
-      : 0;
-    const daysInactive = lastActivity ? Math.floor((now - lastActivity) / 86400000) : 999;
-    return balance > 0 && daysInactive > 60;
-  });
 
   const handleLogPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +52,8 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
       <PageLayout
         pageTitle="Finances"
         headerAction={
-          <button onClick={() => setModalCaseId(cases[0]?.id ?? null)}
-            disabled={cases.length === 0}
+          <button onClick={() => setModalCaseId(caseRows[0]?.id ?? null)}
+            disabled={caseRows.length === 0}
             className="btn-gold flex items-center gap-2 px-7 py-3 rounded-full font-bold tracking-widest uppercase text-[12px] disabled:opacity-60">
             <Plus className="h-4 w-4" /> Log Payment
           </button>
@@ -79,16 +67,16 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
             <div className="space-y-4 mb-8">
               <div className="bg-white/5 dark:bg-[var(--surface-2)] rounded-2xl p-5 border border-white/10">
                 <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 dark:text-muted-foreground mb-1">Total Agreed Fees</p>
-                <h3 className="font-serif text-[1.5rem] font-bold text-lawdger-cream dark:text-white">{fmt(totalExpected)}</h3>
+                <h3 className="font-serif text-[1.5rem] font-bold text-lawdger-cream dark:text-white">{formatINR(totals.expected)}</h3>
               </div>
               <div className="flex gap-4">
                 <div className="flex-1 bg-green-500/10 rounded-2xl p-5 border border-green-500/20">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-green-400 mb-1">Total Received</p>
-                  <h3 className="font-serif text-[1.4rem] font-bold text-green-400">{fmt(totalReceived)}</h3>
+                  <h3 className="font-serif text-[1.4rem] font-bold text-green-400">{formatINR(totals.received)}</h3>
                 </div>
                 <div className="flex-1 bg-red-500/10 rounded-2xl p-5 border border-red-500/20">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-red-400 mb-1">Outstanding</p>
-                  <h3 className="font-serif text-[1.4rem] font-bold text-red-400">{fmt(Math.max(0, totalBalance))}</h3>
+                  <h3 className="font-serif text-[1.4rem] font-bold text-red-400">{formatINR(Math.max(0, totals.balance))}</h3>
                 </div>
               </div>
             </div>
@@ -106,20 +94,17 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                 {forgottenDues.length === 0 ? (
                   <p className="text-xs text-white/50 dark:text-muted-foreground font-medium">No stagnant dues. All good!</p>
                 ) : (
-                  forgottenDues.map((c) => {
-                    const balance = (c.agreedFee ?? 0) - c.payments.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount, 0);
-                    return (
-                      <div key={c.id} className="rounded-xl border border-red-500/10 bg-black/20 p-4">
-                        <p className="font-medium text-[13px] text-white truncate mb-2">{c.title}</p>
-                        <div className="flex justify-between items-center">
-                          <p className="text-sm font-bold text-red-400">{fmt(balance)}</p>
-                          <button title="Send Reminder" className="h-7 w-7 flex items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors">
-                            <Send className="h-3 w-3 ml-0.5" />
-                          </button>
-                        </div>
+                  forgottenDues.map((d) => (
+                    <div key={d.caseId} className="rounded-xl border border-red-500/10 bg-black/20 p-4">
+                      <p className="font-medium text-[13px] text-white truncate mb-2">{d.title}</p>
+                      <div className="flex justify-between items-center">
+                        <p className="text-sm font-bold text-red-400">{formatINR(d.balance)}</p>
+                        <button title="Send Reminder" className="h-7 w-7 flex items-center justify-center rounded-full bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors">
+                          <Send className="h-3 w-3 ml-0.5" />
+                        </button>
                       </div>
-                    );
-                  })
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -131,7 +116,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
         mainPaneContent={
           <div className="h-full overflow-y-auto scrollbar-hide p-10">
             <div className="h-full">
-              {cases.length === 0 ? (
+              {caseRows.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-60">
                   <div className="empty-medallion">
                     <Receipt className="h-8 w-8 text-lawdger-gold dark:text-[#D4AF37]" />
@@ -140,16 +125,9 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {cases.map((c) => {
-                    const received = c.payments.filter((p) => p.status === "paid").reduce((a, p) => a + p.amount, 0);
-                    const balance = (c.agreedFee ?? 0) - received;
-                    const statusLabel = !c.agreedFee ? "No Fee Set" : balance <= 0 ? "Paid" : received > 0 ? "Partial" : "Unpaid";
-                    const statusCls = statusLabel === "Paid" ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20"
-                      : statusLabel === "Partial" ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20"
-                      : statusLabel === "Unpaid" ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
-                      : "bg-black/5 dark:bg-white/5 text-muted-foreground border-white/10";
+                  {caseRows.map((c) => {
                     const isExpanded = expandedCaseId === c.id;
-                    const pct = c.agreedFee && c.agreedFee > 0 ? Math.min(100, Math.round((received / c.agreedFee) * 100)) : 0;
+                    const pct = c.agreedFee && c.agreedFee > 0 ? Math.min(100, Math.round((c.received / c.agreedFee) * 100)) : 0;
 
                     return (
                       <div key={c.id} className="surface-card surface-inner rounded-[1.5rem] bg-white/70 border border-white/50 shadow-sm overflow-hidden transition-all hover:shadow-md">
@@ -158,15 +136,15 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                           <Link href={`/cases/${c.id}`} className="font-serif text-[1.1rem] font-medium text-lawdger-cream hover:text-primary transition-colors">
                             {c.title}
                           </Link>
-                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-[9px] font-bold tracking-widest uppercase border ${statusCls}`}>
-                            {statusLabel}
+                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-[9px] font-bold tracking-widest uppercase border ${statusClass(c.status)}`}>
+                            {c.status}
                           </span>
                         </div>
 
                         {/* Case Details */}
                         <div className="p-6">
                           <div className="flex flex-wrap items-center justify-between gap-6 mb-6">
-                            
+
                             <div className="flex-1 min-w-[200px]">
                               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Agreed Fee</p>
                               {editFeeId === c.id ? (
@@ -181,7 +159,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                               ) : (
                                 <button onClick={() => { setEditFeeId(c.id); setEditFeeValue(String(c.agreedFee ?? "")); }}
                                   className="text-[18px] font-bold text-foreground hover:text-primary transition-colors flex items-center gap-2">
-                                  {c.agreedFee ? fmt(c.agreedFee) : <span className="text-sm text-muted-foreground">Set fee →</span>}
+                                  {c.agreedFee ? formatINR(c.agreedFee) : <span className="text-sm text-muted-foreground">Set fee →</span>}
                                 </button>
                               )}
                             </div>
@@ -189,15 +167,15 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                             <div className="flex items-center gap-8">
                               <div>
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-green-600 dark:text-green-400 mb-1">Received</p>
-                                <p className="text-[16px] font-bold text-green-600 dark:text-green-400">{fmt(received)}</p>
+                                <p className="text-[16px] font-bold text-green-600 dark:text-green-400">{formatINR(c.received)}</p>
                               </div>
                               <div className="w-px h-8 bg-black/10 dark:bg-white/40" />
                               <div>
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-red-500 mb-1">Balance</p>
-                                <p className="text-[16px] font-bold text-red-500">{fmt(Math.max(0, balance))}</p>
+                                <p className="text-[16px] font-bold text-red-500">{formatINR(Math.max(0, c.balance))}</p>
                               </div>
                             </div>
-                            
+
                             <div className="flex items-center gap-2">
                               <button onClick={() => setModalCaseId(c.id)}
                                 className="btn-ghost-gold flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full px-4 py-2 transition-colors">
@@ -225,11 +203,11 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                         {isExpanded && c.payments.length > 0 && (
                           <div className="bg-black/5 dark:bg-card/80 border-t border-black/5 dark:border-white/5 px-6 py-4 space-y-2">
                             <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mb-3">Payment History</p>
-                            {[...c.payments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((p) => (
+                            {c.payments.slice().sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map((p) => (
                               <div key={p.id} className="flex items-center justify-between group surface-inner bg-white/95 dark:bg-white/5 rounded-xl px-4 py-3 hover:bg-white dark:hover:bg-white/40 transition-colors">
                                 <div className="flex items-center gap-4">
                                   <span className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                                  <span className="text-[14px] font-bold text-foreground">{fmt(p.amount)}</span>
+                                  <span className="text-[14px] font-bold text-foreground">{formatINR(p.amount)}</span>
                                   <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5"><History className="w-3 h-3"/>{format(new Date(p.createdAt), "d MMM yyyy")}</span>
                                 </div>
                                 <button onClick={() => deletePayment(p.id)} className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100">
@@ -267,7 +245,7 @@ export default function FinancesClient({ cases }: { cases: CaseWithPayments[] })
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Case</label>
                 <select value={modalCaseId} onChange={(e) => setModalCaseId(e.target.value)}
                   className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary dark:focus:ring-[rgba(212,175,55,0.2)] shadow-sm appearance-none">
-                  {cases.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+                  {caseRows.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
                 </select>
               </div>
               <div>
