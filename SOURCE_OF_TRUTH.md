@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-27 (5.2b closed — server-side finances aggregation + formatINR extraction; main @ `082affb`)
+**Last updated:** 2026-06-27 (Audit reconciliation @ 5.2b — 37 new findings + 4 §10 under-counts corrected; closed @ `082affb`)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -299,6 +299,8 @@ Every Claude Code prompt for Lawdger must include:
 
 ## 10. Known Tech Debt
 
+**Reconciliation pass 2026-06-27**: 4 existing entries (L7/L8/S2/S12) expanded to reflect full debt class scope. 37 new findings (N1–N37) catalogued in subsection below. Audit report: `/tmp/AUDIT_REPORT_2026-06-27.md` (Sahil's machine, not committed).
+
 ### Larger debt (sequenced)
 
 - **Runtime RLS enforcement: ✅ LIVE (local) — Vercel cutover deferred to Phase 9.**
@@ -307,14 +309,14 @@ Every Claude Code prompt for Lawdger must include:
 - Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Sequenced to **Phase 3.2.6**.
 - `connection_limit` in `DATABASE_URL` stays at `5` under `lawdger_app`. Monitor post-cutover; bump to `10` if Prisma P2024 returns.
 - `next-pwa` installed but unconfigured. Decision deferred to platform phase.
-- **`Payment.amount: Float` → `Int` paise migration.** Float introduces FP rounding for currency. Resolve in **schema-cleanup pass** with destructive backfill (multiply by 100, cast to Int). Coordinated with `formatINR` extraction at 5.2b.
-- **`Payment.status: String` → `PaymentStatus` enum.** Currently free-text `"pending" | "paid"` with no DB-level constraint. Enum sequenced to **Phase 3.2.6** (financeActions contract uplift bundle).
+- **`Payment.amount` Float → Int paise + `Case.agreedFee` Float? → Int paise (sibling)** — destructive ×100 backfill, same migration window; both carry FP rounding risk. Resolve together in **schema-cleanup pass**.
+- **String-as-enum migration — `Payment.status`, `Case.caseType`, `Note.category`, `Task.status`, `Document.status`** — free-text fields with no DB-level constraint. Sequenced to **schema-cleanup pass** (Prisma enums); contract-side enforcement covered by **3.2.6**.
 - **`updateCaseAgreedFee` shape.** Uses `getServerScopedPrisma` + `updateMany` (fail-closed via where-clause, not owner-chain precheck). Functional but inconsistent with `withServerUserContext` + owner-check pattern used elsewhere. Uplift sequenced to **Phase 3.2.6**.
 
 ### Smaller debt — log + opportunistic
 
 - **`.env.local` `DIRECT_URL` on pooler 6543** (Sahil's IPv4-only home network). Forces Supabase MCP detour for schema migrations. Fix at **P9 cutover** via Supabase IPv4 add-on or session-pooler endpoint.
-- **dnd-kit deps in `package.json`** despite TasksClient rewrite dropping imports. Audit + prune at **P9 cleanup**.
+- **Unused runtime deps prune** — `@dnd-kit/{core,sortable,utilities}` + `next-pwa` — 4 deps with zero `src/` refs. Also `@types/bcryptjs` misplaced under `dependencies` (move to `devDependencies`). Resolve in **PR6** dep + token hygiene.
 - **Dark mode emulation via Chrome MCP** doesn't toggle Tailwind `.dark` class strategy. Out of scope until P9 or user-facing bug surfaces.
 - **User-table where-clause requirement:** going-forward rule — every new scoped query against User SHOULD include explicit `where: { id }` as defence-in-depth.
 - **`prisma/seed.ts` upsert with `update: {}`.** On re-seed, existing users' password never refreshes. One-line fix: change `update: {}` to `update: { password, name }`.
@@ -324,10 +326,65 @@ Every Claude Code prompt for Lawdger must include:
 - Stale worktree `.claude/worktrees/stoic-hamilton-d98127/` — cleanup pending.
 - **`Case.nextHearingDate` schema debt** — column is form-driven only (written on case create/update via form), NOT synced with `CalendarEvent` mutations (no write in `calendarActions` create/update/delete, no write in `noteActions` auto-event create from "Next Date" or 4-C.1 re-sync, no write on case-delete cascade). Phase 5.1 routed around via `groupBy` on `CalendarEvent`. Resolve in schema-cleanup pass: either (i) drop column + remove from case form, OR (ii) backfill on every calendar mutation path.
 - **Recent Documents real wiring deferred to Phase 6** — Phase 5.1 ships honest empty state. Wire to `Document` table when Inbox/upload flow lands.
-- **`Payment.case` lacks `onDelete` cascade clause** — Prisma default Restrict. Deleting a Case with payments throws FK violation. Resolve with case-delete flow when that ships.
+- **Zero `onDelete` clauses schema-wide** — every relation defaults to Restrict. App-layer cascades exist for Case (4 children) and Note (calendar event). User-delete will hit Restrict on all child relations. Resolve in **schema-cleanup pass** alongside enum + paise migrations.
 - **`CaseDetailClient.tsx` `value={info.agreedFee ? formatINR(parseFloat(info.agreedFee)) : null}`.** `info.agreedFee` is `string` from Prisma `Float?` serialization through this code path (form-state typing); `parseFloat` bridge before `formatINR` is type-debt — should be `number | null` end-to-end. Defer to **Phase 3.2.6** contract uplift.
 - **`verify-phase52-finances-rls.ts` A5 cosmetic.** `insertErrMsg` logs as empty string due to Prisma error string leading newline (`e.message.split("\n")[0]` returns `""`). Assertion correctness unaffected. Optional fix: `.trim()` before split.
 - Dead `claude/*` branches — prune pending.
+
+### Audit findings (2026-06-27)
+
+**Server-action contract drift**
+- **N1** — Four duplicate `Result<T>` definitions; no shared `@/lib/result` type — PR7 (3.2.6 Pillar A)
+- **N2** — Two auth helpers coexist (`requireUserId` throws / `getServerUser` redirects); split along legacy/3.2 boundary — PR7
+- **N3** — `revalidatePath` cross-table gaps systematic across `createCase`, `deleteCase`, `updateCaseAgreedFee`, `createPayment`, `deletePayment`, `createCaseTask`, `toggleCaseTaskStatus`, `deleteCaseTask` — PR4
+- **N4** — `taskActions.ts:56` `caseId as string` launders optional → string; runtime can write undefined cast to string — PR3
+- **N5** — `try/catch` + `console.error` swallowing in `updateNote` (noteActions L274) and `updateCaseTask` (taskActions L365) inconsistent with 25 other actions; sentinel strings `"NOT_FOUND"` / `"INTERNAL_ERROR"` inconsistent with human-readable siblings — PR7
+
+**RLS coverage**
+- **N6** — User table zero verify-script coverage (critical given SECURITY DEFINER funcs touch it) — PR5
+- **N7** — Document model zero verify-script coverage (orphan model, ships pre-data) — RLS hardening batch
+- **N8** — INSERT WITH CHECK gap systematic on Case, Task, Note, CalendarEvent (only Payment verifies via phase52 verify) — RLS hardening batch
+- **N9** — Note UPDATE + CalendarEvent UPDATE RLS uncovered (already in carry-forward as `verify-phase4-c1-update-rls.ts`) — RLS hardening batch
+
+**Type-shape**
+- **N10** — `gemini-adapter.ts:62` `Record<string, any>` — only `any` in entire codebase; LLM tool boundary — PR3 (fold with N26 Zod-per-tool)
+- **N11** — Form-state → enum assertion cluster (9 hits across CaseDetailClient + CasesClient) — PR7 + post-3.2.6 component polish
+- **N12** — String→number coercion cluster (FinancesClient L36/L43 + CaseDetailClient L140 — beyond SOT-listed L468) — PR7
+- **N13** — `CasesClient.tsx:396` asserts schema-String field `caseType` as TS-enum — schema-cleanup pass (schema enum migration) + PR7
+
+**Component shape**
+- **N14** — CasesClient raw-Prisma debt (self-documents "3.3 will swap" TODO) — post-3.2.6 component polish (informal)
+- **N15** — 5 captured-at-mount `useState(new Date())` cluster in CalendarClient + CaseDetailClient (pickerMonth state, not stale-now) — post-3.2.6 component polish
+- **N16** — TasksClient re-derives server-computed Stats client-side; duplicate source of truth for optimistic UX — post-3.2.6 component polish
+- **N17** — InboxClient drop handler stub `// Handle file drop logic here` — Phase 6 external (Document layer)
+- **N18** — DashboardClient `now = new Date()` in fn body, re-evaluates every render; minor — post-3.2.6 component polish
+
+**Auth boundary**
+- **N19** — No `middleware.ts`; `auth.config.ts` `authorized()` callback is dead code with phantom matcher comment — PR1
+- **N20** — `/sandbox` unprotected; reachable logged-out; renders auth-context-assuming chrome — PR1 (gate or strip)
+- **N21** — `/api/voice/transcribe` returns 500 on unauth (`requireUserId` throws); `/api/chat` returns 401 JSON; semantic mismatch — PR1
+- **N22** — No rate-limiting on `/api/voice/transcribe` or `/api/chat` (both spend Gemini credits) — Phase 9
+
+**Voice + LLM**
+- **N23** — `VoiceFAB.tsx` is UI-only stub; Send button has no onClick; floating mic globally visible but only `/chat` page wires real MediaRecorder. **DECISION: strip in PR2; rewire properly post-RAG in voice-polish phase** — PR2 + voice-polish
+- **N24** — LLM tool surface uses LEGACY `taskActions` exclusively (raw-prisma 7); 3.2-compliant 5 not exposed; agent operates on pre-3.2 contract — PR3
+- **N25** — `create_task` LLM tool hits N4 `caseId`-as-string bug — PR3
+- **N26** — `executeTool` args mega-cast (`chat/route.ts` L334–350); no per-tool Zod validation; LLM wrong-shaped args silently undefined. **Promoted to internal pre-handoff per advisory decision** — PR3
+- **N27** — Inconsistent Result-envelope checking in `executeTool` (`update_case_status` checks `result.ok`, `update_case_fee` doesn't) — Phase 6 external
+- **N28** — `create_case` LLM tool spec doesn't accept `caseType`; defaults to `"OTHER"`; agent can't write Indian case types — PR3
+- **N29** — Voice latency floor 4–30s from Gemini File API upload + polling — voice-polish phase
+- **N30** — Transcription bypasses LLM provider abstraction; hardcoded `GoogleAIFileManager` + `gemini-2.5-flash` — Phase 6 external (RAG provider decision)
+- **N31** — Document model zero LLM tool exposure — Phase 6 external
+
+**Dep hygiene**
+- **N32** — `next-auth` pinned to `5.0.0-beta.31` — pre-stable beta — Phase 9
+- **N33** — `@types/bcryptjs` misplaced in `dependencies` (should be `devDependencies`) — PR6
+- **N34** — `public/manifest.json` orphan (present but `next-pwa` not wired) — PR6 (couples to L6)
+
+**Forbidden patterns / hygiene**
+- **N35** — ~25 raw hex literals leak across components despite `@theme inline` sole-source. Sandbox worst offender (11+ hits). Exact-match drift: `#D4AF37` × 3 has token `--lawdger-gold`; `#f4efe8` × 2 has token `--primary-foreground` — PR6
+- **N36** — `SettingsClient.tsx:192–194` comment claims token usage but next line uses raw `dark:bg-[#3A322C]` — PR6
+- **N37** — `env.ts` validator coverage gap: `AUTH_SECRET`/`DATABASE_URL`/`DIRECT_URL` enforced at boot; `GOOGLE_API_KEY`/`LLM_*` only at first-call — Phase 9
 
 ---
 
@@ -385,7 +442,20 @@ Every Claude Code prompt for Lawdger must include:
 | **5.2 (Finances)** | ✅ Recon | **Recon revealed no FinancesClient mock to kill — data pipeline already live.** Rescoped into 5.2a (P0 hardening) + 5.2b (polish). |
 | **5.2a (Payment RLS verify + header bug)** | ✅ Done | **PR #24 (main @ `7ac0157`).** `verify-phase52-finances-rls.ts` (+5 Payment RLS assertions: SELECT iso + cross-user SELECT/UPDATE/DELETE fail-closed + INSERT mismatched-userId blocked by `WITH CHECK`). Header "Log Payment" button `disabled={cases.length === 0}` (was silently no-op when zero cases). Deferred to 5.2b: server-side aggregation, `formatINR` → `src/lib/format.ts`, `revalidatePath` on payment mutations, Zod on financeActions (or subsumed by 3.2.6). |
 | **5.2b (Finances polish)** | ✅ Done | **PR #25 (main @ `082affb`).** Server-side aggregation in `getFinancesData` — returns `{ totals, forgottenDues, caseRows }` with per-row scalars, server-derived status (`FinanceStatus` union literal `"No Fee Set" \| "Paid" \| "Partial" \| "Unpaid"`), and fresh `Date.now()` per call (kills L28 `useState(() => Date.now())` captured-at-mount bug). `STAGNANT_DAYS = 60` hoisted to module const. `formatINR` extracted to `src/lib/format.ts` (third-consumer trigger fired); 4 call sites swapped (FinancesClient ×8, CaseDetailClient ×1, chat/route ×2). Single source of truth — `toLocaleString("en-IN")` exists only in `format.ts`. Existing `revalidatePath("/finances")` on all 3 mutators preserved. Zod / Result envelope / Payment.amount→paise / Payment.status enum deferred to 3.2.6 per scope discipline. All 5-step manual smoke walk PASS (fee edit `"No Fee Set"`→`"Unpaid"` / payment log → tiles `₹50k/₹20k/₹30k` + badge→`"Partial"` / 2nd payment → expand history sorted desc `[₹5,000, ₹20,000]` / forgotten-dues empty-state). Smoke 28/28 unchanged (no RLS surface touched). |
-| 6–9 | ⏸️ Sequenced | Legal Brain (RAG) → Inbox → Settings → **Phase 9** Vercel cutover + DIRECT_URL fix + dnd-kit prune + PWA decision |
+| PR1 | ⏸️ Next | Auth boundary cleanup (N19/N20/N21) — strip `authorized()` dead code, gate-or-strip `/sandbox`, fix transcribe 401 |
+| PR2 | ⏸️ Sequenced | VoiceFAB strip (N23) — remove decorative FAB; voice lives on `/chat` only until rewire |
+| PR3 | ⏸️ Sequenced | LLM tool migration + `executeTool` Zod (N4/N24/N25/N26/N28/N10) — migrate to 3.2 `taskActions`, fix `caseId` bug, Zod-per-tool, add `caseType` to `create_case` |
+| PR4 | ⏸️ Sequenced | `revalidatePath` cross-table gap closure (N3) — invalidate downstream paths on mutations |
+| PR5 | ⏸️ Sequenced | User RLS verify script (N6) — model on `verify-phase52-finances-rls.ts`; wire into `smoke:rls-runtime` |
+| PR6 | ⏸️ Sequenced | Dep + token hygiene (L6/S2/N33/N34/N35/N36) — strip 4 unused deps, move `@types/bcryptjs`, replace exact-match raw hex |
+| PR7 | ⏸️ Sequenced | 3.2.6 Pillar A — `financeActions`/`calendarActions`/`dashboardActions` contract uplift (L4/L9/S13/N1/N2/N5/N11/N12) — Zod + `Result<T>` + `revalidatePath` normalization; extract `@/lib/result` |
+| PR8 | ⏸️ Sequenced | 3.2.6 Pillar B — `taskActions` legacy 7 + drag-drop restoration (L2/L3) — uplift remaining 7 actions, restore Kanban drag |
+| Schema-cleanup pass | ⏸️ Sequenced | Enum migrations + `onDelete` cascades + Float→paise (L7/L8/S10/S12) — single migration window |
+| RLS hardening batch | ⏸️ Sequenced | Document RLS, INSERT WITH CHECK on Case/Task/Note/CalendarEvent, Note+CalendarEvent UPDATE (N7/N8/N9) — post-PR5 |
+| Voice infra polish | ⏸️ Sequenced (NEW PHASE) | Voice latency reduction + provider abstraction + global one-tap VoiceFAB rewire post-RAG (N29/N30 + future rewire) |
+| Phase 6 — Legal Brain RAG | 🤝 External | N17/N27/N30/N31 + RAG architecture — Deferred to external dev. Baseline shipped via Phases 1–5.2b + internal queue PR1–PR8 + voice-polish + schema-cleanup + RLS hardening. Not in internal build queue. |
+| Phase 7 — Notifications | ⏸️ Sequenced | Daily brief, task reminders, overlap alerts, payment alerts — post-RAG |
+| Phase 9 — Vercel cutover | ⏸️ Sequenced | L1/L5/S1/N22/N32/N37 — DIRECT_URL fix, FORCE RLS posture on cloud, env validator extension, rate-limit, next-auth stable |
 
 ---
 
