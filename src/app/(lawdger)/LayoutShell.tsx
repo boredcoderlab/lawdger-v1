@@ -1,9 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import Sidebar from "@/components/ui/Sidebar";
 import Header from "@/components/ui/Header";
-import VoiceFAB from "@/components/VoiceFAB";
 import Atmosphere from "@/components/Atmosphere";
 
 export default function LayoutShell({
@@ -11,9 +9,6 @@ export default function LayoutShell({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const showFAB = pathname !== '/dashboard' && pathname !== '/chat';
-
   return (
     <div className="h-screen flex bg-background text-foreground font-sans relative overflow-hidden">
       <Atmosphere />
@@ -24,7 +19,6 @@ export default function LayoutShell({
           {children}
         </main>
       </div>
-      {showFAB && <VoiceFAB />}
     </div>
   );
 }
