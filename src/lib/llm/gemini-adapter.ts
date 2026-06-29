@@ -58,8 +58,7 @@ export class GeminiAdapter implements LLMProvider {
           toolCalls.push({
             id: `call_${part.functionCall.name}_${Date.now()}`,
             name: part.functionCall.name,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            args: (part.functionCall.args as Record<string, any>) ?? {},
+            args: (part.functionCall.args as Record<string, unknown>) ?? {},
           });
         }
       }
