@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-29 (post-PR2 flip — N23 closed @ `8edef7e`; PR3 next)
+**Last updated:** 2026-06-30 (post-PR3 flip — N4/N10/N24a/N25/N26/N28 closed @ `db48bb9`; PR4 next)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -337,7 +337,7 @@ Every Claude Code prompt for Lawdger must include:
 - **N1** — Four duplicate `Result<T>` definitions; no shared `@/lib/result` type — PR7 (3.2.6 Pillar A)
 - **N2** — Two auth helpers coexist (`requireUserId` throws / `getServerUser` redirects); split along legacy/3.2 boundary — PR7
 - **N3** — `revalidatePath` cross-table gaps systematic across `createCase`, `deleteCase`, `updateCaseAgreedFee`, `createPayment`, `deletePayment`, `createCaseTask`, `toggleCaseTaskStatus`, `deleteCaseTask` — PR4
-- **N4** — `taskActions.ts:56` `caseId as string` launders optional → string; runtime can write undefined cast to string — PR3
+- **N4** — ✅ closed @ db48bb9 (PR3). LLM-boundary zod requires `caseId` on `create_task`; legacy `taskActions.ts:56` cast untouched, cleanup deferred to schema-cleanup pass.
 - **N5** — `try/catch` + `console.error` swallowing in `updateNote` (noteActions L274) and `updateCaseTask` (taskActions L365) inconsistent with 25 other actions; sentinel strings `"NOT_FOUND"` / `"INTERNAL_ERROR"` inconsistent with human-readable siblings — PR7
 
 **RLS coverage**
@@ -347,7 +347,7 @@ Every Claude Code prompt for Lawdger must include:
 - **N9** — Note UPDATE + CalendarEvent UPDATE RLS uncovered (already in carry-forward as `verify-phase4-c1-update-rls.ts`) — RLS hardening batch
 
 **Type-shape**
-- **N10** — `gemini-adapter.ts:62` `Record<string, any>` — only `any` in entire codebase; LLM tool boundary — PR3 (fold with N26 Zod-per-tool)
+- **N10** — ✅ closed @ db48bb9 (PR3). `gemini-adapter.ts:62` `Record<string, any>` → `Record<string, unknown>`.
 - **N11** — Form-state → enum assertion cluster (9 hits across CaseDetailClient + CasesClient) — PR7 + post-3.2.6 component polish
 - **N12** — String→number coercion cluster (FinancesClient L36/L43 + CaseDetailClient L140 — beyond SOT-listed L468) — PR7
 - **N13** — `CasesClient.tsx:396` asserts schema-String field `caseType` as TS-enum — schema-cleanup pass (schema enum migration) + PR7
@@ -367,11 +367,12 @@ Every Claude Code prompt for Lawdger must include:
 
 **Voice + LLM**
 - **N23** — `VoiceFAB.tsx` is UI-only stub; Send button has no onClick; floating mic globally visible but only `/chat` page wires real MediaRecorder. **DECISION: strip in PR2; rewire properly post-RAG in voice-polish phase** — ✅ PR #27 @ 8edef7e — VoiceFAB.tsx deleted, LayoutShell.tsx cleaned (usePathname + showFAB + mount removed)
-- **N24** — LLM tool surface uses LEGACY `taskActions` exclusively (raw-prisma 7); 3.2-compliant 5 not exposed; agent operates on pre-3.2 contract — PR3
-- **N25** — `create_task` LLM tool hits N4 `caseId`-as-string bug — PR3
-- **N26** — `executeTool` args mega-cast (`chat/route.ts` L334–350); no per-tool Zod validation; LLM wrong-shaped args silently undefined. **Promoted to internal pre-handoff per advisory decision** — PR3
+- **N24a** — ✅ closed @ db48bb9 (PR3). 4 task tools re-pointed to 3.2 siblings: `get_tasks`→`listAllTasks`, `create_task`→`createCaseTask`, `update_task_status`→`toggleCaseTaskStatus` (read-then-toggle adapter), `delete_task`→`deleteCaseTask`.
+- **N24b** — OPEN. Sequenced to PR8 (3.2.6 Pillar B). `update_task` stays on legacy `updateTask` with zod at LLM boundary. `updateCaseTask` needs partial-update surface (currently all 5 fields mandatory) before LLM tool can migrate.
+- **N25** — ✅ closed @ db48bb9 (PR3). `create_task` tool spec `caseId` required + routes to `createCaseTask`.
+- **N26** — ✅ closed @ db48bb9 (PR3). Per-tool zod `safeParse` in `src/lib/llm/tools/dispatch.ts`; mega-cast deleted.
 - **N27** — Inconsistent Result-envelope checking in `executeTool` (`update_case_status` checks `result.ok`, `update_case_fee` doesn't) — Phase 6 external
-- **N28** — `create_case` LLM tool spec doesn't accept `caseType`; defaults to `"OTHER"`; agent can't write Indian case types — PR3
+- **N28** — ✅ closed @ db48bb9 (PR3). `create_case` tool spec adds `caseType` enum from `CASE_TYPES`; hardcoded `"OTHER"` removed.
 - **N29** — Voice latency floor 4–30s from Gemini File API upload + polling — voice-polish phase
 - **N30** — Transcription bypasses LLM provider abstraction; hardcoded `GoogleAIFileManager` + `gemini-2.5-flash` — Phase 6 external (RAG provider decision)
 - **N31** — Document model zero LLM tool exposure — Phase 6 external
@@ -385,6 +386,7 @@ Every Claude Code prompt for Lawdger must include:
 - **N35** — ~25 raw hex literals leak across components despite `@theme inline` sole-source. Sandbox worst offender (11+ hits). Exact-match drift: `#D4AF37` × 3 has token `--lawdger-gold`; `#f4efe8` × 2 has token `--primary-foreground` — PR6
 - **N36** — `SettingsClient.tsx:192–194` comment claims token usage but next line uses raw `dark:bg-[#3A322C]` — PR6
 - **N37** — `env.ts` validator coverage gap: `AUTH_SECRET`/`DATABASE_URL`/`DIRECT_URL` enforced at boot; `GOOGLE_API_KEY`/`LLM_*` only at first-call — Phase 9
+- **N38** — Legacy `updateTask` (`taskActions.ts:91`) non-functional under runtime RLS. Uses bare `prisma.task.updateMany` without `withServerUserContext`/`getServerScopedPrisma`. `lawdger_app` role (NOBYPASSRLS, FORCE RLS) blocks the write → `result.count=0` → throws `"Unauthorized"`. Pre-existing bug exposed by PR3 direct dispatcher diagnostic. Until PR8: agent calls to `update_task` fail with `"Unauthorized"` error message (clean error, not silent failure). All other LLM tools unaffected. Resolution: PR8 — either (a) full uplift to 3.2 contract (`withServerUserContext` + Result + zod) or (b) minimal `getServerScopedPrisma` wrap.
 
 ---
 
@@ -444,12 +446,12 @@ Every Claude Code prompt for Lawdger must include:
 | **5.2b (Finances polish)** | ✅ Done | **PR #25 (main @ `082affb`).** Server-side aggregation in `getFinancesData` — returns `{ totals, forgottenDues, caseRows }` with per-row scalars, server-derived status (`FinanceStatus` union literal `"No Fee Set" \| "Paid" \| "Partial" \| "Unpaid"`), and fresh `Date.now()` per call (kills L28 `useState(() => Date.now())` captured-at-mount bug). `STAGNANT_DAYS = 60` hoisted to module const. `formatINR` extracted to `src/lib/format.ts` (third-consumer trigger fired); 4 call sites swapped (FinancesClient ×8, CaseDetailClient ×1, chat/route ×2). Single source of truth — `toLocaleString("en-IN")` exists only in `format.ts`. Existing `revalidatePath("/finances")` on all 3 mutators preserved. Zod / Result envelope / Payment.amount→paise / Payment.status enum deferred to 3.2.6 per scope discipline. All 5-step manual smoke walk PASS (fee edit `"No Fee Set"`→`"Unpaid"` / payment log → tiles `₹50k/₹20k/₹30k` + badge→`"Partial"` / 2nd payment → expand history sorted desc `[₹5,000, ₹20,000]` / forgotten-dues empty-state). Smoke 28/28 unchanged (no RLS surface touched). |
 | PR1 | ✅ Done | **PR #26 (main @ `12bbc3a`).** Deleted `src/proxy.ts` (phantom middleware, misnamed). Stripped `authorized()` callback + matcher comment from `auth.config.ts`. Deleted `/sandbox` route entirely (static demo, zero nav refs). `/api/voice/transcribe` now returns 401 JSON on unauth (mirrors `/api/chat`). Layout-guard at `(lawdger)/layout.tsx` remains sole page-route auth boundary. N19/N20/N21 closed. |
 | PR2 | ✅ Done @ 8edef7e — VoiceFAB stub stripped, rewire deferred to voice-polish phase | VoiceFAB strip (N23) — remove decorative FAB; voice lives on `/chat` only until rewire |
-| PR3 | ⏸️ Next | LLM tool migration + `executeTool` Zod (N4/N24/N25/N26/N28/N10) — migrate to 3.2 `taskActions`, fix `caseId` bug, Zod-per-tool, add `caseType` to `create_case` |
-| PR4 | ⏸️ Sequenced | `revalidatePath` cross-table gap closure (N3) — invalidate downstream paths on mutations |
+| PR3 | ✅ Done @ db48bb9 | LLM tool migration + per-tool Zod (N4/N10/N24a/N25/N26/N28 closed). `src/lib/llm/tools/` — definitions, dispatch (per-tool safeParse), schemas, index. N24b + N38 → PR8. |
+| PR4 | ⏸️ Next | `revalidatePath` cross-table gap closure (N3) — invalidate downstream paths on mutations |
 | PR5 | ⏸️ Sequenced | User RLS verify script (N6) — model on `verify-phase52-finances-rls.ts`; wire into `smoke:rls-runtime` |
 | PR6 | ⏸️ Sequenced | Dep + token hygiene (L6/S2/N33/N34/N35/N36) — strip 4 unused deps, move `@types/bcryptjs`, replace exact-match raw hex |
 | PR7 | ⏸️ Sequenced | 3.2.6 Pillar A — `financeActions`/`calendarActions`/`dashboardActions` contract uplift (L4/L9/S13/N1/N2/N5/N11/N12) — Zod + `Result<T>` + `revalidatePath` normalization; extract `@/lib/result` |
-| PR8 | ⏸️ Sequenced | 3.2.6 Pillar B — `taskActions` legacy 7 + drag-drop restoration (L2/L3) — uplift remaining 7 actions, restore Kanban drag |
+| PR8 | ⏸️ Sequenced | 3.2.6 Pillar B — `taskActions` legacy 7 + drag-drop restoration (L2/L3/N24b/N38) — uplift remaining 7 actions (incl. `updateTask` LLM migration + RLS fix, `updateCaseTask` partial-update surface), restore Kanban drag |
 | Schema-cleanup pass | ⏸️ Sequenced | Enum migrations + `onDelete` cascades + Float→paise (L7/L8/S10/S12) — single migration window |
 | RLS hardening batch | ⏸️ Sequenced | Document RLS, INSERT WITH CHECK on Case/Task/Note/CalendarEvent, Note+CalendarEvent UPDATE (N7/N8/N9) — post-PR5 |
 | Voice infra polish | ⏸️ Sequenced (NEW PHASE) | Voice latency reduction + provider abstraction + global one-tap VoiceFAB rewire post-RAG (N29/N30 + future rewire) |
