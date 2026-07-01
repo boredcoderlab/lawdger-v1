@@ -51,6 +51,7 @@ export async function createCalendarEvent(data: {
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
+  revalidatePath("/cases/[id]", "page");
 }
 
 export async function updateCalendarEvent(
@@ -75,6 +76,7 @@ export async function updateCalendarEvent(
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
+  revalidatePath("/cases/[id]", "page");
 }
 
 export async function deleteCalendarEvent(id: string) {
@@ -89,6 +91,7 @@ export async function deleteCalendarEvent(id: string) {
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
+  revalidatePath("/cases/[id]", "page");
 }
 
 export async function getCasesForSelect() {
