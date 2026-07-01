@@ -140,6 +140,10 @@ export async function createCase(
   });
 
   revalidatePath("/cases");
+  revalidatePath("/dashboard");
+  revalidatePath("/finances");
+  revalidatePath("/calendar");
+  revalidatePath("/tasks");
   return { ok: true, data: created };
 }
 
@@ -276,6 +280,10 @@ export async function updateCase(
 
   revalidatePath("/cases");
   revalidatePath(`/cases/${parsedId.data}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/finances");
+  revalidatePath("/calendar");
+  revalidatePath("/tasks");
   return { ok: true, data: updated };
 }
 
@@ -311,6 +319,10 @@ export async function updateCaseStatus(
 
   revalidatePath("/cases");
   revalidatePath(`/cases/${parsed.data.id}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/finances");
+  revalidatePath("/calendar");
+  revalidatePath("/tasks");
   return { ok: true, data: updated };
 }
 
@@ -369,5 +381,9 @@ export async function deleteCase(id: string): Promise<Result<{ id: string }>> {
   if (!result.count) return { ok: false, error: "Case not found" };
 
   revalidatePath("/cases");
+  revalidatePath("/dashboard");
+  revalidatePath("/finances");
+  revalidatePath("/calendar");
+  revalidatePath("/tasks");
   return { ok: true, data: { id: parsed.data } };
 }

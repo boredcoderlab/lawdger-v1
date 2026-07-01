@@ -138,6 +138,8 @@ export async function updateCaseAgreedFee(caseId: string, agreedFee: number) {
   }
 
   revalidatePath("/finances");
+  revalidatePath("/cases/[id]", "page");
+  revalidatePath("/dashboard");
 }
 
 export async function createPayment(data: {

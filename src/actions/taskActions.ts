@@ -193,6 +193,8 @@ export async function createCaseTask(input: {
 
   revalidatePath(`/cases/${parsed.data.caseId}`);
   revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   return { ok: true, data: { id: task.id } };
 }
 
@@ -226,6 +228,8 @@ export async function toggleCaseTaskStatus(
 
   revalidatePath(`/cases/${parsed.data.caseId}`);
   revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   return { ok: true, data: { id: parsed.data.id, status: newStatus } };
 }
 
@@ -254,6 +258,8 @@ export async function deleteCaseTask(
 
   revalidatePath(`/cases/${parsed.data.caseId}`);
   revalidatePath("/tasks");
+  revalidatePath("/dashboard");
+  revalidatePath("/calendar");
   return { ok: true, data: { id: parsed.data.id } };
 }
 
@@ -361,6 +367,8 @@ export async function updateCaseTask(
 
     revalidatePath("/tasks");
     revalidatePath(`/cases/${updated.caseId}`);
+    revalidatePath("/dashboard");
+    revalidatePath("/calendar");
     return { ok: true, data: updated };
   } catch (e) {
     console.error("[updateCaseTask]", e);
