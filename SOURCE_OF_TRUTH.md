@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-06-30 (post-PR3 flip — N4/N10/N24a/N25/N26/N28 closed @ `db48bb9`; PR4 next)
+**Last updated:** 2026-07-02 (post-PR4 flip — N3 closed @ `795e898`; N40 closed @ `4d815dd`; N39 catalogued → PR8; PR5 next)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -336,7 +336,7 @@ Every Claude Code prompt for Lawdger must include:
 **Server-action contract drift**
 - **N1** — Four duplicate `Result<T>` definitions; no shared `@/lib/result` type — PR7 (3.2.6 Pillar A)
 - **N2** — Two auth helpers coexist (`requireUserId` throws / `getServerUser` redirects); split along legacy/3.2 boundary — PR7
-- **N3** — `revalidatePath` cross-table gaps systematic across `createCase`, `deleteCase`, `updateCaseAgreedFee`, `createPayment`, `deletePayment`, `createCaseTask`, `toggleCaseTaskStatus`, `deleteCaseTask` — PR4
+- **N3** — ✅ closed @ `795e898`. `revalidatePath` cross-table gaps closed across 9 mutations (`createCase`, `updateCase`, `updateCaseStatus`/`archiveCase`, `deleteCase`, `createCaseTask`, `toggleCaseTaskStatus`, `deleteCaseTask`, `updateCaseTask`, `createCalendarEvent`, `updateCalendarEvent`, `deleteCalendarEvent`, `updateCaseAgreedFee`) with 29 revalidatePath additions across 4 action files. Wildcard `/cases/[id]` syntax used for consistency. Original finding cited `createPayment`/`deletePayment` as gappy — recon confirmed hypothetical, not real gaps under current data model (Payment only read on `/finances` which is already revalidated), so those two remain untouched. Legacy taskActions (`createTask`, `updateTask`, `updateTaskStatus`, `updateTaskAssignee`, `deleteTask`) NOT touched in PR4 — non-functional under RLS (N38/N39), revalidate fix moot until PR8 restores functionality.
 - **N4** — ✅ closed @ db48bb9 (PR3). LLM-boundary zod requires `caseId` on `create_task`; legacy `taskActions.ts:56` cast untouched, cleanup deferred to schema-cleanup pass.
 - **N5** — `try/catch` + `console.error` swallowing in `updateNote` (noteActions L274) and `updateCaseTask` (taskActions L365) inconsistent with 25 other actions; sentinel strings `"NOT_FOUND"` / `"INTERNAL_ERROR"` inconsistent with human-readable siblings — PR7
 
@@ -387,6 +387,8 @@ Every Claude Code prompt for Lawdger must include:
 - **N36** — `SettingsClient.tsx:192–194` comment claims token usage but next line uses raw `dark:bg-[#3A322C]` — PR6
 - **N37** — `env.ts` validator coverage gap: `AUTH_SECRET`/`DATABASE_URL`/`DIRECT_URL` enforced at boot; `GOOGLE_API_KEY`/`LLM_*` only at first-call — Phase 9
 - **N38** — Legacy `updateTask` (`taskActions.ts:91`) non-functional under runtime RLS. Uses bare `prisma.task.updateMany` without `withServerUserContext`/`getServerScopedPrisma`. `lawdger_app` role (NOBYPASSRLS, FORCE RLS) blocks the write → `result.count=0` → throws `"Unauthorized"`. Pre-existing bug exposed by PR3 direct dispatcher diagnostic. Until PR8: agent calls to `update_task` fail with `"Unauthorized"` error message (clean error, not silent failure). All other LLM tools unaffected. Resolution: PR8 — either (a) full uplift to 3.2 contract (`withServerUserContext` + Result + zod) or (b) minimal `getServerScopedPrisma` wrap.
+- **N39** — `CalendarClient.tsx` imports and calls legacy `createTask`/`updateTask`/`deleteTask` from `taskActions.ts`. Under runtime RLS (`lawdger_app`, FORCE RLS, no GUC), all three broken: INSERT policy blocks `createTask`, UPDATE/DELETE return count=0. Task create/edit/delete from Calendar page silently non-functional. Extension of N38 pattern to Calendar surface. P1 user-visible breakage. Surfaced during PR4 recon. Resolution: PR8 — rewire CalendarClient to case-task siblings (`createCaseTask`/`updateCaseTask`/`deleteCaseTask`) or fix underlying legacy actions during PR8 uplift.
+- **N40** — ✅ closed @ `4d815dd`. `verify-isolation.ts` check 1 hardcoded `aCases.length === 2` and `title.startsWith("A-")` assertions incompatible with shared dev-account test user pattern (userA = `jainsahil2897@gmail.com` doubles as manual /chat walk user; real cases pollute count + title baseline). RLS itself sound — checks 2/3/4 continued to pass and validate fail-closed cross-tenant behavior. Fix: dropped count and title-prefix constraints, kept structural ownership check (`length > 0` + `every(c => c.userId === userA.id)`) matching sibling `verify-with-user-context.ts` pattern. User B check (check 2) intentionally left strict — `userb@test.local` is dedicated stable test user.
 
 ---
 
@@ -447,11 +449,11 @@ Every Claude Code prompt for Lawdger must include:
 | PR1 | ✅ Done | **PR #26 (main @ `12bbc3a`).** Deleted `src/proxy.ts` (phantom middleware, misnamed). Stripped `authorized()` callback + matcher comment from `auth.config.ts`. Deleted `/sandbox` route entirely (static demo, zero nav refs). `/api/voice/transcribe` now returns 401 JSON on unauth (mirrors `/api/chat`). Layout-guard at `(lawdger)/layout.tsx` remains sole page-route auth boundary. N19/N20/N21 closed. |
 | PR2 | ✅ Done @ 8edef7e — VoiceFAB stub stripped, rewire deferred to voice-polish phase | VoiceFAB strip (N23) — remove decorative FAB; voice lives on `/chat` only until rewire |
 | PR3 | ✅ Done @ db48bb9 | LLM tool migration + per-tool Zod (N4/N10/N24a/N25/N26/N28 closed). `src/lib/llm/tools/` — definitions, dispatch (per-tool safeParse), schemas, index. N24b + N38 → PR8. |
-| PR4 | ⏸️ Next | `revalidatePath` cross-table gap closure (N3) — invalidate downstream paths on mutations |
-| PR5 | ⏸️ Sequenced | User RLS verify script (N6) — model on `verify-phase52-finances-rls.ts`; wire into `smoke:rls-runtime` |
+| PR4 | ✅ Done @ `795e898` | `revalidatePath` cross-table gap closure (N3 closed). 29 additions across 4 action files. N39 surfaced during recon → PR8. |
+| PR5 | ⏸️ Next | User RLS verify script (N6) — model on `verify-phase52-finances-rls.ts`; wire into `smoke:rls-runtime` |
 | PR6 | ⏸️ Sequenced | Dep + token hygiene (L6/S2/N33/N34/N35/N36) — strip 4 unused deps, move `@types/bcryptjs`, replace exact-match raw hex |
 | PR7 | ⏸️ Sequenced | 3.2.6 Pillar A — `financeActions`/`calendarActions`/`dashboardActions` contract uplift (L4/L9/S13/N1/N2/N5/N11/N12) — Zod + `Result<T>` + `revalidatePath` normalization; extract `@/lib/result` |
-| PR8 | ⏸️ Sequenced | 3.2.6 Pillar B — `taskActions` legacy 7 + drag-drop restoration (L2/L3/N24b/N38) — uplift remaining 7 actions (incl. `updateTask` LLM migration + RLS fix, `updateCaseTask` partial-update surface), restore Kanban drag |
+| PR8 | ⏸️ Sequenced | 3.2.6 Pillar B — `taskActions` legacy 7 + drag-drop restoration + CalendarClient rewire (L2/L3/N24b/N38/N39) — uplift remaining 7 actions (incl. `updateTask` LLM migration + RLS fix, `updateCaseTask` partial-update surface), restore Kanban drag, rewire CalendarClient off legacy task actions |
 | Schema-cleanup pass | ⏸️ Sequenced | Enum migrations + `onDelete` cascades + Float→paise (L7/L8/S10/S12) — single migration window |
 | RLS hardening batch | ⏸️ Sequenced | Document RLS, INSERT WITH CHECK on Case/Task/Note/CalendarEvent, Note+CalendarEvent UPDATE (N7/N8/N9) — post-PR5 |
 | Voice infra polish | ⏸️ Sequenced (NEW PHASE) | Voice latency reduction + provider abstraction + global one-tap VoiceFAB rewire post-RAG (N29/N30 + future rewire) |
