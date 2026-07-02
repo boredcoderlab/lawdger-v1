@@ -33,7 +33,6 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#291e16" />
         <link rel="apple-touch-icon" href="/lawdger-logo-transparent.png" />
       </head>
