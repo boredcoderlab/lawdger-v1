@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-07-02 (post-PR4 flip — N3 closed @ `795e898`; N40 closed @ `4d815dd`; N39 catalogued → PR8; PR5 next)
+**Last updated:** 2026-07-02 (post-PR5 flip — N6 closed @ `e387450`; RLS runtime 32/6 → 36/7 (28 was drift); PR6 next)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -124,7 +124,7 @@ Verified by `npm run smoke:rls`.
 
 ### Current Runtime Isolation Posture
 
-> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **28/28 PASS** confirmed across **6 verify scripts** (count was 27/5, corrected to 23/5 at 4-A.7 CP-8 — prior 4-C.1 SOT flip incorrectly said 23/4; bumped to 28/6 at 5.2a with `verify-phase52-finances-rls.ts` +5 Payment assertions; see §7). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
+> **Status (Phase 3.0.1 closed — local runtime RLS enforced):** Local `DATABASE_URL` repointed to `lawdger_app` (NOBYPASSRLS). `smoke:rls-runtime` runs in **blocking mode** — **36/36 PASS** confirmed across **7 verify scripts** (count was 27/5, corrected to 23/5 at 4-A.7 CP-8 — prior 4-C.1 SOT flip incorrectly said 23/4; bumped to 28/6 at 5.2a with `verify-phase52-finances-rls.ts` +5 Payment assertions; that "28/6" figure was itself drift — actual pre-PR5 total was **32/6**; bumped to 36/7 at PR5 with `verify-user-rls.ts` +4 User assertions; see §7). Manual smoke 10/10 PASS. Vercel `DATABASE_URL` swap deferred to **Phase 9 (Platform + deploy)**.
 
 - 8 tables have RLS **ENABLED**; 7 app tables also have **FORCE ROW LEVEL SECURITY** (as of 3.0.1a). `_prisma_migrations` has ENABLED only.
 - `lawdger_app` is a **fully hardened LOGIN role**: real password (in `.env.local` as `LAWDGER_APP_DB_PASSWORD`), NOBYPASSRLS, SELECT/INSERT/UPDATE/DELETE GRANTs on all 7 app tables, subject to FORCE RLS.
@@ -245,8 +245,9 @@ This runs in order:
    - `verify-phase4-rls.ts` (7 checks — Task isolation, added 4-A.3; check 7 added 4-A.4)
    - `verify-pillar-b-rls.ts` (5 checks — CalendarEvent isolation + noteId fail-closed + cascade + past-date skip, added 4-B)
    - `verify-phase52-finances-rls.ts` (5 checks — Payment isolation: SELECT iso + cross-user SELECT/UPDATE/DELETE fail-closed + INSERT mismatched-userId blocked by `WITH CHECK`, added 5.2a)
+   - `verify-user-rls.ts` (4 checks — User isolation: self-select positive control + cross-tenant SELECT/UPDATE fail-closed + scoped-B state re-read, added PR5/N6)
 
-   **Total: 28 RLS assertions across 6 scripts** (corrected 27→23 at 4-C.1; prior SOT flip mistakenly said 4 scripts — actual is 5: isolation/phase32-rls/with-user-context/phase4-rls/pillar-b-rls; bumped to 28/6 at 5.2a with `verify-phase52-finances-rls.ts` +5). Two pending: `verify-phase4-c1-update-rls.ts` (updateNote, +3) and `verify-phase4-a7-update-task-rls.ts` (updateCaseTask, similar shape) — next RLS hardening batch. Blocking mode — any FAIL exits 1.
+   **Total: 36 RLS assertions across 7 scripts** (corrected 27→23 at 4-C.1; prior SOT flip mistakenly said 4 scripts — actual is 5: isolation/phase32-rls/with-user-context/phase4-rls/pillar-b-rls; bumped to 28/6 at 5.2a with `verify-phase52-finances-rls.ts` +5 — that "28/6" figure was itself drift, actual pre-PR5 total was 32/6; bumped to 36/7 at PR5 with `verify-user-rls.ts` +4). Standalone verify scripts use `getPrismaForUser` directly, not `getServerScopedPrisma` — no Next.js request context outside the app, and `getServerScopedPrisma` internally calls `getServerUser()` which depends on that context. Two pending: `verify-phase4-c1-update-rls.ts` (updateNote, +3) and `verify-phase4-a7-update-task-rls.ts` (updateCaseTask, similar shape) — next RLS hardening batch. Blocking mode — any FAIL exits 1.
 
 Any failure blocks the merge.
 
@@ -341,7 +342,7 @@ Every Claude Code prompt for Lawdger must include:
 - **N5** — `try/catch` + `console.error` swallowing in `updateNote` (noteActions L274) and `updateCaseTask` (taskActions L365) inconsistent with 25 other actions; sentinel strings `"NOT_FOUND"` / `"INTERNAL_ERROR"` inconsistent with human-readable siblings — PR7
 
 **RLS coverage**
-- **N6** — User table zero verify-script coverage (critical given SECURITY DEFINER funcs touch it) — PR5
+- **N6** — ✅ closed @ `e387450`. User table zero verify-script coverage (critical given SECURITY DEFINER funcs touch it). `verify-user-rls.ts` added (+4 assertions: self-select positive control, cross-tenant SELECT/UPDATE fail-closed, scoped-B state re-read). INSERT/DELETE probes and action-layer read-modify-write explicitly out of scope (no policies/code paths exist; redundant with `verify-with-user-context.ts`).
 - **N7** — Document model zero verify-script coverage (orphan model, ships pre-data) — RLS hardening batch
 - **N8** — INSERT WITH CHECK gap systematic on Case, Task, Note, CalendarEvent (only Payment verifies via phase52 verify) — RLS hardening batch
 - **N9** — Note UPDATE + CalendarEvent UPDATE RLS uncovered (already in carry-forward as `verify-phase4-c1-update-rls.ts`) — RLS hardening batch
@@ -450,8 +451,8 @@ Every Claude Code prompt for Lawdger must include:
 | PR2 | ✅ Done @ 8edef7e — VoiceFAB stub stripped, rewire deferred to voice-polish phase | VoiceFAB strip (N23) — remove decorative FAB; voice lives on `/chat` only until rewire |
 | PR3 | ✅ Done @ db48bb9 | LLM tool migration + per-tool Zod (N4/N10/N24a/N25/N26/N28 closed). `src/lib/llm/tools/` — definitions, dispatch (per-tool safeParse), schemas, index. N24b + N38 → PR8. |
 | PR4 | ✅ Done @ `795e898` | `revalidatePath` cross-table gap closure (N3 closed). 29 additions across 4 action files. N39 surfaced during recon → PR8. |
-| PR5 | ⏸️ Next | User RLS verify script (N6) — model on `verify-phase52-finances-rls.ts`; wire into `smoke:rls-runtime` |
-| PR6 | ⏸️ Sequenced | Dep + token hygiene (L6/S2/N33/N34/N35/N36) — strip 4 unused deps, move `@types/bcryptjs`, replace exact-match raw hex |
+| PR5 | ✅ Done @ `e387450` | User RLS verify script (N6 closed). `verify-user-rls.ts` (+4 assertions) modeled on `verify-isolation.ts`, wired into `smoke:rls-runtime`. Runtime count 32/6 → 36/7 (prior "28/6" figure was drift, corrected retroactively). |
+| PR6 | ⏸️ Next | Dep + token hygiene (L6/S2/N33/N34/N35/N36) — strip 4 unused deps, move `@types/bcryptjs`, replace exact-match raw hex |
 | PR7 | ⏸️ Sequenced | 3.2.6 Pillar A — `financeActions`/`calendarActions`/`dashboardActions` contract uplift (L4/L9/S13/N1/N2/N5/N11/N12) — Zod + `Result<T>` + `revalidatePath` normalization; extract `@/lib/result` |
 | PR8 | ⏸️ Sequenced | 3.2.6 Pillar B — `taskActions` legacy 7 + drag-drop restoration + CalendarClient rewire (L2/L3/N24b/N38/N39) — uplift remaining 7 actions (incl. `updateTask` LLM migration + RLS fix, `updateCaseTask` partial-update surface), restore Kanban drag, rewire CalendarClient off legacy task actions |
 | Schema-cleanup pass | ⏸️ Sequenced | Enum migrations + `onDelete` cascades + Float→paise (L7/L8/S10/S12) — single migration window |
