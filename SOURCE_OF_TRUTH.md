@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-07-02 (post-PR5 flip — N6 closed @ `e387450`; RLS runtime 32/6 → 36/7 (28 was drift); PR6 next)
+**Last updated:** 2026-07-02 (post-PR6a flip — L6, S2, N33, N34 closed @ `6a57fa4`; N41 opened; PR6 split — PR6a done, PR6b next)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -281,7 +281,7 @@ Any failure blocks the merge.
 | Chrome MCP | Empirical visual verification (CP4 standard) |
 | GitHub MCP | PR ops |
 | `next-themes` | Light / dark / system theme |
-| ~~`dnd-kit`~~ | Dropped in 4-A.2 TasksClient rewrite; deps remain in `package.json` (P9 cleanup). |
+| ~~`dnd-kit`~~ | Dropped in 4-A.2 TasksClient rewrite; deps removed @ `6a57fa4`. PR8 must `npm install` back if Kanban restoration needs it. |
 
 ### CC prompt format (mandatory)
 
@@ -309,7 +309,7 @@ Every Claude Code prompt for Lawdger must include:
 - Drag-drop between Kanban columns — dropped in 4-A.2. Restoration committed to **3.2.6 sprint**, bound to legacy `updateTaskAssignee` 3.2-compliant uplift.
 - Contract uplift for `calendarActions` / `dashboardActions` / `financeActions` — currently scoped-only (3.2.5b-i), no Zod / no Result envelope. Sequenced to **Phase 3.2.6**.
 - `connection_limit` in `DATABASE_URL` stays at `5` under `lawdger_app`. Monitor post-cutover; bump to `10` if Prisma P2024 returns.
-- `next-pwa` installed but unconfigured. Decision deferred to platform phase.
+- ~~`next-pwa` installed but unconfigured.~~ ✅ closed @ `6a57fa4` — stripped `next-pwa` entirely. Phase 9 revisits PWA with modern tooling if needed.
 - **`Payment.amount` Float → Int paise + `Case.agreedFee` Float? → Int paise (sibling)** — destructive ×100 backfill, same migration window; both carry FP rounding risk. Resolve together in **schema-cleanup pass**.
 - **String-as-enum migration — `Payment.status`, `Case.caseType`, `Note.category`, `Task.status`, `Document.status`** — free-text fields with no DB-level constraint. Sequenced to **schema-cleanup pass** (Prisma enums); contract-side enforcement covered by **3.2.6**.
 - **`updateCaseAgreedFee` shape.** Uses `getServerScopedPrisma` + `updateMany` (fail-closed via where-clause, not owner-chain precheck). Functional but inconsistent with `withServerUserContext` + owner-check pattern used elsewhere. Uplift sequenced to **Phase 3.2.6**.
@@ -317,7 +317,7 @@ Every Claude Code prompt for Lawdger must include:
 ### Smaller debt — log + opportunistic
 
 - **`.env.local` `DIRECT_URL` on pooler 6543** (Sahil's IPv4-only home network). Forces Supabase MCP detour for schema migrations. Fix at **P9 cutover** via Supabase IPv4 add-on or session-pooler endpoint.
-- **Unused runtime deps prune** — `@dnd-kit/{core,sortable,utilities}` + `next-pwa` — 4 deps with zero `src/` refs. Also `@types/bcryptjs` misplaced under `dependencies` (move to `devDependencies`). Resolve in **PR6** dep + token hygiene.
+- ~~**Unused runtime deps prune** — `@dnd-kit/{core,sortable,utilities}` + `next-pwa` — 4 deps with zero `src/` refs. Also `@types/bcryptjs` misplaced under `dependencies` (move to `devDependencies`).~~ ✅ closed @ `6a57fa4` — dep prune fully done. No remaining scope.
 - **Dark mode emulation via Chrome MCP** doesn't toggle Tailwind `.dark` class strategy. Out of scope until P9 or user-facing bug surfaces.
 - **User-table where-clause requirement:** going-forward rule — every new scoped query against User SHOULD include explicit `where: { id }` as defence-in-depth.
 - **`prisma/seed.ts` upsert with `update: {}`.** On re-seed, existing users' password never refreshes. One-line fix: change `update: {}` to `update: { password, name }`.
@@ -380,16 +380,17 @@ Every Claude Code prompt for Lawdger must include:
 
 **Dep hygiene**
 - **N32** — `next-auth` pinned to `5.0.0-beta.31` — pre-stable beta — Phase 9
-- **N33** — `@types/bcryptjs` misplaced in `dependencies` (should be `devDependencies`) — PR6
-- **N34** — `public/manifest.json` orphan (present but `next-pwa` not wired) — PR6 (couples to L6)
+- **N33** — ✅ closed @ `6a57fa4`. `@types/bcryptjs` moved `dependencies` → `devDependencies`.
+- **N34** — ✅ closed @ `6a57fa4`. `public/manifest.json` deleted + dangling `<link rel="manifest">` removed from `src/app/layout.tsx:36`. Amendment: file was linked from `layout.tsx:36`, not truly orphan as originally catalogued — recon-time scope expansion included the `<link rel="manifest">` removal.
 
 **Forbidden patterns / hygiene**
-- **N35** — ~25 raw hex literals leak across components despite `@theme inline` sole-source. Sandbox worst offender (11+ hits). Exact-match drift: `#D4AF37` × 3 has token `--lawdger-gold`; `#f4efe8` × 2 has token `--primary-foreground` — PR6
-- **N36** — `SettingsClient.tsx:192–194` comment claims token usage but next line uses raw `dark:bg-[#3A322C]` — PR6
+- **N35** — OPEN. ~25 raw hex literals leak across components despite `@theme inline` sole-source. Sandbox worst offender (11+ hits). Exact-match drift: `#D4AF37` × 3 has token `--lawdger-gold`; `#f4efe8` × 2 has token `--primary-foreground` — PR6b
+- **N36** — OPEN. `SettingsClient.tsx:192–194` comment claims token usage but next line uses raw `dark:bg-[#3A322C]` — PR6b (folded into N35 sweep)
 - **N37** — `env.ts` validator coverage gap: `AUTH_SECRET`/`DATABASE_URL`/`DIRECT_URL` enforced at boot; `GOOGLE_API_KEY`/`LLM_*` only at first-call — Phase 9
 - **N38** — Legacy `updateTask` (`taskActions.ts:91`) non-functional under runtime RLS. Uses bare `prisma.task.updateMany` without `withServerUserContext`/`getServerScopedPrisma`. `lawdger_app` role (NOBYPASSRLS, FORCE RLS) blocks the write → `result.count=0` → throws `"Unauthorized"`. Pre-existing bug exposed by PR3 direct dispatcher diagnostic. Until PR8: agent calls to `update_task` fail with `"Unauthorized"` error message (clean error, not silent failure). All other LLM tools unaffected. Resolution: PR8 — either (a) full uplift to 3.2 contract (`withServerUserContext` + Result + zod) or (b) minimal `getServerScopedPrisma` wrap.
 - **N39** — `CalendarClient.tsx` imports and calls legacy `createTask`/`updateTask`/`deleteTask` from `taskActions.ts`. Under runtime RLS (`lawdger_app`, FORCE RLS, no GUC), all three broken: INSERT policy blocks `createTask`, UPDATE/DELETE return count=0. Task create/edit/delete from Calendar page silently non-functional. Extension of N38 pattern to Calendar surface. P1 user-visible breakage. Surfaced during PR4 recon. Resolution: PR8 — rewire CalendarClient to case-task siblings (`createCaseTask`/`updateCaseTask`/`deleteCaseTask`) or fix underlying legacy actions during PR8 uplift.
 - **N40** — ✅ closed @ `4d815dd`. `verify-isolation.ts` check 1 hardcoded `aCases.length === 2` and `title.startsWith("A-")` assertions incompatible with shared dev-account test user pattern (userA = `jainsahil2897@gmail.com` doubles as manual /chat walk user; real cases pollute count + title baseline). RLS itself sound — checks 2/3/4 continued to pass and validate fail-closed cross-tenant behavior. Fix: dropped count and title-prefix constraints, kept structural ownership check (`length > 0` + `every(c => c.userId === userA.id)`) matching sibling `verify-with-user-context.ts` pattern. User B check (check 2) intentionally left strict — `userb@test.local` is dedicated stable test user.
+- **N41** — `postcss <8.5.10` moderate (GHSA-qx2v-qp2m-jg93 — XSS via Unescaped `</style>` in CSS Stringify Output) transitive inside `node_modules/next/node_modules/postcss`. Not the project's own postcss devDependency. Unaffected by next 16.2.10 bump — bundled inside Next's own dependency tree. Only npm-suggested fix is `next@9.3.3` downgrade (nonsensical, forbidden). Awaits upstream Vercel postcss bump. Track, do not force-fix.
 
 ---
 
@@ -452,7 +453,8 @@ Every Claude Code prompt for Lawdger must include:
 | PR3 | ✅ Done @ db48bb9 | LLM tool migration + per-tool Zod (N4/N10/N24a/N25/N26/N28 closed). `src/lib/llm/tools/` — definitions, dispatch (per-tool safeParse), schemas, index. N24b + N38 → PR8. |
 | PR4 | ✅ Done @ `795e898` | `revalidatePath` cross-table gap closure (N3 closed). 29 additions across 4 action files. N39 surfaced during recon → PR8. |
 | PR5 | ✅ Done @ `e387450` | User RLS verify script (N6 closed). `verify-user-rls.ts` (+4 assertions) modeled on `verify-isolation.ts`, wired into `smoke:rls-runtime`. Runtime count 32/6 → 36/7 (prior "28/6" figure was drift, corrected retroactively). |
-| PR6 | ⏸️ Next | Dep + token hygiene (L6/S2/N33/N34/N35/N36) — strip 4 unused deps, move `@types/bcryptjs`, replace exact-match raw hex |
+| PR6a | ✅ Done @ `6a57fa4` | Dep + audit hygiene (L6/S2/N33/N34) — strip `next-pwa` + `@dnd-kit/{core,sortable,utilities}`, move `@types/bcryptjs` to `devDependencies`, bump `next` 16.2.4 → 16.2.10, delete orphan `public/manifest.json` + dangling `<link rel="manifest">` in `layout.tsx`. N41 opened (postcss transitive, awaits upstream). |
+| PR6b | ⏸️ Next | N35 hex-literal sweep + N36 fold-in (design-token consistency) — replace exact-match raw hex with tokens |
 | PR7 | ⏸️ Sequenced | 3.2.6 Pillar A — `financeActions`/`calendarActions`/`dashboardActions` contract uplift (L4/L9/S13/N1/N2/N5/N11/N12) — Zod + `Result<T>` + `revalidatePath` normalization; extract `@/lib/result` |
 | PR8 | ⏸️ Sequenced | 3.2.6 Pillar B — `taskActions` legacy 7 + drag-drop restoration + CalendarClient rewire (L2/L3/N24b/N38/N39) — uplift remaining 7 actions (incl. `updateTask` LLM migration + RLS fix, `updateCaseTask` partial-update surface), restore Kanban drag, rewire CalendarClient off legacy task actions |
 | Schema-cleanup pass | ⏸️ Sequenced | Enum migrations + `onDelete` cascades + Float→paise (L7/L8/S10/S12) — single migration window |
