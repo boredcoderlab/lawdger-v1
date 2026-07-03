@@ -70,6 +70,13 @@
   --gold-deep:  #B38D1D;
   --gold-ink:   #FFFFFF;   /* unused in light (.btn-gold bg = espresso) */
   --gold-text:  #876A1F;   /* readable gold-as-text on cream */
+
+  /* PR6b — N35 hex-literal sweep. Light-mode fallbacks map to nearest
+     existing tokens (no fabricated hexes). */
+  --muted-icon:          var(--foreground-faint);
+  --muted-icon-hover:    var(--foreground-secondary);
+  --pane-elevated:       var(--lawdger-espresso);
+  --surface-profile-card: var(--card);
 }
 
 .dark {
@@ -149,6 +156,13 @@
   --gold-antique:   #8A6E22;
   --gold-ink:       #1A130E;
   --gold-text:      #E2C158;
+
+  /* PR6b — N35 hex-literal sweep. Dark values match the exact hexes
+     that previously lived as [#XXXXXX] arbitrary Tailwind classes. */
+  --muted-icon:          #8A8078;
+  --muted-icon-hover:    #D4C9C0;
+  --pane-elevated:       #2C2520;
+  --surface-profile-card: #3A322C;
 }
 
 @theme inline {
@@ -188,6 +202,12 @@
      no longer leaks the old teal hue. True teal is dead. */
   --color-lawdger-teal: var(--primary);
   --color-lawdger-sidebar: #15110F;
+  /* PR6b — N35 hex-literal sweep. Exposes muted-icon / pane-elevated /
+     surface-profile-card as Tailwind color utilities. */
+  --color-muted-icon: var(--muted-icon);
+  --color-muted-icon-hover: var(--muted-icon-hover);
+  --color-pane-elevated: var(--pane-elevated);
+  --color-surface-profile-card: var(--surface-profile-card);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
 }
@@ -785,21 +805,6 @@ html.light .bg-background\/80 { background-color: rgba(36, 29, 24, 0.14) !import
 /* ================================================================
    LANDING PAGE — Animations & Utilities
    ================================================================ */
-
-/* ── Shimmer text ── */
-@keyframes lp-shimmer {
-  0%   { background-position: 200% center; }
-  100% { background-position: -200% center; }
-}
-.lp-shimmer {
-  background-image: linear-gradient(90deg, #F3E1D7 25%, #2dd4bf 50%, #F3E1D7 75%);
-  background-size: 400% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: lp-shimmer 5s linear infinite;
-}
 
 /* ── Aurora background orbs ── */
 @keyframes lp-orb-a {

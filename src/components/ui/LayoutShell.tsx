@@ -170,7 +170,7 @@ export function PageLayout(props: PageLayoutProps) {
             "rounded-[28px]",
             // Light: espresso; Dark: elevated warm-dark step UP from #0D0A09 canvas
             // (was surface-1 #15110F — only a 5pt step, pane blended into the void)
-            "bg-lawdger-espresso dark:bg-[#2C2520]",
+            "bg-lawdger-espresso dark:bg-pane-elevated",
             "p-10 pr-16",
             // Light: embossed shadow ramp (drop + contact + top-edge highlight)
             // Dark: warm grounding shadow + top edge highlight for visible separation

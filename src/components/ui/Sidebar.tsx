@@ -44,7 +44,7 @@ export default function Sidebar() {
   );
 
   return (
-    <aside className="w-24 h-[calc(100vh-3rem)] bg-lawdger-espresso dark:bg-[#2C2520] rounded-[2.5rem] flex flex-col items-center py-6 relative z-50 shadow-[0_20px_60px_rgba(44,36,32,0.12)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)] border border-white/5 dark:border-[rgba(255,240,220,0.04)] my-6 ml-6 shrink-0">
+    <aside className="w-24 h-[calc(100vh-3rem)] bg-lawdger-espresso dark:bg-pane-elevated rounded-[2.5rem] flex flex-col items-center py-6 relative z-50 shadow-[0_20px_60px_rgba(44,36,32,0.12)] dark:shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5)] border border-white/5 dark:border-[rgba(255,240,220,0.04)] my-6 ml-6 shrink-0">
 
       {/* Brand Anchor */}
       <Link
@@ -83,7 +83,7 @@ export default function Sidebar() {
                   className={`transition-all duration-500 ${
                     isActive
                       ? "text-lawdger-espresso dark:text-lawdger-gold scale-110 drop-shadow-sm"
-                      : "text-[#8A8078] dark:text-foreground-secondary group-hover:text-[#D4C9C0] dark:group-hover:text-foreground group-hover:scale-110"
+                      : "text-muted-icon dark:text-foreground-secondary group-hover:text-muted-icon-hover dark:group-hover:text-foreground group-hover:scale-110"
                   }`}
                 />
                 {item.alert && (
@@ -104,7 +104,7 @@ export default function Sidebar() {
         <button
           type="button"
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="text-[#8A8078] dark:text-foreground-secondary hover:text-[#D4C9C0] dark:hover:text-foreground transition-colors cursor-pointer"
+          className="text-muted-icon dark:text-foreground-secondary hover:text-muted-icon-hover dark:hover:text-foreground transition-colors cursor-pointer"
           aria-label="Sign out"
         >
           <LogOut strokeWidth={1.5} size={22} />
