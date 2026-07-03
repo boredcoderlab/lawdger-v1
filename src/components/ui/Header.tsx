@@ -97,7 +97,7 @@ function QuickAddItem({ icon, label, description }: { icon: React.ReactNode, lab
             <div className="p-2 bg-lawdger-espresso/5 dark:bg-[var(--surface-2)] dark:border dark:border-[var(--border)] text-lawdger-espresso dark:text-foreground group-hover:bg-lawdger-espresso dark:group-hover:bg-transparent dark:group-hover:border-[rgba(212,175,55,0.35)] group-hover:text-lawdger-base dark:group-hover:text-[var(--gold-text)] rounded-lg transition-all shadow-sm">{icon}</div>
             <div className="flex flex-col">
                 <span className="text-xs font-bold text-lawdger-espresso dark:text-foreground tracking-tight">{label}</span>
-                <span className="text-[9px] text-[#8A8078] dark:text-muted-foreground font-medium leading-tight mt-0.5">{description}</span>
+                <span className="text-[9px] text-muted-icon dark:text-muted-foreground font-medium leading-tight mt-0.5">{description}</span>
             </div>
             <ChevronRight size={12} className="ml-auto text-lawdger-espresso/20 dark:text-foreground-faint group-hover:translate-x-1 group-hover:text-lawdger-espresso dark:group-hover:text-foreground transition-all" />
         </div>

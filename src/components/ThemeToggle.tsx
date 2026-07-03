@@ -16,7 +16,7 @@ export default function ThemeToggle() {
         type="button"
         aria-label="Theme toggle"
         disabled
-        className="text-[#8A8078] dark:text-foreground-secondary cursor-pointer"
+        className="text-muted-icon dark:text-foreground-secondary cursor-pointer"
       >
         <Moon strokeWidth={1.5} size={22} className="opacity-0" />
       </button>
@@ -30,7 +30,7 @@ export default function ThemeToggle() {
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-      className="text-[#8A8078] dark:text-foreground-secondary hover:text-[#D4C9C0] dark:hover:text-foreground transition-colors cursor-pointer"
+      className="text-muted-icon dark:text-foreground-secondary hover:text-muted-icon-hover dark:hover:text-foreground transition-colors cursor-pointer"
     >
       {isDark ? (
         <Sun strokeWidth={1.5} size={22} />

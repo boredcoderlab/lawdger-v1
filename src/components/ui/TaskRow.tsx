@@ -18,7 +18,7 @@ export default function TaskRow({ title, matter, dueDate, urgency, defaultComple
   const urgencyStyles = {
     Overdue: "text-destructive bg-destructive/10",
     Today: "text-lawdger-gold bg-lawdger-gold/10",
-    Upcoming: "text-[#8A8078] bg-lawdger-espresso/5",
+    Upcoming: "text-muted-icon bg-lawdger-espresso/5",
   };
 
   return (
@@ -45,12 +45,12 @@ export default function TaskRow({ title, matter, dueDate, urgency, defaultComple
 
       {/* 2. Core Data (Title & Matter Context) */}
       <div className="flex flex-col flex-1 min-w-0">
-        <h4 className={`text-sm font-bold text-lawdger-espresso truncate transition-all duration-300 ${isCompleted ? "line-through text-[#8A8078]" : ""}`}>
+        <h4 className={`text-sm font-bold text-lawdger-espresso truncate transition-all duration-300 ${isCompleted ? "line-through text-muted-icon" : ""}`}>
           {title}
         </h4>
         <div className="flex items-center gap-1.5 mt-1">
-          <Briefcase size={12} className="text-[#8A8078]" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-[#8A8078] truncate">
+          <Briefcase size={12} className="text-muted-icon" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-icon truncate">
             {matter}
           </span>
         </div>
@@ -65,7 +65,7 @@ export default function TaskRow({ title, matter, dueDate, urgency, defaultComple
       </div>
 
       {/* 4. Action Menu (Reveals on Hover) */}
-      <button className="w-8 h-8 rounded-full flex items-center justify-center text-[#8A8078] hover:bg-lawdger-espresso/5 hover:text-lawdger-espresso transition-colors opacity-0 group-hover:opacity-100 shrink-0">
+      <button className="w-8 h-8 rounded-full flex items-center justify-center text-muted-icon hover:bg-lawdger-espresso/5 hover:text-lawdger-espresso transition-colors opacity-0 group-hover:opacity-100 shrink-0">
         <MoreHorizontal size={16} />
       </button>
 

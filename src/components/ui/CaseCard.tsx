@@ -13,7 +13,7 @@ export default function CaseCard({ title, caseNumber, status, nextHearing, court
   // Dynamic styling for the status badge
   const statusStyles = {
     Active: "bg-lawdger-gold/10 text-[#B38D1D] border-lawdger-gold/30",
-    Pending: "bg-[#8A8078]/10 text-[#8A8078] border-[#8A8078]/30",
+    Pending: "bg-muted-icon/10 text-muted-icon border-muted-icon/30",
     Urgent: "bg-destructive/10 text-destructive border-destructive/30",
     Closed: "bg-lawdger-espresso/5 text-lawdger-espresso/40 border-lawdger-espresso/10",
   };
@@ -34,7 +34,7 @@ export default function CaseCard({ title, caseNumber, status, nextHearing, court
       {/* Data Grid */}
       <div className="grid grid-cols-2 gap-y-5 gap-x-4 mb-6">
         <div className="flex flex-col">
-          <div className="flex items-center gap-1.5 text-[#8A8078] mb-1">
+          <div className="flex items-center gap-1.5 text-muted-icon mb-1">
             <Hash size={12} strokeWidth={2.5} />
             <span className="text-[10px] font-bold uppercase tracking-widest">Matter ID</span>
           </div>
@@ -42,7 +42,7 @@ export default function CaseCard({ title, caseNumber, status, nextHearing, court
         </div>
 
         <div className="flex flex-col">
-          <div className="flex items-center gap-1.5 text-[#8A8078] mb-1">
+          <div className="flex items-center gap-1.5 text-muted-icon mb-1">
             <Calendar size={12} strokeWidth={2.5} />
             <span className="text-[10px] font-bold uppercase tracking-widest">Next Hearing</span>
           </div>
@@ -50,7 +50,7 @@ export default function CaseCard({ title, caseNumber, status, nextHearing, court
         </div>
 
         <div className="flex flex-col col-span-2">
-          <div className="flex items-center gap-1.5 text-[#8A8078] mb-1">
+          <div className="flex items-center gap-1.5 text-muted-icon mb-1">
             <Scale size={12} strokeWidth={2.5} />
             <span className="text-[10px] font-bold uppercase tracking-widest">Forum / Court</span>
           </div>

@@ -15,7 +15,7 @@ export default function PageActionHeader() {
         <h2 className="font-serif text-[3rem] font-bold text-lawdger-espresso tracking-tight leading-none">
           Matters
         </h2>
-        <p className="text-[#8A8078] text-[11px] font-bold uppercase tracking-[0.2em] mt-3">
+        <p className="text-muted-icon text-[11px] font-bold uppercase tracking-[0.2em] mt-3">
           14 Active • 2 Pending
         </p>
       </div>
@@ -32,7 +32,7 @@ export default function PageActionHeader() {
               className={`px-6 py-2 text-sm font-bold rounded-full transition-all duration-300 ${
                 activeTab === tab
                   ? "bg-white text-lawdger-espresso shadow-[0_4px_12px_rgba(44,36,32,0.08)] border border-white/80"
-                  : "text-[#8A8078] hover:text-lawdger-espresso border border-transparent"
+                  : "text-muted-icon hover:text-lawdger-espresso border border-transparent"
               }`}
             >
               {tab}
@@ -42,7 +42,7 @@ export default function PageActionHeader() {
 
         {/* Filter Trigger Button */}
         <button className="flex items-center gap-2 bg-white/60 hover:bg-white border border-lawdger-espresso/10 hover:border-lawdger-gold/40 text-lawdger-espresso px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-sm group">
-          <Filter size={16} className="text-[#8A8078] group-hover:text-lawdger-gold transition-colors" />
+          <Filter size={16} className="text-muted-icon group-hover:text-lawdger-gold transition-colors" />
           <span>Filters</span>
         </button>
 
