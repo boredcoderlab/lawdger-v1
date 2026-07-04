@@ -27,7 +27,7 @@ type Result<T> =
   | { ok: false; error: string };
 
 const createNoteSchema = z.object({
-  caseId: z.string().min(1, "caseId required"),
+  caseId: z.string().uuid(),
   cleanContent: z.string().min(1, "Note content required"),
   category: z.enum(NOTE_CATEGORIES),
   rawTranscript: z.string().optional(),
@@ -103,8 +103,8 @@ export async function createNote(input: {
 }
 
 const deleteNoteSchema = z.object({
-  id: z.string().min(1, "Note id required"),
-  caseId: z.string().min(1, "caseId required"),
+  id: z.string().uuid(),
+  caseId: z.string().uuid(),
 });
 
 export async function deleteNote(
@@ -143,8 +143,8 @@ export async function deleteNote(
 
 const updateNoteSchema = z
   .object({
-    id: z.string().min(1, "Note id required"),
-    caseId: z.string().min(1, "caseId required"),
+    id: z.string().uuid(),
+    caseId: z.string().uuid(),
     cleanContent: z.string().trim().min(1, "Note content required"),
     category: z.enum(NOTE_CATEGORIES),
     nextDate: z.coerce.date().nullable().optional(),

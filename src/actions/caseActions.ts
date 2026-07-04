@@ -51,7 +51,7 @@ export type Result<T> =
 
 // ─── Shared Zod fragments ────────────────────────────────────────────────────
 
-const idSchema = z.string().min(1, "id required");
+const idSchema = z.string().uuid();
 
 const caseWritableSchema = z.object({
   title: z.string().min(1, "Case title required"),
