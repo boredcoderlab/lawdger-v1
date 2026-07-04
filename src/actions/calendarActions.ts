@@ -5,6 +5,7 @@ import {
   getServerScopedPrisma,
   withServerUserContext,
 } from "@/lib/session";
+import { syncNextHearingDate } from "@/lib/calendar-sync";
 import { CaseStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
@@ -47,6 +48,8 @@ export async function createCalendarEvent(data: {
         ...(data.noteId !== undefined && { noteId: data.noteId }),
       },
     });
+
+    await syncNextHearingDate(data.caseId, tx);
   });
 
   revalidatePath("/calendar");
@@ -59,20 +62,28 @@ export async function updateCalendarEvent(
   data: { title?: string; hearingDate?: Date; description?: string }
 ) {
   const userId = await requireUserId();
-  const scoped = await getServerScopedPrisma();
 
-  const result = await scoped.calendarEvent.updateMany({
-    where: { id, userId },
-    data: {
-      ...(data.title && { title: data.title }),
-      ...(data.hearingDate && { hearingDate: data.hearingDate }),
-      ...(data.description !== undefined && { description: data.description }),
-    },
+  await withServerUserContext(async (tx) => {
+    const existing = await tx.calendarEvent.findFirst({
+      where: { id, userId },
+      select: { caseId: true },
+    });
+
+    if (!existing) {
+      throw new Error("Unauthorized");
+    }
+
+    await tx.calendarEvent.update({
+      where: { id },
+      data: {
+        ...(data.title && { title: data.title }),
+        ...(data.hearingDate && { hearingDate: data.hearingDate }),
+        ...(data.description !== undefined && { description: data.description }),
+      },
+    });
+
+    await syncNextHearingDate(existing.caseId, tx);
   });
-
-  if (!result.count) {
-    throw new Error("Unauthorized");
-  }
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");
@@ -81,13 +92,21 @@ export async function updateCalendarEvent(
 
 export async function deleteCalendarEvent(id: string) {
   const userId = await requireUserId();
-  const scoped = await getServerScopedPrisma();
 
-  const result = await scoped.calendarEvent.deleteMany({ where: { id, userId } });
+  await withServerUserContext(async (tx) => {
+    const existing = await tx.calendarEvent.findFirst({
+      where: { id, userId },
+      select: { caseId: true },
+    });
 
-  if (!result.count) {
-    throw new Error("Unauthorized");
-  }
+    if (!existing) {
+      throw new Error("Unauthorized");
+    }
+
+    await tx.calendarEvent.deleteMany({ where: { id, userId } });
+
+    await syncNextHearingDate(existing.caseId, tx);
+  });
 
   revalidatePath("/calendar");
   revalidatePath("/dashboard");

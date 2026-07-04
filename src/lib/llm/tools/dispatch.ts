@@ -206,12 +206,13 @@ export async function executeTool(
 
     case "create_payment":
       return withSchema("create_payment", rawArgs, async (args) => {
-        await createPayment({
+        const result = await createPayment({
           caseId: args.caseId,
           amount: args.amount,
           status: args.status,
           dueDate: args.dueDate ? new Date(args.dueDate) : undefined,
         });
+        if (!result.ok) return { result: result.error };
         return {
           result: "Payment recorded.",
           action: `✅ Recorded payment: ${formatINR(args.amount)}`,
@@ -277,7 +278,8 @@ export async function executeTool(
 
     case "update_case_fee":
       return withSchema("update_case_fee", rawArgs, async (args) => {
-        await updateCaseAgreedFee(args.caseId, args.agreedFee);
+        const result = await updateCaseAgreedFee(args.caseId, args.agreedFee);
+        if (!result.ok) return { result: result.error };
         return {
           result: "Agreed fee updated.",
           action: `✅ Updated agreed fee to ${formatINR(args.agreedFee)}`,

@@ -51,8 +51,12 @@ function toDisplayTime(date: Date): string {
   return format(date, "hh:mm aa").toUpperCase();
 }
 
+function isAllDayEvent(date: Date): boolean {
+  return date.getTime() % 86_400_000 === 0;
+}
+
 function formatChipTime(date: Date): string {
-  return date.getTime() % 86_400_000 === 0 ? "All day" : format(date, "h:mm a");
+  return isAllDayEvent(date) ? "All day" : format(date, "h:mm a");
 }
 
 function buildDateFromDayAndTime(day: Date, timeStr: string): Date {
@@ -294,10 +298,12 @@ export default function CalendarClient({
     end:   endOfWeek(endOfMonth(pickerMonth)),
   });
 
-  const eventsOnDay     = (day: Date) => initialEvents.filter((ev) => isSameDay(ev.hearingDate, day));
-  const eventsOnDayTime = (day: Date, time: string) =>
+  const eventsOnDay        = (day: Date) => initialEvents.filter((ev) => isSameDay(ev.hearingDate, day));
+  const eventsOnDayTime    = (day: Date, time: string) =>
     initialEvents.filter((ev) => isSameDay(ev.hearingDate, day) && toDisplayTime(ev.hearingDate) === time);
-  const tasksOnDay      = (day: Date) => tasks.filter((t) => isSameDay(t.dueDate, day));
+  const allDayEventsOnDay  = (day: Date) =>
+    initialEvents.filter((ev) => isSameDay(ev.hearingDate, day) && isAllDayEvent(ev.hearingDate));
+  const tasksOnDay         = (day: Date) => tasks.filter((t) => isSameDay(t.dueDate, day));
 
   const autoAllocateTasks = (day: Date): { slotMap: Record<string, TaskItem>; overflow: TaskItem[] } => {
     const dayTasks = tasksOnDay(day);
@@ -457,9 +463,22 @@ export default function CalendarClient({
             {/* ── Day View ── */}
             {view === "day" && (() => {
               const { slotMap } = autoAllocateTasks(currentDate);
+              const dayAllDay   = allDayEventsOnDay(currentDate);
               return (
                 <div className="flex flex-col bg-transparent">
                   <div className="p-6 space-y-0">
+                    {dayAllDay.length > 0 && (
+                      <div className="flex border-b border-primary/10 group relative py-2">
+                        <div className="w-24 shrink-0 pr-6 text-right">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground relative top-2">All day</span>
+                        </div>
+                        <div className="flex-1 border-l border-primary/10 pl-6 space-y-2">
+                          {dayAllDay.map((ev) => (
+                            <EventCard key={ev.id} ev={ev} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {TIME_SLOTS.map((time, i) => {
                       const slotEvents    = eventsOnDayTime(currentDate, time);
                       const allocatedTask = slotEvents.length === 0 ? slotMap[time] : undefined;
@@ -523,6 +542,28 @@ export default function CalendarClient({
                     );
                   })}
                 </div>
+                {weekDays.some((d) => allDayEventsOnDay(d).length > 0) && (
+                  <div className="flex border-b border-primary/10 min-h-[44px]">
+                    <div className="w-20 shrink-0 border-r border-primary/10 pr-3 text-right pt-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">All day</span>
+                    </div>
+                    {weekDays.map((day, i) => (
+                      <div key={i} className="flex-1 border-r border-primary/10 last:border-0 p-1 space-y-1">
+                        {allDayEventsOnDay(day).map((ev) => (
+                          <div
+                            key={ev.id}
+                            draggable
+                            onDragStart={(e) => { e.stopPropagation(); setDraggedId(ev.id); }}
+                            onClick={() => openEditHearing(ev)}
+                            className={`rounded-lg border ${EVENT_COLOR} bg-orange-500/10 px-2 py-1 cursor-pointer hover:opacity-80 transition-opacity`}
+                          >
+                            <p className="text-[10px] font-medium leading-tight text-orange-600 dark:text-orange-300 truncate">{ev.title}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="flex-1">
                   {TIME_SLOTS.map((time, i) => (
                     <div key={i} className="flex border-b border-primary/10 h-28">

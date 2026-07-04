@@ -28,23 +28,43 @@ export default function FinancesClient({ totals, forgottenDues, caseRows }: Fina
   const [editFeeId, setEditFeeId] = useState<string | null>(null);
   const [editFeeValue, setEditFeeValue] = useState("");
   const [expandedCaseId, setExpandedCaseId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const handleLogPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!modalCaseId || !payAmount) return;
     setIsSubmitting(true);
-    await createPayment({ caseId: modalCaseId, amount: parseFloat(payAmount), status: "paid" });
+    const result = await createPayment({ caseId: modalCaseId, amount: parseFloat(payAmount), status: "paid" });
+    setIsSubmitting(false);
+    if (!result.ok) {
+      setActionError(result.error);
+      return;
+    }
+    setActionError(null);
     setPayAmount("");
     setModalCaseId(null);
-    setIsSubmitting(false);
   };
 
   const handleSaveFee = async (caseId: string) => {
     const val = parseFloat(editFeeValue);
     if (isNaN(val)) return;
-    await updateCaseAgreedFee(caseId, val);
+    const result = await updateCaseAgreedFee(caseId, val);
+    if (!result.ok) {
+      setActionError(result.error);
+      return;
+    }
+    setActionError(null);
     setEditFeeId(null);
     setEditFeeValue("");
+  };
+
+  const handleDeletePayment = async (id: string) => {
+    const result = await deletePayment(id);
+    if (!result.ok) {
+      setActionError(result.error);
+      return;
+    }
+    setActionError(null);
   };
 
   return (
@@ -116,6 +136,14 @@ export default function FinancesClient({ totals, forgottenDues, caseRows }: Fina
         mainPaneContent={
           <div className="h-full overflow-y-auto scrollbar-hide p-10">
             <div className="h-full">
+              {actionError && (
+                <div className="mb-6 flex items-center justify-between rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] font-medium text-red-500">
+                  <span>{actionError}</span>
+                  <button onClick={() => setActionError(null)} className="text-red-500/60 hover:text-red-500">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
               {caseRows.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground opacity-60">
                   <div className="empty-medallion">
@@ -210,7 +238,7 @@ export default function FinancesClient({ totals, forgottenDues, caseRows }: Fina
                                   <span className="text-[14px] font-bold text-foreground">{formatINR(p.amount)}</span>
                                   <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1.5"><History className="w-3 h-3"/>{format(new Date(p.createdAt), "d MMM yyyy")}</span>
                                 </div>
-                                <button onClick={() => deletePayment(p.id)} className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100">
+                                <button onClick={() => handleDeletePayment(p.id)} className="p-1.5 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100">
                                   <Trash2 className="h-4 w-4" />
                                 </button>
                               </div>
