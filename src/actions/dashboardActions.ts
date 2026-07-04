@@ -28,37 +28,32 @@ export async function getDashboardData() {
       take: 10,
     });
 
+    // Case.nextHearingDate is a synced cache column (see src/lib/calendar-sync.ts,
+    // wired into all CalendarEvent mutations in calendarActions.ts). Read it
+    // directly instead of re-deriving via a per-request groupBy.
     const allCases = await tx.case.findMany({
       where: { userId },
-      select: { id: true, title: true, clientName: true, status: true },
+      select: { id: true, title: true, clientName: true, status: true, nextHearingDate: true },
       orderBy: { updatedAt: "desc" },
     });
 
-    const now = new Date();
-    // CalendarEvent.caseId is non-nullable in schema — every event belongs to a case.
-    const nextHearings = await tx.calendarEvent.groupBy({
-      by: ["caseId"],
-      where: { userId, hearingDate: { gte: now } },
-      _min: { hearingDate: true },
-    });
-    const nextHearingByCase = new Map<string, Date>();
-    for (const r of nextHearings) {
-      const min = r._min?.hearingDate;
-      if (min) nextHearingByCase.set(r.caseId, min);
-    }
-    const allCasesWithNext = allCases.map((c) => ({
-      ...c,
-      nextHearingDate: nextHearingByCase.get(c.id) ?? null,
-    }));
-
     const totalCases = await tx.case.count({ where: { userId, status: "ACTIVE" } });
     const totalTasks = await tx.task.count({ where: { userId, status: "pending" } });
+
+    // Cache is only re-synced on calendar mutations, so its "next" event can
+    // fall into the past between mutations. Filter stale-past values here so
+    // the dashboard never surfaces a "next hearing" that has already occurred.
+    const now = new Date();
+    const allCasesFresh = allCases.map((c) => ({
+      ...c,
+      nextHearingDate: c.nextHearingDate && c.nextHearingDate >= now ? c.nextHearingDate : null,
+    }));
 
     return {
       todayEvents,
       upcomingEvents,
       pendingTasks,
-      allCases: allCasesWithNext,
+      allCases: allCasesFresh,
       totalCases,
       totalTasks,
     };
