@@ -152,7 +152,7 @@ export async function deleteTask(id: string) {
 // ─── Phase 3.2 — case-scoped task actions (moved from caseActions.ts) ─────────
 
 const createCaseTaskSchema = z.object({
-  caseId: z.string().min(1, "caseId required"),
+  caseId: z.string().uuid(),
   description: z.string().min(1, "Description required"),
   dueDate: z.coerce.date().optional(),
   isUrgent: z.boolean().default(false),
@@ -199,9 +199,9 @@ export async function createCaseTask(input: {
 }
 
 const toggleCaseTaskStatusSchema = z.object({
-  id: z.string().min(1, "Task id required"),
+  id: z.string().uuid(),
   currentStatus: z.string().min(1),
-  caseId: z.string().min(1, "caseId required"),
+  caseId: z.string().uuid(),
 });
 
 export async function toggleCaseTaskStatus(
@@ -234,8 +234,8 @@ export async function toggleCaseTaskStatus(
 }
 
 const deleteCaseTaskSchema = z.object({
-  id: z.string().min(1, "Task id required"),
-  caseId: z.string().min(1, "caseId required"),
+  id: z.string().uuid(),
+  caseId: z.string().uuid(),
 });
 
 export async function deleteCaseTask(
