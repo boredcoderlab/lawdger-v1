@@ -122,7 +122,6 @@ export default function CaseDetailClient({
     matterType:      caseData.matterType,
     caseType:        (caseData.caseType ?? "") as CaseType | "",
     filingDate:      toDateInputValue(caseData.filingDate),
-    nextHearingDate: toDateInputValue(caseData.nextHearingDate),
     description:     caseData.description ?? "",
     actsSections:    caseData.actsSections ?? "",
     firNumber:       caseData.firNumber ?? "",
@@ -142,7 +141,6 @@ export default function CaseDetailClient({
       caseType:        matterData.caseType ? matterData.caseType : undefined,
       matterType:      matterData.matterType,
       filingDate:      matterData.filingDate ? new Date(matterData.filingDate) : undefined,
-      nextHearingDate: matterData.nextHearingDate ? new Date(matterData.nextHearingDate) : undefined,
       description:     matterData.description || undefined,
       actsSections:    matterData.actsSections || undefined,
       firNumber:       isCriminal && matterData.firNumber ? matterData.firNumber : undefined,
@@ -575,12 +573,12 @@ export default function CaseDetailClient({
                       />
                     </EditField>
                     <EditField label="Next Hearing Date" tone="light">
-                      <input
-                        type="date"
-                        value={matterData.nextHearingDate}
-                        onChange={(e) => setMatterData({ ...matterData, nextHearingDate: e.target.value })}
-                        className="w-full bg-white dark:bg-[var(--surface-inset)] border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-foreground focus:outline-none focus:border-primary transition-all shadow-sm"
-                      />
+                      <div className="w-full bg-black/5 dark:bg-white/5 border border-primary/10 dark:border-[var(--border)] rounded-xl px-4 py-3 text-[14px] text-muted-foreground">
+                        {caseData.nextHearingDate ? formatIndianDate(caseData.nextHearingDate) : "Not scheduled"}
+                        <span className="block text-[10px] mt-1 text-muted-foreground/70">
+                          Synced from Calendar — schedule via the Calendar tab.
+                        </span>
+                      </div>
                     </EditField>
                     <div className="sm:col-span-2">
                       <EditField label="Description" tone="light">

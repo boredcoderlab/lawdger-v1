@@ -88,7 +88,6 @@ function NewMatterDialog({
   const [court, setCourt] = useState("");
   const [caseNumber, setCaseNumber] = useState("");
   const [caseType, setCaseType] = useState<CaseType>("CIVIL");
-  const [nextHearingDate, setNextHearingDate] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -104,7 +103,6 @@ function NewMatterDialog({
       setCourt("");
       setCaseNumber("");
       setCaseType("CIVIL");
-      setNextHearingDate("");
       setDescription("");
       setError(null);
       // Focus first field
@@ -163,7 +161,6 @@ function NewMatterDialog({
         court,
         caseNumber: caseNumber || undefined,
         caseType,
-        nextHearingDate: nextHearingDate || undefined,
         description: description || undefined,
       });
       if (!result.ok) {
@@ -259,24 +256,16 @@ function NewMatterDialog({
             placeholder="e.g. CP 11/99, WP 1234/2024"
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormSelect
-              label="Case Type"
-              required
-              value={caseType}
-              onChange={(v) => setCaseType(v as CaseType)}
-              options={CASE_TYPES.map((t) => ({
-                value: t,
-                label: CASE_TYPE_LABEL[t],
-              }))}
-            />
-            <FormField
-              label="Next Hearing Date"
-              type="date"
-              value={nextHearingDate}
-              onChange={setNextHearingDate}
-            />
-          </div>
+          <FormSelect
+            label="Case Type"
+            required
+            value={caseType}
+            onChange={(v) => setCaseType(v as CaseType)}
+            options={CASE_TYPES.map((t) => ({
+              value: t,
+              label: CASE_TYPE_LABEL[t],
+            }))}
+          />
 
           <div>
             <label className="block text-[10px] font-bold uppercase tracking-widest text-lawdger-muted mb-2">

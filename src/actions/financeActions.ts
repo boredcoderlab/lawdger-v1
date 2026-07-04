@@ -6,6 +6,11 @@ import {
   withServerUserContext,
 } from "@/lib/session";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+
+export type Result<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };
 
 const STAGNANT_DAYS = 60;
 
@@ -124,65 +129,111 @@ export async function getFinancesData(): Promise<FinancesData> {
   };
 }
 
-export async function updateCaseAgreedFee(caseId: string, agreedFee: number) {
+const updateCaseAgreedFeeSchema = z.object({
+  caseId: z.string().uuid(),
+  agreedFee: z.number().nonnegative(),
+});
+
+export async function updateCaseAgreedFee(
+  caseId: string,
+  agreedFee: number,
+): Promise<Result<{ caseId: string; agreedFee: number }>> {
+  const parsed = updateCaseAgreedFeeSchema.safeParse({ caseId, agreedFee });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const userId = await requireUserId();
   const scoped = await getServerScopedPrisma();
 
   const result = await scoped.case.updateMany({
-    where: { id: caseId, userId },
-    data: { agreedFee },
+    where: { id: parsed.data.caseId, userId },
+    data: { agreedFee: parsed.data.agreedFee },
   });
 
   if (!result.count) {
-    throw new Error("Unauthorized");
+    return { ok: false, error: "Case not found" };
   }
 
   revalidatePath("/finances");
   revalidatePath("/cases/[id]", "page");
   revalidatePath("/dashboard");
+  return { ok: true, data: { caseId: parsed.data.caseId, agreedFee: parsed.data.agreedFee } };
 }
 
-export async function createPayment(data: {
-  caseId: string;
-  amount: number;
-  status?: string;
-  dueDate?: Date;
-}) {
+const createPaymentSchema = z.object({
+  caseId: z.string().uuid(),
+  amount: z.number().positive(),
+  status: z.string().optional(),
+  dueDate: z.coerce.date().optional(),
+});
+
+export async function createPayment(
+  data: z.input<typeof createPaymentSchema>,
+): Promise<Result<{ id: string }>> {
+  const parsed = createPaymentSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const userId = await requireUserId();
 
-  await withServerUserContext(async (tx) => {
+  const result = await withServerUserContext(async (tx) => {
     const caseItem = await tx.case.findFirst({
-      where: { id: data.caseId, userId },
+      where: { id: parsed.data.caseId, userId },
       select: { id: true },
     });
 
     if (!caseItem) {
-      throw new Error("Unauthorized");
+      return { ok: false, error: "Case not found" } as const;
     }
 
-    await tx.payment.create({
+    const created = await tx.payment.create({
       data: {
         userId,
-        caseId: data.caseId,
-        amount: data.amount,
-        status: data.status ?? "paid",
-        dueDate: data.dueDate ?? null,
+        caseId: parsed.data.caseId,
+        amount: parsed.data.amount,
+        status: parsed.data.status ?? "paid",
+        dueDate: parsed.data.dueDate ?? null,
       },
     });
+
+    return { ok: true, data: { id: created.id } } as const;
   });
 
-  revalidatePath("/finances");
+  if (result.ok) {
+    revalidatePath("/finances");
+    revalidatePath("/dashboard");
+    revalidatePath(`/cases/${parsed.data.caseId}`);
+  }
+  return result;
 }
 
-export async function deletePayment(id: string) {
+const deletePaymentSchema = z.object({
+  id: z.string().uuid(),
+});
+
+export async function deletePayment(id: string): Promise<Result<{ id: string }>> {
+  const parsed = deletePaymentSchema.safeParse({ id });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid id" };
+  }
+
   const userId = await requireUserId();
   const scoped = await getServerScopedPrisma();
 
-  const result = await scoped.payment.deleteMany({ where: { id, userId } });
-
-  if (!result.count) {
-    throw new Error("Unauthorized");
+  const payment = await scoped.payment.findFirst({
+    where: { id: parsed.data.id, userId },
+    select: { caseId: true },
+  });
+  if (!payment) {
+    return { ok: false, error: "Payment not found" };
   }
 
+  await scoped.payment.deleteMany({ where: { id: parsed.data.id, userId } });
+
   revalidatePath("/finances");
+  revalidatePath("/dashboard");
+  revalidatePath(`/cases/${payment.caseId}`);
+  return { ok: true, data: { id: parsed.data.id } };
 }
