@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-07-02 (post-PR6a flip — L6, S2, N33, N34 closed @ `6a57fa4`; N41 opened; PR6 split — PR6a done, PR6b next)
+**Last updated:** 2026-07-05 (post-PR7 cleanup flip — N42 (idSchema uuid alignment) closed @ `37292f7` (#35); N43 (dashboard nextHearingDate groupBy redundancy) closed @ `4e009c2` (#36); PR7 pillar done; PR8 next)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,7 +24,7 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `12bbc3a` (PR1 — auth boundary cleanup + transcribe 401 fix — PR #26)
+- **Current main sha:** `4e009c2` (#36 — dashboard nextHearingDate groupBy → cache column read)
 
 ---
 
@@ -392,6 +392,10 @@ Every Claude Code prompt for Lawdger must include:
 - **N40** — ✅ closed @ `4d815dd`. `verify-isolation.ts` check 1 hardcoded `aCases.length === 2` and `title.startsWith("A-")` assertions incompatible with shared dev-account test user pattern (userA = `jainsahil2897@gmail.com` doubles as manual /chat walk user; real cases pollute count + title baseline). RLS itself sound — checks 2/3/4 continued to pass and validate fail-closed cross-tenant behavior. Fix: dropped count and title-prefix constraints, kept structural ownership check (`length > 0` + `every(c => c.userId === userA.id)`) matching sibling `verify-with-user-context.ts` pattern. User B check (check 2) intentionally left strict — `userb@test.local` is dedicated stable test user.
 - **N41** — `postcss <8.5.10` moderate (GHSA-qx2v-qp2m-jg93 — XSS via Unescaped `</style>` in CSS Stringify Output) transitive inside `node_modules/next/node_modules/postcss`. Not the project's own postcss devDependency. Unaffected by next 16.2.10 bump — bundled inside Next's own dependency tree. Only npm-suggested fix is `next@9.3.3` downgrade (nonsensical, forbidden). Awaits upstream Vercel postcss bump. Track, do not force-fix.
 
+**Post-PR7 cleanup (2026-07-05)**
+- **N42** — ✅ closed @ `37292f7` (#35). Every id-shaped Zod validator in the actions layer used `z.string().min(1)` with a custom "required"-style message. Every model uses `@default(uuid())`, so the check only ever caught an empty string, never an invalid-uuid string. `financeActions.ts` set the stricter `z.string().uuid()` convention in PR7; this aligned the rest — 11 fields across `caseActions.ts` (`idSchema`), `noteActions.ts` (5 fields), `taskActions.ts` (5 fields).
+- **N43** — ✅ closed @ `4e009c2` (#36). `dashboardActions.ts` `getDashboardData` re-derived `Case.nextHearingDate` per request via `groupBy` on `CalendarEvent` — redundant DB round-trip once PR7 (`5974272`) made `Case.nextHearingDate` a synced cache column (`src/lib/calendar-sync.ts`, wired into all `CalendarEvent` mutations). Replaced with direct `nextHearingDate: true` select + stale-past filter (cache is only re-synced on calendar mutations, so its value can lag into the past between them). Not in scope: `CasesClient.formatHearing` and `CaseDetailClient` surface the same cache column without the stale-past filter — same root cause, different files, carried forward.
+
 ---
 
 ## 11. Open Forks (need resolution)
@@ -455,8 +459,9 @@ Every Claude Code prompt for Lawdger must include:
 | PR5 | ✅ Done @ `e387450` | User RLS verify script (N6 closed). `verify-user-rls.ts` (+4 assertions) modeled on `verify-isolation.ts`, wired into `smoke:rls-runtime`. Runtime count 32/6 → 36/7 (prior "28/6" figure was drift, corrected retroactively). |
 | PR6a | ✅ Done @ `6a57fa4` | Dep + audit hygiene (L6/S2/N33/N34) — strip `next-pwa` + `@dnd-kit/{core,sortable,utilities}`, move `@types/bcryptjs` to `devDependencies`, bump `next` 16.2.4 → 16.2.10, delete orphan `public/manifest.json` + dangling `<link rel="manifest">` in `layout.tsx`. N41 opened (postcss transitive, awaits upstream). |
 | PR6b | ⏸️ Next | N35 hex-literal sweep + N36 fold-in (design-token consistency) — replace exact-match raw hex with tokens |
-| PR7 | ⏸️ Sequenced | 3.2.6 Pillar A — `financeActions`/`calendarActions`/`dashboardActions` contract uplift (L4/L9/S13/N1/N2/N5/N11/N12) — Zod + `Result<T>` + `revalidatePath` normalization; extract `@/lib/result` |
-| PR8 | ⏸️ Sequenced | 3.2.6 Pillar B — `taskActions` legacy 7 + drag-drop restoration + CalendarClient rewire (L2/L3/N24b/N38/N39) — uplift remaining 7 actions (incl. `updateTask` LLM migration + RLS fix, `updateCaseTask` partial-update surface), restore Kanban drag, rewire CalendarClient off legacy task actions |
+| PR7 | ✅ Done @ `5974272` (#34) | 3.2.6 Pillar A — `financeActions` Zod + `Result<T>` + `revalidatePath` normalization; `Case.nextHearingDate` becomes synced cache column (`src/lib/calendar-sync.ts`, wired into all `CalendarEvent` mutations); Day/Week all-day row. `@/lib/result` extraction (L4/L9/S13/N1/N2/N5/N11/N12) not done — remains tracked in §10. Cleanup pass: N42 (idSchema `min(1)`→`.uuid()` alignment, 11 fields across `caseActions`/`noteActions`/`taskActions`) closed @ `37292f7` (#35); N43 (`dashboardActions.ts` `nextHearingDate` `groupBy` redundancy → direct cache-column read) closed @ `4e009c2` (#36). |
+| PR8 | ⏸️ Next | 3.2.6 Pillar B — `taskActions` legacy 7 + drag-drop restoration + CalendarClient rewire (L2/L3/N24b/N38/N39) — uplift remaining 7 actions (incl. `updateTask` LLM migration + RLS fix, `updateCaseTask` partial-update surface), restore Kanban drag, rewire CalendarClient off legacy task actions |
+| Chatbot widget uplift | ⏸️ Pending — not yet scoped | Unscoped enhancement, unblocked — prior dependency was this cleanup pass (#35/#36), now resolved. |
 | Schema-cleanup pass | ⏸️ Sequenced | Enum migrations + `onDelete` cascades + Float→paise (L7/L8/S10/S12) — single migration window |
 | RLS hardening batch | ⏸️ Sequenced | Document RLS, INSERT WITH CHECK on Case/Task/Note/CalendarEvent, Note+CalendarEvent UPDATE (N7/N8/N9) — post-PR5 |
 | Voice infra polish | ⏸️ Sequenced (NEW PHASE) | Voice latency reduction + provider abstraction + global one-tap VoiceFAB rewire post-RAG (N29/N30 + future rewire) |
