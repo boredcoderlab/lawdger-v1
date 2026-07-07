@@ -168,6 +168,7 @@ export default function CalendarClient({
   const [editId, setEditId] = useState<string | null>(null);
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [form, setForm] = useState({
     type: "hearing" as "hearing" | "task",
     title: "",
@@ -236,19 +237,34 @@ export default function CalendarClient({
     e.preventDefault();
     setIsSubmitting(true);
     if (form.type === "task") {
-      const caseIdVal = form.caseId || null;
+      if (!form.caseId) {
+        setErrorMsg("A case is required for tasks");
+        setIsSubmitting(false);
+        return;
+      }
       if (editTaskId) {
-        await updateTask(editTaskId, {
+        const result = await updateTask(editTaskId, {
           description: form.title,
           dueDate: form.date ? new Date(form.date) : null,
-          caseId: caseIdVal,
+          caseId: form.caseId,
         });
+        if (!result.ok) {
+          setErrorMsg(result.error);
+          setIsSubmitting(false);
+          return;
+        }
       } else {
-        await createTask({
-          caseId: caseIdVal ?? undefined,
+        const result = await createTask({
+          caseId: form.caseId,
           description: form.title,
-          dueDate: form.date ? new Date(form.date) : undefined,
+          dueDate: form.date ? new Date(form.date) : null,
+          assignee: null,
         });
+        if (!result.ok) {
+          setErrorMsg(result.error);
+          setIsSubmitting(false);
+          return;
+        }
       }
     } else {
       const hearingDate = buildDateFromDayAndTime(
@@ -261,16 +277,22 @@ export default function CalendarClient({
         await createCalendarEvent({ title: form.title, hearingDate, description: form.description || undefined, caseId: form.caseId });
       }
     }
+    setErrorMsg(null);
     setIsSubmitting(false);
     closeModal();
   };
 
   const handleDelete = async () => {
     if (editTaskId) {
-      await deleteTask(editTaskId);
+      const result = await deleteTask(editTaskId);
+      if (!result.ok) {
+        setErrorMsg(result.error);
+        return;
+      }
     } else if (editId) {
       await deleteCalendarEvent(editId);
     }
+    setErrorMsg(null);
     closeModal();
   };
 
@@ -459,6 +481,22 @@ export default function CalendarClient({
         }
         mainPaneContent={
           <div className="h-full overflow-y-auto scrollbar-hide relative">
+            {errorMsg && (
+              <div
+                role="alert"
+                className="m-4 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-[12.5px] text-destructive"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <p className="flex-1">{errorMsg}</p>
+                <button
+                  onClick={() => setErrorMsg(null)}
+                  aria-label="Dismiss error"
+                  className="p-1 rounded-full hover:bg-destructive/10"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
 
             {/* ── Day View ── */}
             {view === "day" && (() => {
