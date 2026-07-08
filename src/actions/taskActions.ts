@@ -416,16 +416,32 @@ export async function listAllTasks(): Promise<Result<TaskRow[]>> {
 
 const updateCaseTaskSchema = z.object({
   taskId: z.string().uuid(),
-  description: z.string().trim().min(1).max(500),
-  assignee: z.string().trim().min(1).max(100),
-  dueDate: z.coerce.date().nullable(),
-  isUrgent: z.boolean(),
-});
+  description: z.string().trim().min(1).max(500).optional(),
+  assignee: z.string().trim().min(1).max(100).optional(),
+  dueDate: z.coerce.date().nullable().optional(),
+  isUrgent: z.boolean().optional(),
+}).refine(
+  (d) => d.description !== undefined
+      || d.assignee !== undefined
+      || d.dueDate !== undefined
+      || d.isUrgent !== undefined,
+  { message: "At least one field required for update" }
+);
 
-export type UpdateCaseTaskInput = z.infer<typeof updateCaseTaskSchema>;
+// Kept as the pre-WS2 required shape (not tied to the now-partial Zod
+// schema) so existing full-payload callers (CaseDetailClient, TasksClient)
+// keep compiling unchanged. updateCaseTask's own parameter type below
+// accepts the wider partial shape for future partial-update consumers.
+export type UpdateCaseTaskInput = {
+  taskId: string;
+  description: string;
+  assignee: string;
+  dueDate: Date | null;
+  isUrgent: boolean;
+};
 
 export async function updateCaseTask(
-  input: UpdateCaseTaskInput,
+  input: z.input<typeof updateCaseTaskSchema>,
 ): Promise<Result<TaskRow>> {
   const parsed = updateCaseTaskSchema.safeParse(input);
   if (!parsed.success) {
@@ -440,15 +456,15 @@ export async function updateCaseTask(
       where: { id: parsed.data.taskId, case: { userId: user.id } },
       select: { id: true },
     });
-    if (!existing) return { ok: false, error: "NOT_FOUND" };
+    if (!existing) return { ok: false, error: "Task not found or not yours" };
 
     const updated = await db.task.update({
       where: { id: parsed.data.taskId },
       data: {
-        description: parsed.data.description,
-        assignee: parsed.data.assignee,
-        dueDate: parsed.data.dueDate,
-        isUrgent: parsed.data.isUrgent,
+        ...(parsed.data.description !== undefined && { description: parsed.data.description }),
+        ...(parsed.data.assignee !== undefined && { assignee: parsed.data.assignee }),
+        ...(parsed.data.dueDate !== undefined && { dueDate: parsed.data.dueDate }),
+        ...(parsed.data.isUrgent !== undefined && { isUrgent: parsed.data.isUrgent }),
       },
       select: {
         id: true,
@@ -471,6 +487,6 @@ export async function updateCaseTask(
     return { ok: true, data: updated };
   } catch (e) {
     console.error("[updateCaseTask]", e);
-    return { ok: false, error: "INTERNAL_ERROR" };
+    return { ok: false, error: "Failed to update task" };
   }
 }
