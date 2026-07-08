@@ -78,6 +78,22 @@ async function ensureFixtures(userId: string, prefix: "A" | "B") {
       })
     }
   }
+
+  // Independent task (no case association) — one per user, idempotent.
+  const independentTaskDesc = `${prefix}-Independent-Task`
+  const independentTaskExists = await prisma.task.findFirst({
+    where: { userId, caseId: null, description: independentTaskDesc },
+  })
+  if (!independentTaskExists) {
+    await prisma.task.create({
+      data: {
+        caseId: null,
+        userId,
+        description: independentTaskDesc,
+        status: "pending",
+      },
+    })
+  }
 }
 
 async function main() {

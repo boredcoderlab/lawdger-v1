@@ -53,7 +53,7 @@ export async function createTask(data: {
   await prisma.task.create({
     data: {
       userId,
-      caseId: data.caseId as string,
+      caseId: data.caseId ?? null,
       description: data.description,
       dueDate: data.dueDate ?? null,
       assignee: data.assignee ?? "Unassigned",
@@ -65,26 +65,39 @@ export async function createTask(data: {
   if (data.caseId) revalidatePath(`/cases/${data.caseId}`);
 }
 
+const updateTaskSchema = z.object({
+  id: z.string().uuid(),
+  description: z.string().trim().min(1).max(500).optional(),
+  dueDate: z.coerce.date().nullable().optional(),
+  caseId: z.string().uuid().nullable().optional(),
+}).refine(
+  (d) => d.description !== undefined || d.dueDate !== undefined || d.caseId !== undefined,
+  { message: "At least one field required for update" }
+);
+
 export async function updateTask(
   id: string,
   data: { description?: string; dueDate?: Date | null; caseId?: string | null },
 ) {
+  const parsed = updateTaskSchema.safeParse({ id, ...data });
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid input");
+
   const userId = await requireUserId();
 
-  if (data.caseId) {
+  if (parsed.data.caseId) {
     const caseItem = await prisma.case.findFirst({
-      where: { id: data.caseId, userId },
+      where: { id: parsed.data.caseId, userId },
       select: { id: true },
     });
     if (!caseItem) throw new Error("Case not found or unauthorized");
   }
 
   const result = await prisma.task.updateMany({
-    where: { id, userId },
+    where: { id: parsed.data.id, userId },
     data: {
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.dueDate !== undefined && { dueDate: data.dueDate }),
-      ...(data.caseId != null && { caseId: data.caseId }),
+      ...(parsed.data.description !== undefined && { description: parsed.data.description }),
+      ...(parsed.data.dueDate !== undefined && { dueDate: parsed.data.dueDate }),
+      ...(parsed.data.caseId !== undefined && { caseId: parsed.data.caseId }),
     },
   });
 
@@ -276,8 +289,8 @@ export type TaskRow = {
   isUrgent: boolean;
   createdAt: Date;
   updatedAt: Date;
-  caseId: string;
-  case: { id: string; title: string; caseNumber: string | null };
+  caseId: string | null;
+  case: { id: string; title: string; caseNumber: string | null } | null;
 };
 
 export async function listAllTasks(): Promise<Result<TaskRow[]>> {

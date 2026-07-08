@@ -33,8 +33,9 @@ import { prisma as baseClient } from "../src/lib/prisma"
 const USER_A_EMAIL = "jainsahil2897@gmail.com"
 const USER_B_EMAIL = "userb@test.local"
 
-// Stable, predictable description so the cleanup query is unambiguous.
+// Stable, predictable descriptions so cleanup queries are unambiguous.
 const PROBE_DESCRIPTION = "[verify-phase4-rls] probe task — userA owned"
+const INDEPENDENT_PROBE_DESCRIPTION = "[verify-phase4-rls] independent probe task — userA owned, caseId null"
 
 type Check = { name: string; pass: boolean; detail: string }
 const checks: Check[] = []
@@ -52,11 +53,10 @@ function record(name: string, pass: boolean, detail: string) {
 
 async function cleanupProbe() {
   if (!cleanupUserAId) return
-  // Scoped cleanup via userA's GUC-set client — sweeps the current
-  // probe plus any stragglers from earlier failed runs. Description
-  // string is unique to this script so the WHERE clause is unambiguous.
   const dbA = getPrismaForUser(cleanupUserAId)
-  await dbA.task.deleteMany({ where: { description: PROBE_DESCRIPTION } })
+  await dbA.task.deleteMany({
+    where: { description: { in: [PROBE_DESCRIPTION, INDEPENDENT_PROBE_DESCRIPTION] } },
+  })
 }
 
 async function main(): Promise<number> {
@@ -211,6 +211,46 @@ async function main(): Promise<number> {
     bUpdateOwnerCheck
       ? `LEAK: B can see A's task ${JSON.stringify(bUpdateOwnerCheck)}`
       : "returned null — updateCaseTask would short-circuit with {ok:false,error:'NOT_FOUND'}",
+  )
+
+  // ─── Check 8: Independent Task (caseId null) — cross-tenant isolation ────────
+  // Creates an independent task (no case association) as userA, then verifies
+  // userB cannot read or mutate it. Policy Task_isolation keys on userId alone,
+  // so null caseId rows must be scoped identically to case-linked rows.
+  const independentProbe = await dbA.task.create({
+    data: {
+      userId: userA.id,
+      caseId: null,
+      description: INDEPENDENT_PROBE_DESCRIPTION,
+      status: "pending",
+      isUrgent: false,
+    },
+    select: { id: true },
+  })
+  console.log(`\nIndependent probe Task id=${independentProbe.id} userId=${userA.id} caseId=null\n`)
+
+  const bSeesIndependent = await dbB.task.findFirst({
+    where: { id: independentProbe.id, userId: userB.id },
+    select: { id: true },
+  })
+  record(
+    "8. Independent Task isolation: scoped(B) findFirst on A's null-caseId task → null",
+    bSeesIndependent === null,
+    bSeesIndependent
+      ? `LEAK: B can see A's independent task ${JSON.stringify(bSeesIndependent)}`
+      : "returned null — RLS correctly scopes independent tasks by userId",
+  )
+
+  const aSeesIndependent = await dbA.task.findFirst({
+    where: { id: independentProbe.id },
+    select: { id: true, caseId: true },
+  })
+  record(
+    "8b. Independent Task readable by owner A",
+    aSeesIndependent !== null && aSeesIndependent.caseId === null,
+    aSeesIndependent
+      ? `present id=${aSeesIndependent.id} caseId=${aSeesIndependent.caseId}`
+      : "MISSING — independent probe not found for userA",
   )
 
   console.log("")

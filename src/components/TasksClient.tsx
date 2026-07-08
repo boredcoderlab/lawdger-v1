@@ -30,6 +30,8 @@ import {
   toggleCaseTaskStatus,
   deleteCaseTask,
   updateCaseTask,
+  updateTaskStatus,
+  deleteTask,
   type TaskRow,
   type UpdateCaseTaskInput,
 } from "@/actions/taskActions";
@@ -88,7 +90,8 @@ function dueClasses(d: Date | null): string {
   return "text-lawdger-muted";
 }
 
-function caseChipLabel(c: { title: string; caseNumber: string | null }) {
+function caseChipLabel(c: { title: string; caseNumber: string | null } | null) {
+  if (!c) return "Independent";
   return c.caseNumber ? `${c.title} · ${c.caseNumber}` : c.title;
 }
 
@@ -129,7 +132,7 @@ export default function TasksClient({
     if (!q) return null;
     const s = new Set<string>();
     for (const t of allTasks) {
-      const hay = `${t.description} ${t.case.title} ${t.case.caseNumber ?? ""}`.toLowerCase();
+      const hay = `${t.description} ${t.case?.title ?? ""} ${t.case?.caseNumber ?? ""}`.toLowerCase();
       if (hay.includes(q)) s.add(t.id);
     }
     return s;
@@ -195,12 +198,13 @@ export default function TasksClient({
     setAssociates(nextAssociates);
     setStats(deriveStats(nextUnassigned, nextMyPlate, nextAssociates));
     startTransition(async () => {
-      const result = await toggleCaseTaskStatus(task.id, task.status, task.caseId);
-      if (!result.ok) {
-        rollback(snap);
-        setErrorMsg(result.error);
+      if (task.caseId) {
+        const result = await toggleCaseTaskStatus(task.id, task.status, task.caseId);
+        if (!result.ok) { rollback(snap); setErrorMsg(result.error); }
+        else setErrorMsg(null);
       } else {
-        setErrorMsg(null);
+        try { await updateTaskStatus(task.id, newStatus); setErrorMsg(null); }
+        catch (e) { rollback(snap); setErrorMsg(e instanceof Error ? e.message : "Failed to update task"); }
       }
     });
   }
@@ -217,12 +221,13 @@ export default function TasksClient({
     setDetailTaskId(null);
     setStats(deriveStats(nextUnassigned, nextMyPlate, nextAssociates));
     startTransition(async () => {
-      const result = await deleteCaseTask(task.id, task.caseId);
-      if (!result.ok) {
-        rollback(snap);
-        setErrorMsg(result.error);
+      if (task.caseId) {
+        const result = await deleteCaseTask(task.id, task.caseId);
+        if (!result.ok) { rollback(snap); setErrorMsg(result.error); }
+        else setErrorMsg(null);
       } else {
-        setErrorMsg(null);
+        try { await deleteTask(task.id); setErrorMsg(null); }
+        catch (e) { rollback(snap); setErrorMsg(e instanceof Error ? e.message : "Failed to delete task"); }
       }
     });
   }
@@ -597,13 +602,19 @@ function AssignedCard({
             {task.description}
           </div>
           <div className="mt-3 flex items-center justify-between gap-2">
-            <Link
-              href={`/cases/${task.caseId}`}
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[60%] truncate"
-            >
-              {caseChipLabel(task.case)}
-            </Link>
+            {task.caseId ? (
+              <Link
+                href={`/cases/${task.caseId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[60%] truncate"
+              >
+                {caseChipLabel(task.case)}
+              </Link>
+            ) : (
+              <span className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-[60%] truncate">
+                Independent
+              </span>
+            )}
             {dueLabel(task.dueDate) === "Overdue" ? (
               <span className="chip chip-danger">Overdue</span>
             ) : (
