@@ -203,8 +203,9 @@ export default function TasksClient({
         if (!result.ok) { rollback(snap); setErrorMsg(result.error); }
         else setErrorMsg(null);
       } else {
-        try { await updateTaskStatus(task.id, newStatus); setErrorMsg(null); }
-        catch (e) { rollback(snap); setErrorMsg(e instanceof Error ? e.message : "Failed to update task"); }
+        const result = await updateTaskStatus(task.id, newStatus);
+        if (!result.ok) { rollback(snap); setErrorMsg(result.error); }
+        else setErrorMsg(null);
       }
     });
   }
@@ -226,8 +227,9 @@ export default function TasksClient({
         if (!result.ok) { rollback(snap); setErrorMsg(result.error); }
         else setErrorMsg(null);
       } else {
-        try { await deleteTask(task.id); setErrorMsg(null); }
-        catch (e) { rollback(snap); setErrorMsg(e instanceof Error ? e.message : "Failed to delete task"); }
+        const result = await deleteTask(task.id);
+        if (!result.ok) { rollback(snap); setErrorMsg(result.error); }
+        else setErrorMsg(null);
       }
     });
   }

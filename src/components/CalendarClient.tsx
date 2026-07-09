@@ -168,6 +168,7 @@ export default function CalendarClient({
   const [editId, setEditId] = useState<string | null>(null);
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [form, setForm] = useState({
     type: "hearing" as "hearing" | "task",
     title: "",
@@ -230,26 +231,28 @@ export default function CalendarClient({
     setModalOpen(true);
   };
 
-  const closeModal = () => { setModalOpen(false); setEditId(null); setEditTaskId(null); };
+  const closeModal = () => { setModalOpen(false); setEditId(null); setEditTaskId(null); setErrorMsg(null); };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setErrorMsg(null);
     if (form.type === "task") {
       const caseIdVal = form.caseId || null;
-      if (editTaskId) {
-        await updateTask(editTaskId, {
-          description: form.title,
-          dueDate: form.date ? new Date(form.date) : null,
-          caseId: caseIdVal,
-        });
-      } else {
-        await createTask({
-          caseId: caseIdVal ?? undefined,
-          description: form.title,
-          dueDate: form.date ? new Date(form.date) : undefined,
-        });
-      }
+      const result = editTaskId
+        ? await updateTask(editTaskId, {
+            description: form.title,
+            dueDate: form.date ? new Date(form.date) : null,
+            caseId: caseIdVal,
+          })
+        : await createTask({
+            caseId: caseIdVal,
+            description: form.title,
+            dueDate: form.date ? new Date(form.date) : null,
+            assignee: null,
+          });
+      setIsSubmitting(false);
+      if (!result.ok) { setErrorMsg(result.error); return; }
     } else {
       const hearingDate = buildDateFromDayAndTime(
         parse(form.date, "yyyy-MM-dd", new Date()),
@@ -260,14 +263,15 @@ export default function CalendarClient({
       } else {
         await createCalendarEvent({ title: form.title, hearingDate, description: form.description || undefined, caseId: form.caseId });
       }
+      setIsSubmitting(false);
     }
-    setIsSubmitting(false);
     closeModal();
   };
 
   const handleDelete = async () => {
     if (editTaskId) {
-      await deleteTask(editTaskId);
+      const result = await deleteTask(editTaskId);
+      if (!result.ok) { setErrorMsg(result.error); return; }
     } else if (editId) {
       await deleteCalendarEvent(editId);
     }
@@ -665,6 +669,12 @@ export default function CalendarClient({
                 <X className="h-5 w-5" />
               </button>
             </div>
+
+            {errorMsg && (
+              <div className="mx-8 mt-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] text-red-500">
+                {errorMsg}
+              </div>
+            )}
 
             <form onSubmit={handleSave} className="p-8 space-y-6">
               {!isEditing && (
