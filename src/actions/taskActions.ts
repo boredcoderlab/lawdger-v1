@@ -3,20 +3,18 @@
 /**
  * Mixed contract module.
  *
- * Functions added in phase 3.2 (createCaseTask, toggleCaseTaskStatus,
- * deleteCaseTask) follow the 3.2 contract: Zod input, RLS-scoped Prisma
- * via getServerScopedPrisma, defence-in-depth `where: { userId }`, and a
- * Result<T> envelope.
+ * createTask, updateTask, deleteTask, updateTaskStatus (independent-task
+ * path, phase 3.2.6) and createCaseTask, toggleCaseTaskStatus, deleteCaseTask
+ * (phase 3.2) follow the 3.2 contract: Zod input, RLS-scoped Prisma via
+ * withServerUserContext/getServerScopedPrisma, defence-in-depth
+ * `where: { userId }`, and a Result<T> envelope.
  *
- * Pre-existing functions (getTasks, createTask, updateTask, updateTaskStatus,
- * updateTaskAssignee, getTasksWithDueDate, deleteTask) still use bare
- * `prisma` + `requireUserId` and throw on error. They are pending the
- * post-3.3 sibling-uplift mini-phase (3.2.x) and are intentionally left
- * untouched here to keep the 3.2 PR scoped.
+ * getTasks, updateTaskAssignee still use bare `prisma` + `requireUserId`
+ * and throw on error. Left untouched — out of scope for 3.2.6.
  */
 
 import { requireUserId } from "@/actions/requireUserId";
-import { getServerScopedPrisma, getServerUser } from "@/lib/session";
+import { getServerScopedPrisma, getServerUser, withServerUserContext } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -34,78 +32,136 @@ export async function getTasks() {
   });
 }
 
-export async function createTask(data: {
-  caseId?: string;
-  description: string;
-  dueDate?: Date;
-  assignee?: string;
-}) {
-  const userId = await requireUserId();
+const createTaskSchema = z.object({
+  caseId: z.string().uuid().nullable(),
+  description: z.string().trim().min(1).max(500),
+  dueDate: z.coerce.date().nullable(),
+  assignee: z.string().trim().min(1).max(100).nullable(),
+});
 
-  if (data.caseId) {
-    const caseItem = await prisma.case.findFirst({
-      where: { id: data.caseId, userId },
+export async function createTask(
+  data: z.input<typeof createTaskSchema>,
+): Promise<Result<{ id: string }>> {
+  const parsed = createTaskSchema.safeParse(data);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const user = await getServerUser();
+  const result = await withServerUserContext(async (tx) => {
+    if (parsed.data.caseId) {
+      const caseItem = await tx.case.findFirst({
+        where: { id: parsed.data.caseId, userId: user.id },
+        select: { id: true },
+      });
+      if (!caseItem) return { ok: false, error: "Case not found or unauthorized" } as const;
+    }
+    const task = await tx.task.create({
+      data: {
+        userId: user.id,
+        caseId: parsed.data.caseId,
+        description: parsed.data.description,
+        dueDate: parsed.data.dueDate,
+        assignee: parsed.data.assignee ?? "Unassigned",
+        status: "pending",
+      },
       select: { id: true },
     });
-    if (!caseItem) throw new Error("Case not found or unauthorized");
-  }
-
-  await prisma.task.create({
-    data: {
-      userId,
-      caseId: data.caseId as string,
-      description: data.description,
-      dueDate: data.dueDate ?? null,
-      assignee: data.assignee ?? "Unassigned",
-      status: "pending",
-    },
+    return { ok: true, data: { id: task.id } } as const;
   });
 
-  revalidatePath("/tasks");
-  if (data.caseId) revalidatePath(`/cases/${data.caseId}`);
+  if (result.ok) {
+    revalidatePath("/tasks");
+    revalidatePath("/calendar");
+    revalidatePath("/dashboard");
+    if (parsed.data.caseId) revalidatePath(`/cases/${parsed.data.caseId}`);
+  }
+  return result;
 }
+
+const updateTaskSchema = z.object({
+  id: z.string().uuid(),
+  description: z.string().trim().min(1).max(500).optional(),
+  dueDate: z.coerce.date().nullable().optional(),
+  caseId: z.string().uuid().nullable().optional(),
+}).refine(
+  (d) => d.description !== undefined || d.dueDate !== undefined || d.caseId !== undefined,
+  { message: "At least one field required for update" }
+);
 
 export async function updateTask(
   id: string,
   data: { description?: string; dueDate?: Date | null; caseId?: string | null },
-) {
-  const userId = await requireUserId();
+): Promise<Result<{ id: string }>> {
+  const parsed = updateTaskSchema.safeParse({ id, ...data });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
-  if (data.caseId) {
-    const caseItem = await prisma.case.findFirst({
-      where: { id: data.caseId, userId },
-      select: { id: true },
+  const user = await getServerUser();
+  const result = await withServerUserContext(async (tx) => {
+    const existing = await tx.task.findFirst({
+      where: { id: parsed.data.id, userId: user.id },
+      select: { id: true, caseId: true },
     });
-    if (!caseItem) throw new Error("Case not found or unauthorized");
-  }
+    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
 
-  const result = await prisma.task.updateMany({
-    where: { id, userId },
-    data: {
-      ...(data.description !== undefined && { description: data.description }),
-      ...(data.dueDate !== undefined && { dueDate: data.dueDate }),
-      ...(data.caseId != null && { caseId: data.caseId }),
-    },
+    if (parsed.data.caseId) {
+      const caseItem = await tx.case.findFirst({
+        where: { id: parsed.data.caseId, userId: user.id },
+        select: { id: true },
+      });
+      if (!caseItem) return { ok: false, error: "Case not found or unauthorized" } as const;
+    }
+
+    await tx.task.update({
+      where: { id: parsed.data.id },
+      data: {
+        ...(parsed.data.description !== undefined && { description: parsed.data.description }),
+        ...(parsed.data.dueDate !== undefined && { dueDate: parsed.data.dueDate }),
+        ...(parsed.data.caseId !== undefined && { caseId: parsed.data.caseId }),
+      },
+    });
+    return { ok: true, data: { id: parsed.data.id, oldCaseId: existing.caseId } } as const;
   });
 
-  if (!result.count) throw new Error("Unauthorized");
-
-  revalidatePath("/tasks");
-  revalidatePath("/calendar");
+  if (result.ok) {
+    revalidatePath("/tasks");
+    revalidatePath("/calendar");
+    revalidatePath("/dashboard");
+    if (parsed.data.caseId) revalidatePath(`/cases/${parsed.data.caseId}`);
+    if (result.data.oldCaseId) revalidatePath(`/cases/${result.data.oldCaseId}`);
+    return { ok: true, data: { id: result.data.id } };
+  }
+  return result;
 }
 
-export async function updateTaskStatus(id: string, status: "pending" | "completed") {
-  const userId = await requireUserId();
-  const result = await prisma.task.updateMany({
-    where: { id, userId },
-    data: { status },
+const updateTaskStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["pending", "completed"]),
+});
+
+export async function updateTaskStatus(
+  id: string,
+  status: "pending" | "completed",
+): Promise<Result<{ id: string }>> {
+  const parsed = updateTaskStatusSchema.safeParse({ id, status });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const user = await getServerUser();
+  const result = await withServerUserContext(async (tx) => {
+    const existing = await tx.task.findFirst({
+      where: { id, userId: user.id },
+      select: { id: true, caseId: true },
+    });
+    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
+    await tx.task.update({ where: { id }, data: { status: parsed.data.status } });
+    return { ok: true, data: { id: existing.id, caseId: existing.caseId } } as const;
   });
 
-  if (!result.count) {
-    throw new Error("Unauthorized");
+  if (result.ok) {
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    if (result.data.caseId) revalidatePath(`/cases/${result.data.caseId}`);
+    return { ok: true, data: { id: result.data.id } };
   }
-
-  revalidatePath("/tasks");
+  return result;
 }
 
 export async function updateTaskAssignee(id: string, assignee: string) {
@@ -122,31 +178,62 @@ export async function updateTaskAssignee(id: string, assignee: string) {
   revalidatePath("/tasks");
 }
 
-export async function getTasksWithDueDate() {
-  const userId = await requireUserId();
-  return prisma.task.findMany({
-    where: { userId, status: "pending", dueDate: { not: null } },
-    select: {
-      id: true,
-      description: true,
-      dueDate: true,
-      case: { select: { id: true, title: true } },
-    },
-    orderBy: { dueDate: "asc" },
+const getTasksWithDueDateSchema = z.object({}).strict();
+
+export type TaskWithDueDateRow = {
+  id: string;
+  description: string;
+  dueDate: Date | null;
+  case: { id: string; title: string } | null;
+};
+
+export async function getTasksWithDueDate(): Promise<Result<TaskWithDueDateRow[]>> {
+  const parsed = getTasksWithDueDateSchema.safeParse({});
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const user = await getServerUser();
+  return withServerUserContext(async (tx) => {
+    const tasks = await tx.task.findMany({
+      where: { userId: user.id, status: "pending", dueDate: { not: null } },
+      select: {
+        id: true,
+        description: true,
+        dueDate: true,
+        case: { select: { id: true, title: true } },
+      },
+      orderBy: { dueDate: "asc" },
+    });
+    return { ok: true, data: tasks } as const;
   });
 }
 
-export async function deleteTask(id: string) {
-  const userId = await requireUserId();
-  const result = await prisma.task.deleteMany({
-    where: { id, userId },
+const deleteTaskSchema = z.object({ id: z.string().uuid() });
+
+export async function deleteTask(id: string): Promise<Result<{ id: string }>> {
+  const parsed = deleteTaskSchema.safeParse({ id });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const user = await getServerUser();
+  const result = await withServerUserContext(async (tx) => {
+    const existing = await tx.task.findFirst({
+      where: { id, userId: user.id },
+      select: { id: true, caseId: true },
+    });
+    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
+    await tx.task.delete({ where: { id } });
+    return { ok: true, data: { id: existing.id, caseId: existing.caseId } } as const;
   });
 
-  if (!result.count) {
-    throw new Error("Unauthorized");
+  if (result.ok) {
+    revalidatePath("/tasks");
+    revalidatePath("/calendar");
+    revalidatePath("/dashboard");
+    if (result.data.caseId) revalidatePath(`/cases/${result.data.caseId}`);
+    return { ok: true, data: { id: result.data.id } };
   }
-
-  revalidatePath("/tasks");
+  return result;
 }
 
 // ─── Phase 3.2 — case-scoped task actions (moved from caseActions.ts) ─────────
@@ -276,8 +363,8 @@ export type TaskRow = {
   isUrgent: boolean;
   createdAt: Date;
   updatedAt: Date;
-  caseId: string;
-  case: { id: string; title: string; caseNumber: string | null };
+  caseId: string | null;
+  case: { id: string; title: string; caseNumber: string | null } | null;
 };
 
 export async function listAllTasks(): Promise<Result<TaskRow[]>> {

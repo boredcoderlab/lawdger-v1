@@ -86,14 +86,14 @@ model Note {
 
 model Task {
   id          String    @id @default(uuid())
-  caseId      String
+  caseId      String?
   userId      String
   description String
   status      String    @default("pending") // pending, completed
   assignee    String    @default("Unassigned")
   dueDate     DateTime?
   isUrgent    Boolean   @default(false)
-  case        Case      @relation(fields: [caseId], references: [id])
+  case        Case?     @relation(fields: [caseId], references: [id])
   user        User      @relation(fields: [userId], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

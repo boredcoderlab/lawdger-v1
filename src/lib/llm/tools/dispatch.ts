@@ -243,7 +243,7 @@ export async function executeTool(
 
     case "update_task":
       return withSchema("update_task", rawArgs, async (args) => {
-        await updateTask(args.taskId, {
+        const result = await updateTask(args.taskId, {
           description: args.description,
           dueDate:
             args.dueDate === null
@@ -253,6 +253,7 @@ export async function executeTool(
                 : undefined,
           caseId: args.caseId,
         });
+        if (!result.ok) return { result: result.error };
         return { result: "Task updated.", action: `✅ Updated task` };
       });
 
