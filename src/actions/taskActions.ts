@@ -9,10 +9,8 @@
  * withServerUserContext/getServerScopedPrisma, defence-in-depth
  * `where: { userId }`, and a Result<T> envelope.
  *
- * getTasks, updateTaskAssignee, getTasksWithDueDate still use bare `prisma`
- * + `requireUserId` and throw on error. They are pending the post-3.3
- * sibling-uplift mini-phase (3.2.x) and are intentionally left untouched
- * here to keep the 3.2.6 PR scoped.
+ * getTasks, updateTaskAssignee still use bare `prisma` + `requireUserId`
+ * and throw on error. Left untouched — out of scope for 3.2.6.
  */
 
 import { requireUserId } from "@/actions/requireUserId";
@@ -180,17 +178,34 @@ export async function updateTaskAssignee(id: string, assignee: string) {
   revalidatePath("/tasks");
 }
 
-export async function getTasksWithDueDate() {
-  const userId = await requireUserId();
-  return prisma.task.findMany({
-    where: { userId, status: "pending", dueDate: { not: null } },
-    select: {
-      id: true,
-      description: true,
-      dueDate: true,
-      case: { select: { id: true, title: true } },
-    },
-    orderBy: { dueDate: "asc" },
+const getTasksWithDueDateSchema = z.object({}).strict();
+
+export type TaskWithDueDateRow = {
+  id: string;
+  description: string;
+  dueDate: Date | null;
+  case: { id: string; title: string } | null;
+};
+
+export async function getTasksWithDueDate(): Promise<Result<TaskWithDueDateRow[]>> {
+  const parsed = getTasksWithDueDateSchema.safeParse({});
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const user = await getServerUser();
+  return withServerUserContext(async (tx) => {
+    const tasks = await tx.task.findMany({
+      where: { userId: user.id, status: "pending", dueDate: { not: null } },
+      select: {
+        id: true,
+        description: true,
+        dueDate: true,
+        case: { select: { id: true, title: true } },
+      },
+      orderBy: { dueDate: "asc" },
+    });
+    return { ok: true, data: tasks } as const;
   });
 }
 
