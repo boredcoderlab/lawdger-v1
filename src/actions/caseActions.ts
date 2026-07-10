@@ -29,6 +29,7 @@
  */
 
 import { CASE_TYPES } from "@/lib/case-constants";
+import { filterStalePastHearing, stripStalePastHearing } from "@/lib/date";
 import {
   getServerScopedPrisma,
   getServerUser,
@@ -187,7 +188,7 @@ export async function listCases(
       take,
     });
     const total = await tx.case.count({ where });
-    return { ok: true, data: { items, total } };
+    return { ok: true, data: { items: filterStalePastHearing(items), total } };
   });
 }
 
@@ -237,7 +238,7 @@ export async function getCaseWithChildren(
     },
   });
 
-  return { ok: true, data: found };
+  return { ok: true, data: found ? stripStalePastHearing(found) : null };
 }
 
 // ─── updateCase ──────────────────────────────────────────────────────────────
