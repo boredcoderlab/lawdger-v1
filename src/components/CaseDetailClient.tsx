@@ -24,7 +24,7 @@ import {
 import { CaseStatus, MatterType } from "@prisma/client";
 import { CASE_TYPES, type CaseType } from "@/lib/case-constants";
 import { PageLayout, DarkPaneHeaderTitle, ContentHeading } from "@/components/ui/LayoutShell";
-import { formatIndianDate } from "@/lib/date";
+import { formatIndianDate, isFutureIST } from "@/lib/date";
 import { formatINR } from "@/lib/format";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -327,8 +327,7 @@ export default function CaseDetailClient({
   };
 
   // ── Next hearing ────────────────────────────────────────────────────────────
-  const now         = new Date();
-  const nextHearing = upcomingHearings.find((h) => new Date(h.hearingDate) >= now);
+  const nextHearing = upcomingHearings.find((h) => isFutureIST(new Date(h.hearingDate)));
 
   // ── Activity Timeline (merged notes + tasks + hearings, read-only) ─────────
   const timeline: TimelineItem[] = [

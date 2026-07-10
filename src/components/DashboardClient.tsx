@@ -7,6 +7,7 @@ import {
   ChevronRight, Bell, Send, ChevronLeft
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
+import { isFutureIST } from "@/lib/date";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -52,10 +53,16 @@ export default function DashboardClient({
   totalCases: number;
   totalTasks: number;
 }) {
-  const now = new Date();
-  const futureTodayEvents = todayEvents.filter(e => new Date(e.hearingDate) >= now);
+  const futureTodayEvents = todayEvents.filter(e => isFutureIST(new Date(e.hearingDate)));
   const nextUp = futureTodayEvents[0] ?? null;
   const onRadar = futureTodayEvents.slice(1, 4);
+
+  const formatNextHearing = (d: Date): string => {
+    const isAllDay = d.getUTCHours() === 0 && d.getUTCMinutes() === 0;
+    return isAllDay
+      ? `Next hearing: ${format(d, "d MMM")} (All day)`
+      : `Next hearing: ${format(d, "d MMM, h:mm a")}`;
+  };
 
   const [query, setQuery] = useState("");
   const [chatQuery, setChatQuery] = useState("");
@@ -264,7 +271,7 @@ export default function DashboardClient({
                     <h4 className="text-[14px] font-bold text-lawdger-cream dark:text-white group-hover:text-white">{c.title}</h4>
                     <p className="text-[12px] text-lawdger-cream/50 dark:text-white/50">
                       {c.nextHearingDate
-                        ? `Next hearing: ${format(new Date(c.nextHearingDate), "d MMM, h:mm a")}`
+                        ? formatNextHearing(new Date(c.nextHearingDate))
                         : "No upcoming hearing"}
                     </p>
                   </div>
