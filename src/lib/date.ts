@@ -90,3 +90,22 @@ export function stripStalePastHearing<T extends { nextHearingDate: Date | null }
     nextHearingDate: item.nextHearingDate && item.nextHearingDate >= floor ? item.nextHearingDate : null,
   };
 }
+
+/**
+ * True if `d` represents IST-local midnight — i.e., an all-day event stored
+ * as the UTC instant corresponding to 00:00 IST (which is 18:30 UTC prev day).
+ * Uses Intl formatter — same canonical pattern as istDateKey/formatIndianDate.
+ * Do NOT check `d.getUTCHours() === 0` — that only matches UTC midnight, which
+ * is 05:30 IST, not IST midnight.
+ */
+export function isAllDayIST(d: Date): boolean {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(d);
+  const hh = parts.find((p) => p.type === "hour")?.value;
+  const mm = parts.find((p) => p.type === "minute")?.value;
+  return hh === "00" && mm === "00";
+}

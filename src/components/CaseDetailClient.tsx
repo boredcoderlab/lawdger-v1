@@ -1396,9 +1396,10 @@ function DetailLine({ label, children }: { label: string; children: React.ReactN
 }
 
 function MatterDetails({ caseData }: { caseData: CaseWithChildren }) {
-  // matterType excluded — it defaults to LITIGATION and is never absent,
-  // so including it here would make hasAny always true.
+  // matterType always populated (defaults to LITIGATION), so the block
+  // always renders — narrow fields below still guard themselves.
   const hasAny =
+    caseData.matterType ||
     caseData.caseNumber ||
     caseData.caseType ||
     caseData.nextHearingDate ||

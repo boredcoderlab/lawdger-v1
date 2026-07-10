@@ -7,7 +7,7 @@ import {
   ChevronRight, Bell, Send, ChevronLeft
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
-import { isFutureIST } from "@/lib/date";
+import { isFutureIST, isAllDayIST } from "@/lib/date";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -58,8 +58,7 @@ export default function DashboardClient({
   const onRadar = futureTodayEvents.slice(1, 4);
 
   const formatNextHearing = (d: Date): string => {
-    const isAllDay = d.getUTCHours() === 0 && d.getUTCMinutes() === 0;
-    return isAllDay
+    return isAllDayIST(d)
       ? `Next hearing: ${format(d, "d MMM")} (All day)`
       : `Next hearing: ${format(d, "d MMM, h:mm a")}`;
   };
