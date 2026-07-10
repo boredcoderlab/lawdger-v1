@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-07-10 (post-#37 merge, Fable 5 audit folded — N48–N67 opened)
+**Last updated:** 2026-07-10 (post-W6 merge #38 — N49/N67/N68 closed at 1c49346)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,8 +24,8 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `424b959` (#37 — Independent Tasks merge; last flip commit)
-- **Last merge:** #37 Independent Tasks (`3bc3742`)
+- **Current main sha:** `1c49346` (#38 — W6 IST date-semantics merge; last flip commit)
+- **Last merge:** #38 W6 IST date-semantics (`1c49346`)
 - **PR8 branch:** `feat/pr8-tasks-uplift-pillar-b` HEAD `7c56610` — WS1/WS2/WS3 committed, NOT MERGED, scope collapsed post-#37 (see §13)
 
 ---
@@ -410,7 +410,7 @@ Every Claude Code prompt for Lawdger must include:
 
 **Fable 5 full-codebase audit (2026-07-10)**
 - **N48 (P1)** — Independent-task edit broken on main. TasksClient.tsx:326 routes edits through updateCaseTask, owner-check joins case:{userId}. Null-case tasks never match → NOT_FOUND → silent rollback. Resolution: W1 reconciliation, verify WS2 partial-update covers null-case path; small addition if not.
-- **N49 (P1)** — Today's all-day hearing vanishes at 05:30 IST from all "next hearing" surfaces. Storage UTC-midnight; 4 sites compare against `new Date()` instead of `startOfTodayIST()`. Resolution: W6 micro-PR.
+- **N49 (P1)** — ✅ closed @ `1c49346` (#38). Today's all-day hearing vanishes at 05:30 IST from all "next hearing" surfaces. Storage UTC-midnight; 4 sites compared against `new Date()` instead of an IST-today floor. Closed via IST-today floor at 4 sites: `isFutureIST()` in CaseDetailClient (sidebar) and DashboardClient (hero card); `filterStalePastHearing`/`stripStalePastHearing` (both wrap `startOfTodayIST()`) in dashboardActions/listCases/getCaseWithChildren; `startOfTodayIST()` inline in `calendar-sync.ts` writer that populates the `Case.nextHearingDate` cache column.
 - **N50 (P1)** — CaseDetailClient fire-and-forget mutation calls (updateCase, updateCaseStatus, createCaseTask, docket toggle+delete). Result envelope not checked. User sees success UI, data unsaved on Zod rejection. Resolution: W4 silent-failure UI sweep.
 - **N51 (P2)** — CalendarClient hearing ops have no failure path at all: createCalendarEvent/updateCalendarEvent/deleteCalendarEvent throw (no Result), callers don't catch → unhandled rejection, button stuck "Saving…", drag-drop reschedule silently lost on error. Evidence: CalendarClient.tsx:261–265, 276, 288; root cause calendarActions.ts (no Zod/Result — known 3.2.6 debt, client half uncatalogued). Fix direction: W5 uplift + client result.ok handling. Resolution: W4 (client half) / W5 (server half).
 - **N52 (P2)** — Pages violate the repo's own parallel-scoped-ops BAN: Promise.all over 3 (calendar) / 2 (cases) scoped actions, each opening its own GUC transaction — the exact P2024 shape prisma-rls.ts:18–26 bans. Latent pool-exhaustion under concurrent users at connection_limit=5. Evidence: calendar/page.tsx:6–10, cases/page.tsx:5–8. Fix direction: Sequential awaits, or one withServerUserContext loader per page. Resolution: W5.
@@ -424,11 +424,12 @@ Every Claude Code prompt for Lawdger must include:
 - **N60 (P3)** — Hearing edits can't clear title/description: ...(data.title && …) truthiness drops empty strings, and the client pre-launders with || undefined. Deleting notes text → save → old text persists. Evidence: calendarActions.ts:79–81, CalendarClient.tsx:262. Fix direction: !== undefined checks + explicit null-to-clear in the Zod schema. Resolution: W5.
 - **N61 (P3)** — No indexes on Note / Task / CalendarEvent / Payment — no @@index on userId/caseId/dueDate/hearingDate anywhere on the four hottest tables; every RLS-filtered list is a seq scan. Only Case and Document carry indexes. Evidence: schema.prisma:73–127 (absence) vs :69–70, 143–144. Fix direction: @@index([userId]), @@index([caseId]), plus Task([userId, status]), CalendarEvent([userId, hearingDate]) in the schema-cleanup migration window. Resolution: W9.
 - **N62 (P3)** — Non-null assertion t.dueDate! — safe only via a query invariant (dueDate: { not: null }) living in a different file; exactly the pattern the nullable-caseId era makes dangerous. Evidence: calendar/page.tsx:24. Fix direction: Narrow the return type in getTasksWithDueDate instead. Resolution: W5.
-- **N63 (P3)** — Month-view drag-drop wipes a timed hearing to midnight: handleDrop without targetTime sets hearingDate = targetDay (00:00) — a 2 PM hearing dragged across days becomes "All day". Evidence: CalendarClient.tsx:284–290, 621. Fix direction: Preserve source event's time-of-day on date-only drops. Resolution: W6 (folded in with N49/N67 date-semantics work; not explicitly named in handoff table, best-fit by theme).
+- **N63 (P3)** — Month-view drag-drop wipes a timed hearing to midnight: handleDrop without targetTime sets hearingDate = targetDay (00:00) — a 2 PM hearing dragged across days becomes "All day". Evidence: CalendarClient.tsx:284–290, 621. Fix direction: Preserve source event's time-of-day on date-only drops. Resolution: **split out of W6 into W6b** — W6's actual scope (N49/N67/N68) landed without touching drag-drop; N63 was never in W6's diff.
 - **N64 (P3)** — Load-bearing comments lie about security posture (pre-FORCE-RLS era): "User has no RLS", "Until 3.0.1's FORCE RLS lands", "three verify scripts". Next engineer trusting them re-introduces the N38 class. Evidence: session.ts:24–25, settingsActions.ts:17–19, 29–33, check-rls-runtime.ts:14–22. Fix direction: Comment sweep. Resolution: W5.
 - **N65 (P3)** — SOT §7 assertion count stale again (36 → ≥37 post-#37, verify-phase4-rls.ts Check 8). Fourth drift of this counter. Evidence: verify-phase4-rls.ts:216; SOT §7. Fix direction: Have check-rls-runtime.ts print the authoritative total; SOT references the script, stops hand-counting. Resolution: W8.
 - **N66 (P3)** — Sidebar note composer hardcodes category: "General Note" — "Next Date" notes (the auto-event trigger, P4's cornerstone) are unreachable from the case page UI; only chat or edit-after-create. RECON §3e observed this; it never got an N-number. Evidence: CaseDetailClient.tsx:323. Fix direction: Category select in composer (edit modal at L1230 already has one to copy). Resolution: W4.
-- **N67 (P3)** — nextHearingDate cache rendered with time — all-day cache values display "12:00 am"; and CasesClient.formatHearing + CaseDetail sidebar lack the stale-past filter dashboard got in N43 (known carry-forward, now with the N49 twist). Evidence: DashboardClient.tsx:267, CasesClient.tsx:66, 430. Fix direction: Fold into W6: formatChipTime-style all-day detection + shared stale-past filter. Resolution: W6.
+- **N67 (P3)** — ✅ closed @ `1c49346` (#38). nextHearingDate cache rendered with time — all-day cache values display "12:00 am"; and CasesClient.formatHearing + CaseDetail sidebar lack the stale-past filter dashboard got in N43 (known carry-forward, now with the N49 twist). Evidence: DashboardClient.tsx:267, CasesClient.tsx:66, 430. Closed via server-side `filterStalePastHearing`/`stripStalePastHearing` at listCases/getCaseWithChildren, and `formatNextHearing` with `isAllDayIST` detector in DashboardClient. **Amendment:** initial commit `1970fb5` used broken `getUTCHours()===0` check (matches UTC midnight = 05:30 IST, not IST midnight); corrected in amendment `ce16709` via `isAllDayIST` Intl formatter helper in `src/lib/date.ts`.
+- **N68 (P2)** — ✅ closed @ `1c49346` (#38). CaseDetailClient `MatterDetails` block (`CaseDetailClient.tsx:1398`) had `hasAny` guard excluding `matterType` — when `nextHearingDate` was the only truthy field and got nulled by W6's `stripStalePastHearing`, the entire Matter Details block (including `Matter: Litigation`) vanished from the sidebar. Latent pre-W6, unmasked by W6's cache-null write. Fix: added `matterType` to the `hasAny` clause. Silent-on-null per-row pattern preserved for the individual `Next Hearing` `DetailLine` (consistent with the other 7 optional fields in the same block — no separate fallback text added).
 
 **Bare-Prisma-under-FORCE-RLS bug class: EXHAUSTED.** Fable 5 systematically grepped every `prisma.<model>.` call in app code cross-referenced against FORCE RLS tables. Population = N38 + N46 + N47 + `getTasks` + `updateTaskAssignee` (both dead, deleted in WS1). No further instances hiding.
 
@@ -503,7 +504,8 @@ Every Claude Code prompt for Lawdger must include:
 | ID | Workstream | Scope | Sequencing |
 |----|-----------|-------|------------|
 | W1 | PR8 reconciliation + Pillar B close-out | Merge main→feat/pr8, prefer main for overlapping uplifts, keep WS2+WS3+dead-fn deletes, verify WS2 covers N48, then WS5 (Kanban drag + @dnd-kit) | First |
-| W6 | IST date-semantics (N49) | 4-site swap `new Date()` → `startOfTodayIST()` | Parallel to W1 |
+| W6 | ✅ Done @ `1c49346` (#38) | IST date-semantics + N67 cache-render guard. Closes N49, N67, N68. N63 (drag-drop time wipe) split out — see W6b. | — |
+| W6b | N63 (drag-drop month-view time wipe) | Preserve source event time-of-day on date-only drops. `CalendarClient.tsx:284–290`. | Parallel filler |
 | W2 | Seed-script RLS fix (N47) | auth_create_user RPC or DIRECT_URL | Parallel |
 | W3 | Independent-task LLM tool + /tasks UI parity (N54/N55) | Extend WS3 hybrid pattern; add "Independent" option to /tasks modal | After W1 |
 | W4 | Silent-failure UI sweep (N50/N51 client half) | Every mutation caller checks Result | With W5 |
