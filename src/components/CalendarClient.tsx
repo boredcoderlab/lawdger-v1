@@ -275,6 +275,7 @@ export default function CalendarClient({
     } else if (editId) {
       await deleteCalendarEvent(editId);
     }
+    setErrorMsg(null);
     closeModal();
   };
 
@@ -463,6 +464,22 @@ export default function CalendarClient({
         }
         mainPaneContent={
           <div className="h-full overflow-y-auto scrollbar-hide relative">
+            {errorMsg && (
+              <div
+                role="alert"
+                className="m-4 flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-[12.5px] text-destructive"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <p className="flex-1">{errorMsg}</p>
+                <button
+                  onClick={() => setErrorMsg(null)}
+                  aria-label="Dismiss error"
+                  className="p-1 rounded-full hover:bg-destructive/10"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            )}
 
             {/* ── Day View ── */}
             {view === "day" && (() => {

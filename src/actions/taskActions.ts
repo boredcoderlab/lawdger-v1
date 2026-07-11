@@ -3,34 +3,27 @@
 /**
  * Mixed contract module.
  *
- * createTask, updateTask, deleteTask, updateTaskStatus (independent-task
- * path, phase 3.2.6) and createCaseTask, toggleCaseTaskStatus, deleteCaseTask
- * (phase 3.2) follow the 3.2 contract: Zod input, RLS-scoped Prisma via
- * withServerUserContext/getServerScopedPrisma, defence-in-depth
- * `where: { userId }`, and a Result<T> envelope.
+ * All functions in this file follow the 3.2 contract: Zod input,
+ * RLS-scoped Prisma via getServerScopedPrisma/withServerUserContext,
+ * defence-in-depth `where: { userId }`, and a Result<T> envelope.
  *
- * getTasks, updateTaskAssignee still use bare `prisma` + `requireUserId`
- * and throw on error. Left untouched — out of scope for 3.2.6.
+ * Task.caseId is nullable since the Independent-Tasks migration (#37).
+ * - Case-linked tasks: caseId = UUID, edits routed through updateCaseTask.
+ * - Independent tasks: caseId = null, edits routed through updateTask.
+ * updateCaseTask's owner-check accepts both linkage states via OR-clause.
  */
 
-import { requireUserId } from "@/actions/requireUserId";
-import { getServerScopedPrisma, getServerUser, withServerUserContext } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
+import {
+  getServerScopedPrisma,
+  getServerUser,
+  withServerUserContext,
+} from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 export type Result<T> =
   | { ok: true; data: T }
   | { ok: false; error: string };
-
-export async function getTasks() {
-  const userId = await requireUserId();
-  return prisma.task.findMany({
-    where: { userId },
-    include: { case: { select: { id: true, title: true } } },
-    orderBy: { createdAt: "desc" },
-  });
-}
 
 const createTaskSchema = z.object({
   caseId: z.string().uuid().nullable(),
@@ -132,6 +125,73 @@ export async function updateTask(
   return result;
 }
 
+const deleteTaskSchema = z.object({ id: z.string().uuid() });
+
+export async function deleteTask(id: string): Promise<Result<{ id: string }>> {
+  const parsed = deleteTaskSchema.safeParse({ id });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const user = await getServerUser();
+  const result = await withServerUserContext(async (tx) => {
+    const existing = await tx.task.findFirst({
+      where: { id, userId: user.id },
+      select: { id: true, caseId: true },
+    });
+    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
+    await tx.task.delete({ where: { id } });
+    return { ok: true, data: { id: existing.id, caseId: existing.caseId } } as const;
+  });
+
+  if (result.ok) {
+    revalidatePath("/tasks");
+    revalidatePath("/calendar");
+    revalidatePath("/dashboard");
+    if (result.data.caseId) revalidatePath(`/cases/${result.data.caseId}`);
+    return { ok: true, data: { id: result.data.id } };
+  }
+  return result;
+}
+
+const updateTaskAssigneeSchema = z.object({
+  id: z.string().uuid(),
+  assignee: z.string().trim().min(1).max(100).nullable(),
+});
+
+export async function updateTaskAssignee(
+  id: string,
+  assignee: string | null,
+): Promise<Result<{ id: string }>> {
+  const parsed = updateTaskAssigneeSchema.safeParse({ id, assignee });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const user = await getServerUser();
+
+  const result = await withServerUserContext(async (tx) => {
+    const existing = await tx.task.findFirst({
+      where: { id: parsed.data.id, userId: user.id },
+      select: { id: true },
+    });
+    if (!existing) {
+      return { ok: false, error: "Task not found" } as const;
+    }
+
+    await tx.task.update({
+      where: { id: parsed.data.id },
+      data: { assignee: parsed.data.assignee ?? "Unassigned" },
+    });
+
+    return { ok: true, data: { id: parsed.data.id } } as const;
+  });
+
+  if (result.ok) {
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+  }
+  return result;
+}
+
 const updateTaskStatusSchema = z.object({
   id: z.string().uuid(),
   status: z.enum(["pending", "completed"]),
@@ -164,20 +224,6 @@ export async function updateTaskStatus(
   return result;
 }
 
-export async function updateTaskAssignee(id: string, assignee: string) {
-  const userId = await requireUserId();
-  const result = await prisma.task.updateMany({
-    where: { id, userId },
-    data: { assignee },
-  });
-
-  if (!result.count) {
-    throw new Error("Unauthorized");
-  }
-
-  revalidatePath("/tasks");
-}
-
 const getTasksWithDueDateSchema = z.object({}).strict();
 
 export type TaskWithDueDateRow = {
@@ -207,33 +253,6 @@ export async function getTasksWithDueDate(): Promise<Result<TaskWithDueDateRow[]
     });
     return { ok: true, data: tasks } as const;
   });
-}
-
-const deleteTaskSchema = z.object({ id: z.string().uuid() });
-
-export async function deleteTask(id: string): Promise<Result<{ id: string }>> {
-  const parsed = deleteTaskSchema.safeParse({ id });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
-
-  const user = await getServerUser();
-  const result = await withServerUserContext(async (tx) => {
-    const existing = await tx.task.findFirst({
-      where: { id, userId: user.id },
-      select: { id: true, caseId: true },
-    });
-    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
-    await tx.task.delete({ where: { id } });
-    return { ok: true, data: { id: existing.id, caseId: existing.caseId } } as const;
-  });
-
-  if (result.ok) {
-    revalidatePath("/tasks");
-    revalidatePath("/calendar");
-    revalidatePath("/dashboard");
-    if (result.data.caseId) revalidatePath(`/cases/${result.data.caseId}`);
-    return { ok: true, data: { id: result.data.id } };
-  }
-  return result;
 }
 
 // ─── Phase 3.2 — case-scoped task actions (moved from caseActions.ts) ─────────
@@ -404,16 +423,32 @@ export async function listAllTasks(): Promise<Result<TaskRow[]>> {
 
 const updateCaseTaskSchema = z.object({
   taskId: z.string().uuid(),
-  description: z.string().trim().min(1).max(500),
-  assignee: z.string().trim().min(1).max(100),
-  dueDate: z.coerce.date().nullable(),
-  isUrgent: z.boolean(),
-});
+  description: z.string().trim().min(1).max(500).optional(),
+  assignee: z.string().trim().min(1).max(100).optional(),
+  dueDate: z.coerce.date().nullable().optional(),
+  isUrgent: z.boolean().optional(),
+}).refine(
+  (d) => d.description !== undefined
+      || d.assignee !== undefined
+      || d.dueDate !== undefined
+      || d.isUrgent !== undefined,
+  { message: "At least one field required for update" }
+);
 
-export type UpdateCaseTaskInput = z.infer<typeof updateCaseTaskSchema>;
+// Kept as the pre-WS2 required shape (not tied to the now-partial Zod
+// schema) so existing full-payload callers (CaseDetailClient, TasksClient)
+// keep compiling unchanged. updateCaseTask's own parameter type below
+// accepts the wider partial shape for future partial-update consumers.
+export type UpdateCaseTaskInput = {
+  taskId: string;
+  description: string;
+  assignee: string;
+  dueDate: Date | null;
+  isUrgent: boolean;
+};
 
 export async function updateCaseTask(
-  input: UpdateCaseTaskInput,
+  input: z.input<typeof updateCaseTaskSchema>,
 ): Promise<Result<TaskRow>> {
   const parsed = updateCaseTaskSchema.safeParse(input);
   if (!parsed.success) {
@@ -425,18 +460,18 @@ export async function updateCaseTask(
     const db = await getServerScopedPrisma();
 
     const existing = await db.task.findFirst({
-      where: { id: parsed.data.taskId, case: { userId: user.id } },
+      where: { id: parsed.data.taskId, OR: [{ case: { userId: user.id } }, { userId: user.id, caseId: null }] },
       select: { id: true },
     });
-    if (!existing) return { ok: false, error: "NOT_FOUND" };
+    if (!existing) return { ok: false, error: "Task not found or not yours" };
 
     const updated = await db.task.update({
       where: { id: parsed.data.taskId },
       data: {
-        description: parsed.data.description,
-        assignee: parsed.data.assignee,
-        dueDate: parsed.data.dueDate,
-        isUrgent: parsed.data.isUrgent,
+        ...(parsed.data.description !== undefined && { description: parsed.data.description }),
+        ...(parsed.data.assignee !== undefined && { assignee: parsed.data.assignee }),
+        ...(parsed.data.dueDate !== undefined && { dueDate: parsed.data.dueDate }),
+        ...(parsed.data.isUrgent !== undefined && { isUrgent: parsed.data.isUrgent }),
       },
       select: {
         id: true,
@@ -453,12 +488,12 @@ export async function updateCaseTask(
     });
 
     revalidatePath("/tasks");
-    revalidatePath(`/cases/${updated.caseId}`);
+    if (updated.caseId) revalidatePath(`/cases/${updated.caseId}`);
     revalidatePath("/dashboard");
     revalidatePath("/calendar");
     return { ok: true, data: updated };
   } catch (e) {
     console.error("[updateCaseTask]", e);
-    return { ok: false, error: "INTERNAL_ERROR" };
+    return { ok: false, error: "Failed to update task" };
   }
 }

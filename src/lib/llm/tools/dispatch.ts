@@ -14,6 +14,7 @@ import { createNote } from "@/actions/noteActions";
 import type { CaseStatus } from "@prisma/client";
 import {
   updateTask,
+  updateCaseTask,
   listAllTasks,
   createCaseTask,
   toggleCaseTaskStatus,
@@ -243,15 +244,58 @@ export async function executeTool(
 
     case "update_task":
       return withSchema("update_task", rawArgs, async (args) => {
-        const result = await updateTask(args.taskId, {
-          description: args.description,
-          dueDate:
-            args.dueDate === null
-              ? null
-              : args.dueDate
-                ? new Date(args.dueDate)
-                : undefined,
-          caseId: args.caseId,
+        // Normalize dueDate: null → null (unlink), undefined → undefined
+        // (unchanged), string → Date.
+        const normalizedDueDate =
+          args.dueDate === null
+            ? null
+            : args.dueDate
+              ? new Date(args.dueDate)
+              : undefined;
+
+        // caseId provided (nullable): route to updateTask.
+        // null → unlink from case; string → move/set to case.
+        // Since Independent Tasks migration (#37), null is a real write, not a no-op.
+        if (args.caseId !== undefined) {
+          const result = await updateTask(args.taskId, {
+            description: args.description,
+            dueDate: normalizedDueDate,
+            caseId: args.caseId,
+          });
+          if (!result.ok) return { result: result.error };
+          return { result: "Task updated.", action: `✅ Updated task` };
+        }
+
+        // caseId omitted → pre-flight fetch (scoped, RLS-isolated) to route.
+        const db = await getServerScopedPrisma();
+        const existing = await db.task.findFirst({
+          where: { id: args.taskId },
+          select: { caseId: true },
+        });
+        if (!existing) {
+          return { result: "Task not found or not yours" };
+        }
+
+        if (!existing.caseId) {
+          // Independent task (caseId null in DB) — live path since the
+          // Independent-Tasks migration (#37). updateCaseTask requires a
+          // case, so route to updateTask for the field update.
+          const result = await updateTask(args.taskId, {
+            description: args.description,
+            dueDate: normalizedDueDate,
+          });
+          if (!result.ok) return { result: result.error };
+          return { result: "Task updated.", action: `✅ Updated task` };
+        }
+
+        // Case-linked task, no case change → updateCaseTask partial surface
+        // (WS2). Only forward fields the LLM provided; omitted → unchanged.
+        // The LLM tool schema has no assignee/isUrgent, so those stay
+        // untouched by absence.
+        const result = await updateCaseTask({
+          taskId: args.taskId,
+          ...(args.description !== undefined && { description: args.description }),
+          ...(normalizedDueDate !== undefined && { dueDate: normalizedDueDate }),
         });
         if (!result.ok) return { result: result.error };
         return { result: "Task updated.", action: `✅ Updated task` };
