@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { startOfTodayIST } from "@/lib/date";
 
 /**
  * Recomputes Case.nextHearingDate from CalendarEvent rows and writes the
@@ -12,7 +13,7 @@ export async function syncNextHearingDate(
   tx: Prisma.TransactionClient,
 ): Promise<void> {
   const nextEvent = await tx.calendarEvent.findFirst({
-    where: { caseId, hearingDate: { gte: new Date() } },
+    where: { caseId, hearingDate: { gte: startOfTodayIST() } },
     orderBy: { hearingDate: "asc" },
   });
 

@@ -253,12 +253,9 @@ export async function executeTool(
               ? new Date(args.dueDate)
               : undefined;
 
-        // Hybrid routing on caseId disposition:
-        // - caseId provided (null or string) → legacy updateTask handles both
-        //   "move to case" (string) and "unlink" (null → squashed to undefined
-        //   → silent no-op, preserved per taskActions.ts updateTask doc).
-        // - caseId omitted (undefined) → in-place field update; route on the
-        //   task's current linkage.
+        // caseId provided (nullable): route to updateTask.
+        // null → unlink from case; string → move/set to case.
+        // Since Independent Tasks migration (#37), null is a real write, not a no-op.
         if (args.caseId !== undefined) {
           const result = await updateTask(args.taskId, {
             description: args.description,
@@ -280,8 +277,9 @@ export async function executeTool(
         }
 
         if (!existing.caseId) {
-          // Independent task — defensive branch (Task.caseId is NOT NULL in
-          // schema, so may never trigger). Route to legacy updateTask.
+          // Independent task (caseId null in DB) — live path since the
+          // Independent-Tasks migration (#37). updateCaseTask requires a
+          // case, so route to updateTask for the field update.
           const result = await updateTask(args.taskId, {
             description: args.description,
             dueDate: normalizedDueDate,

@@ -2,7 +2,7 @@
 
 import { requireUserId } from "@/actions/requireUserId";
 import { withServerUserContext } from "@/lib/session";
-import { startOfTodayIST, endOfTodayIST } from "@/lib/date";
+import { startOfTodayIST, endOfTodayIST, filterStalePastHearing } from "@/lib/date";
 
 export async function getDashboardData() {
   const userId = await requireUserId();
@@ -43,11 +43,7 @@ export async function getDashboardData() {
     // Cache is only re-synced on calendar mutations, so its "next" event can
     // fall into the past between mutations. Filter stale-past values here so
     // the dashboard never surfaces a "next hearing" that has already occurred.
-    const now = new Date();
-    const allCasesFresh = allCases.map((c) => ({
-      ...c,
-      nextHearingDate: c.nextHearingDate && c.nextHearingDate >= now ? c.nextHearingDate : null,
-    }));
+    const allCasesFresh = filterStalePastHearing(allCases);
 
     return {
       todayEvents,

@@ -7,10 +7,10 @@
  * RLS-scoped Prisma via getServerScopedPrisma/withServerUserContext,
  * defence-in-depth `where: { userId }`, and a Result<T> envelope.
  *
- * Note: createTask/updateTask require caseId (Task.caseId is NOT NULL,
- * FK ON DELETE RESTRICT — see prisma/schema.prisma). The Calendar "— No
- * Case (Independent Task)" UI option (CalendarClient.tsx) is a pre-existing
- * mismatch with this constraint, deferred to a separate PR.
+ * Task.caseId is nullable since the Independent-Tasks migration (#37).
+ * - Case-linked tasks: caseId = UUID, edits routed through updateCaseTask.
+ * - Independent tasks: caseId = null, edits routed through updateTask.
+ * updateCaseTask's owner-check accepts both linkage states via OR-clause.
  */
 
 import {
@@ -26,7 +26,7 @@ export type Result<T> =
   | { ok: false; error: string };
 
 const createTaskSchema = z.object({
-  caseId: z.string().uuid(),
+  caseId: z.string().uuid().nullable(),
   description: z.string().trim().min(1).max(500),
   dueDate: z.coerce.date().nullable(),
   assignee: z.string().trim().min(1).max(100).nullable(),
@@ -36,21 +36,17 @@ export async function createTask(
   data: z.input<typeof createTaskSchema>,
 ): Promise<Result<{ id: string }>> {
   const parsed = createTaskSchema.safeParse(data);
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
-  }
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
   const user = await getServerUser();
-
   const result = await withServerUserContext(async (tx) => {
-    const caseItem = await tx.case.findFirst({
-      where: { id: parsed.data.caseId, userId: user.id },
-      select: { id: true },
-    });
-    if (!caseItem) {
-      return { ok: false, error: "Case not found or unauthorized" } as const;
+    if (parsed.data.caseId) {
+      const caseItem = await tx.case.findFirst({
+        where: { id: parsed.data.caseId, userId: user.id },
+        select: { id: true },
+      });
+      if (!caseItem) return { ok: false, error: "Case not found or unauthorized" } as const;
     }
-
     const task = await tx.task.create({
       data: {
         userId: user.id,
@@ -62,7 +58,6 @@ export async function createTask(
       },
       select: { id: true },
     });
-
     return { ok: true, data: { id: task.id } } as const;
   });
 
@@ -70,7 +65,7 @@ export async function createTask(
     revalidatePath("/tasks");
     revalidatePath("/calendar");
     revalidatePath("/dashboard");
-    revalidatePath(`/cases/${parsed.data.caseId}`);
+    if (parsed.data.caseId) revalidatePath(`/cases/${parsed.data.caseId}`);
   }
   return result;
 }
@@ -79,7 +74,7 @@ const updateTaskSchema = z.object({
   id: z.string().uuid(),
   description: z.string().trim().min(1).max(500).optional(),
   dueDate: z.coerce.date().nullable().optional(),
-  caseId: z.string().uuid().optional(),
+  caseId: z.string().uuid().nullable().optional(),
 }).refine(
   (d) => d.description !== undefined || d.dueDate !== undefined || d.caseId !== undefined,
   { message: "At least one field required for update" }
@@ -89,40 +84,23 @@ export async function updateTask(
   id: string,
   data: { description?: string; dueDate?: Date | null; caseId?: string | null },
 ): Promise<Result<{ id: string }>> {
-  // caseId: null means "no change" (Task.caseId is NOT NULL — see createTask
-  // doc comment above). Matches pre-uplift no-op-on-null semantics so
-  // existing callers passing null (e.g. dispatch.ts unlink intent) don't crash.
-  const parsed = updateTaskSchema.safeParse({
-    id,
-    description: data.description,
-    dueDate: data.dueDate,
-    caseId: data.caseId ?? undefined,
-  });
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
-  }
+  const parsed = updateTaskSchema.safeParse({ id, ...data });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
   const user = await getServerUser();
-  let oldCaseId: string | null = null;
-
   const result = await withServerUserContext(async (tx) => {
     const existing = await tx.task.findFirst({
       where: { id: parsed.data.id, userId: user.id },
-      select: { caseId: true },
+      select: { id: true, caseId: true },
     });
-    if (!existing) {
-      return { ok: false, error: "Task not found" } as const;
-    }
-    oldCaseId = existing.caseId;
+    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
 
     if (parsed.data.caseId) {
       const caseItem = await tx.case.findFirst({
         where: { id: parsed.data.caseId, userId: user.id },
         select: { id: true },
       });
-      if (!caseItem) {
-        return { ok: false, error: "Case not found or unauthorized" } as const;
-      }
+      if (!caseItem) return { ok: false, error: "Case not found or unauthorized" } as const;
     }
 
     await tx.task.update({
@@ -133,8 +111,7 @@ export async function updateTask(
         ...(parsed.data.caseId !== undefined && { caseId: parsed.data.caseId }),
       },
     });
-
-    return { ok: true, data: { id: parsed.data.id } } as const;
+    return { ok: true, data: { id: parsed.data.id, oldCaseId: existing.caseId } } as const;
   });
 
   if (result.ok) {
@@ -142,42 +119,34 @@ export async function updateTask(
     revalidatePath("/calendar");
     revalidatePath("/dashboard");
     if (parsed.data.caseId) revalidatePath(`/cases/${parsed.data.caseId}`);
-    if (oldCaseId && oldCaseId !== parsed.data.caseId) revalidatePath(`/cases/${oldCaseId}`);
+    if (result.data.oldCaseId) revalidatePath(`/cases/${result.data.oldCaseId}`);
+    return { ok: true, data: { id: result.data.id } };
   }
   return result;
 }
 
-const deleteTaskSchema = z.object({
-  id: z.string().uuid(),
-});
+const deleteTaskSchema = z.object({ id: z.string().uuid() });
 
 export async function deleteTask(id: string): Promise<Result<{ id: string }>> {
   const parsed = deleteTaskSchema.safeParse({ id });
-  if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid id" };
-  }
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
 
   const user = await getServerUser();
-
   const result = await withServerUserContext(async (tx) => {
     const existing = await tx.task.findFirst({
-      where: { id: parsed.data.id, userId: user.id },
-      select: { caseId: true },
+      where: { id, userId: user.id },
+      select: { id: true, caseId: true },
     });
-    if (!existing) {
-      return { ok: false, error: "Task not found" } as const;
-    }
-
-    await tx.task.delete({ where: { id: parsed.data.id } });
-
-    return { ok: true, data: { id: parsed.data.id, caseId: existing.caseId } } as const;
+    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
+    await tx.task.delete({ where: { id } });
+    return { ok: true, data: { id: existing.id, caseId: existing.caseId } } as const;
   });
 
   if (result.ok) {
     revalidatePath("/tasks");
     revalidatePath("/calendar");
     revalidatePath("/dashboard");
-    revalidatePath(`/cases/${result.data.caseId}`);
+    if (result.data.caseId) revalidatePath(`/cases/${result.data.caseId}`);
     return { ok: true, data: { id: result.data.id } };
   }
   return result;
@@ -223,6 +192,40 @@ export async function updateTaskAssignee(
   return result;
 }
 
+const updateTaskStatusSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(["pending", "completed"]),
+});
+
+export async function updateTaskStatus(
+  id: string,
+  status: "pending" | "completed",
+): Promise<Result<{ id: string }>> {
+  const parsed = updateTaskStatusSchema.safeParse({ id, status });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+
+  const user = await getServerUser();
+  const result = await withServerUserContext(async (tx) => {
+    const existing = await tx.task.findFirst({
+      where: { id, userId: user.id },
+      select: { id: true, caseId: true },
+    });
+    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
+    await tx.task.update({ where: { id }, data: { status: parsed.data.status } });
+    return { ok: true, data: { id: existing.id, caseId: existing.caseId } } as const;
+  });
+
+  if (result.ok) {
+    revalidatePath("/tasks");
+    revalidatePath("/dashboard");
+    if (result.data.caseId) revalidatePath(`/cases/${result.data.caseId}`);
+    return { ok: true, data: { id: result.data.id } };
+  }
+  return result;
+}
+
+const getTasksWithDueDateSchema = z.object({}).strict();
+
 export type TaskWithDueDateRow = {
   id: string;
   description: string;
@@ -231,21 +234,25 @@ export type TaskWithDueDateRow = {
 };
 
 export async function getTasksWithDueDate(): Promise<Result<TaskWithDueDateRow[]>> {
+  const parsed = getTasksWithDueDateSchema.safeParse({});
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
   const user = await getServerUser();
-  const scoped = await getServerScopedPrisma();
-
-  const rows = await scoped.task.findMany({
-    where: { userId: user.id, status: "pending", dueDate: { not: null } },
-    select: {
-      id: true,
-      description: true,
-      dueDate: true,
-      case: { select: { id: true, title: true } },
-    },
-    orderBy: { dueDate: "asc" },
+  return withServerUserContext(async (tx) => {
+    const tasks = await tx.task.findMany({
+      where: { userId: user.id, status: "pending", dueDate: { not: null } },
+      select: {
+        id: true,
+        description: true,
+        dueDate: true,
+        case: { select: { id: true, title: true } },
+      },
+      orderBy: { dueDate: "asc" },
+    });
+    return { ok: true, data: tasks } as const;
   });
-
-  return { ok: true, data: rows };
 }
 
 // ─── Phase 3.2 — case-scoped task actions (moved from caseActions.ts) ─────────
@@ -375,8 +382,8 @@ export type TaskRow = {
   isUrgent: boolean;
   createdAt: Date;
   updatedAt: Date;
-  caseId: string;
-  case: { id: string; title: string; caseNumber: string | null };
+  caseId: string | null;
+  case: { id: string; title: string; caseNumber: string | null } | null;
 };
 
 export async function listAllTasks(): Promise<Result<TaskRow[]>> {
@@ -453,7 +460,7 @@ export async function updateCaseTask(
     const db = await getServerScopedPrisma();
 
     const existing = await db.task.findFirst({
-      where: { id: parsed.data.taskId, case: { userId: user.id } },
+      where: { id: parsed.data.taskId, OR: [{ case: { userId: user.id } }, { userId: user.id, caseId: null }] },
       select: { id: true },
     });
     if (!existing) return { ok: false, error: "Task not found or not yours" };
@@ -481,7 +488,7 @@ export async function updateCaseTask(
     });
 
     revalidatePath("/tasks");
-    revalidatePath(`/cases/${updated.caseId}`);
+    if (updated.caseId) revalidatePath(`/cases/${updated.caseId}`);
     revalidatePath("/dashboard");
     revalidatePath("/calendar");
     return { ok: true, data: updated };
