@@ -9,15 +9,20 @@
  *       Runtime RLS cannot be meaningfully tested as superuser.
  *
  *   - If current_user === 'lawdger_app':
- *       BLOCKING mode. Run the three verify scripts in sequence as
+ *       BLOCKING mode. Run the seven verify scripts in sequence as
  *       child processes (matches the existing smoke:rls invocation
  *       pattern for check-rls.ts). Propagate non-zero exit codes.
  *
- * Child scripts spawned (sequentially, never parallel):
- *   1. scripts/verify-isolation.ts          — exit 0 pass, 1 fail
- *   2. scripts/verify-phase32-rls.ts        — exit 0 pass, 1 fail
- *   3. scripts/verify-with-user-context.ts  — exit 0 pass, 1 fail,
- *                                              2 precondition (missing seed)
+ * Child scripts spawned (sequentially, never parallel) — each exits
+ * 0 pass, 1 fail, 2 precondition (missing seed). Kept in sync with the
+ * VERIFY_SCRIPTS array below:
+ *   1. scripts/verify-isolation.ts
+ *   2. scripts/verify-phase32-rls.ts
+ *   3. scripts/verify-with-user-context.ts
+ *   4. scripts/verify-phase4-rls.ts
+ *   5. scripts/verify-pillar-b-rls.ts
+ *   6. scripts/verify-phase52-finances-rls.ts
+ *   7. scripts/verify-user-rls.ts
  *
  * Wrapper exit codes:
  *   0  — advisory skip (pre-cutover) OR all three children passed
