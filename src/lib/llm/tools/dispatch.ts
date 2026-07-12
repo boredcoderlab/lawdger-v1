@@ -140,8 +140,9 @@ export async function executeTool(
 
     case "get_finances":
       return withSchema("get_finances", rawArgs, async () => {
-        const data = await getFinancesData();
-        return { result: JSON.stringify(data) };
+        const result = await getFinancesData();
+        if (!result.ok) return { result: result.error };
+        return { result: JSON.stringify(result.data) };
       });
 
     case "create_case":
