@@ -3,11 +3,9 @@ import { getTasksWithDueDate } from "@/actions/taskActions";
 import CalendarClient from "@/components/CalendarClient";
 
 export default async function CalendarPage() {
-  const [eventsResult, casesResult, tasksResult] = await Promise.all([
-    getCalendarEvents(),
-    getCasesForSelect(),
-    getTasksWithDueDate(),
-  ]);
+  const eventsResult = await getCalendarEvents();
+  const casesResult = await getCasesForSelect();
+  const tasksResult = await getTasksWithDueDate();
 
   if (!eventsResult.ok) {
     console.error("[CalendarPage] getCalendarEvents failed:", eventsResult.error);
@@ -29,7 +27,7 @@ export default async function CalendarPage() {
       <CalendarClient
         initialEvents={events}
         cases={cases}
-        tasks={tasks.map((t) => ({ ...t, dueDate: t.dueDate! }))}
+        tasks={tasks.map((t) => ({ ...t, dueDate: t.dueDate }))}
       />
     </div>
   );

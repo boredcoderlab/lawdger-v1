@@ -226,7 +226,7 @@ const getTasksWithDueDateSchema = z.object({}).strict();
 export type TaskWithDueDateRow = {
   id: string;
   description: string;
-  dueDate: Date | null;
+  dueDate: Date;
   case: { id: string; title: string } | null;
 };
 
@@ -248,7 +248,15 @@ export async function getTasksWithDueDate(): Promise<Result<TaskWithDueDateRow[]
       },
       orderBy: { dueDate: "asc" },
     });
-    return { ok: true, data: tasks } as const;
+    // dueDate is non-null by the `dueDate: { not: null }` filter above; Prisma's
+    // select can't infer that from the where clause, so narrow here (N62) —
+    // keeping the assertion adjacent to its invariant instead of in the
+    // consuming page (calendar/page.tsx previously did `t.dueDate!`).
+    const rows: TaskWithDueDateRow[] = tasks.map((t) => ({
+      ...t,
+      dueDate: t.dueDate!,
+    }));
+    return { ok: true, data: rows } as const;
   });
 }
 
