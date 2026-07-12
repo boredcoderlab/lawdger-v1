@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-07-11 (post-W1 merge #39 — N48/N70 fixed, N53/N71/N72/N73/N75/N76/N77 folded at 0179f38)
+**Last updated:** 2026-07-12 (post-W3 merge #40 — N54/N55 closed at 09113dc)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,8 +24,9 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `0179f38` (#39 — W1 PR8 pillar-b reconciliation squash-merge; last flip commit)
-- **Last merge:** #39 W1 reconcile PR8 pillar-b with main post-#37 (`0179f38`)
+- **Current main sha:** `09113dc` (#40 — W3 LLM tools + /tasks modal squash-merge; last flip commit)
+- **Last merge:** #40 W3 independent-task LLM tools + /tasks modal parity (`09113dc`)
+- **W3 branch:** `w3-independent-task-llm-and-ui` MERGED via #40 (squashed to `09113dc`, branch deleted local + remote). Pre-merge tip was `7bab76d`.
 - **PR8 branch:** `feat/pr8-tasks-uplift-pillar-b` MERGED via #39 (squashed to `0179f38`, branch deleted local + remote). Pre-merge HEAD was `dd96cad` (2-parent merge of `7c56610` + `a2785f1`).
 
 ---
@@ -249,7 +250,9 @@ This runs in order:
    - `verify-phase52-finances-rls.ts` (5 checks — Payment isolation: SELECT iso + cross-user SELECT/UPDATE/DELETE fail-closed + INSERT mismatched-userId blocked by `WITH CHECK`, added 5.2a)
    - `verify-user-rls.ts` (4 checks — User isolation: self-select positive control + cross-tenant SELECT/UPDATE fail-closed + scoped-B state re-read, added PR5/N6)
 
-   **Total: 38 RLS assertions across 7 scripts** (authoritative from `smoke:rls-runtime` PASS-line count 2026-07-11; SOT §7 "36" figure was hand-count drift, 5th drift of this counter — see N65). Per-script breakdown: verify-isolation 4, verify-phase32-rls 6, verify-with-user-context 5, verify-phase4-rls 9 (checks 1–8 + 8b), verify-pillar-b-rls 5, verify-phase52-finances-rls 5, verify-user-rls 4. W1 (#39) touched no verify scripts — count baseline held through merge. Standalone verify scripts use `getPrismaForUser` directly, not `getServerScopedPrisma` — no Next.js request context outside the app, and `getServerScopedPrisma` internally calls `getServerUser()` which depends on that context. Two pending: `verify-phase4-c1-update-rls.ts` (updateNote, +3) and `verify-phase4-a7-update-task-rls.ts` (updateCaseTask, similar shape) — next RLS hardening batch (W8). Blocking mode — any FAIL exits 1. Assertion count is authoritative from `check-rls-runtime.ts` output, not from hand-count. **N65 unblocked at W8:** script must print authoritative total explicitly to eliminate this drift class.
+   **Total: 38 RLS assertions across 7 scripts** (authoritative from `smoke:rls-runtime` PASS-line count 2026-07-11; SOT §7 "36" figure was hand-count drift, 5th drift of this counter — see N65). Per-script breakdown: verify-isolation 4, verify-phase32-rls 6, verify-with-user-context 5, verify-phase4-rls 9 (checks 1–8 + 8b), verify-pillar-b-rls 5, verify-phase52-finances-rls 5, verify-user-rls 4. W1 (#39) touched no verify scripts — count baseline held through merge. W3 (#40) likewise touched no verify scripts — count baseline held through merge (38/7 unchanged; independent-task LLM tool routing reused existing scoped actions, no new mutation surfaces). Standalone verify scripts use `getPrismaForUser` directly, not `getServerScopedPrisma` — no Next.js request context outside the app, and `getServerScopedPrisma` internally calls `getServerUser()` which depends on that context. Two pending: `verify-phase4-c1-update-rls.ts` (updateNote, +3) and `verify-phase4-a7-update-task-rls.ts` (updateCaseTask, similar shape) — next RLS hardening batch (W8). Blocking mode — any FAIL exits 1. Assertion count is authoritative from `check-rls-runtime.ts` output, not from hand-count. **N65 unblocked at W8:** script must print authoritative total explicitly to eliminate this drift class.
+
+**§7 addendum — RLS runtime harness statefulness (2026-07-12):** The runtime RLS harness is stateful — it seeds/mutates probe rows in the real DB. Back-to-back invocations of `npm run smoke` will spuriously fail with assertion-count drift (e.g. 29/6 instead of 38/7). Canonical gate = a single isolated invocation. If a re-run fails immediately after a green run, wait for seed teardown before treating it as a real regression.
 
 Any failure blocks the merge.
 
@@ -300,7 +303,7 @@ Every Claude Code prompt for Lawdger must include:
 
 ---
 
-## 10. Known Tech Debt
+## 10. Findings & Tech Debt
 
 **Reconciliation pass 2026-06-27**: 4 existing entries (L7/L8/S2/S12) expanded to reflect full debt class scope. 37 new findings (N1–N37) catalogued in subsection below. Audit report: `/tmp/AUDIT_REPORT_2026-06-27.md` (Sahil's machine, not committed).
 
@@ -335,6 +338,11 @@ Every Claude Code prompt for Lawdger must include:
 - Dead `claude/*` branches — prune pending.
 - **financeActions "PR7 done" is partial** — `getFinancesData` still bare `requireUserId` + throws (no Zod/Result envelope); only the three mutators are on-contract. Fold into **W5**.
 - **SOT §7 assertion count drift (4th occurrence)** — script should print the authoritative total explicitly; stop hand-counting. See §7 note.
+- **Modal `caseId` defaults to `""` = independent task** on both /calendar and /tasks. Intentional post-W3 (independent tasks are first-class as of #37/#40). Not a bug, do not "fix."
+- **Multi-file schema uplifts — tsc gate ordering.** The clean-tsc checkpoint belongs after the CONSUMER-file edit, not the schema-widen edit. A schema-widen commit in isolation cannot typecheck clean while narrow consumers still exist elsewhere in the tree.
+- **Local `main` lags `origin/main` after a PR squash-merge on GitHub.** Squash rewrites history — a feature-branch working tree at its pre-merge tip is NOT the same commit as the merged `main`, even though file contents match. Always `git checkout main && git pull` before any post-merge verification, Chrome MCP matrix run, or SOT flip. Caught live during W3 CP-0 (local `main` was 1 commit stale, sitting on `w3-independent-task-llm-and-ui` at `7bab76d` instead of `main` at `09113dc`).
+- **/tasks Orchestration sidebar lacks completed-state visual treatment** — no strikethrough/dim styling on completed tasks in the compact task-row list (underlying `status: completed` and the detail-modal "Mark Pending" toggle are both correct; this is UI-surface only). Found during W3 CP-2 verification. Bundle into **WS5** Kanban drag-drop work.
+- **LLM tool confirmation asymmetry** — `delete_task` requires an explicit "yes" confirmation round-trip before executing; `create_task` and `update_task_status` execute on the first message with no confirmation step. Intentional destructive-op safety pattern (found during W3 CP-3 verification). Document, don't unify.
 
 ### Audit findings (2026-06-27)
 
@@ -415,8 +423,8 @@ Every Claude Code prompt for Lawdger must include:
 - **N51 (P2)** — CalendarClient hearing ops have no failure path at all: createCalendarEvent/updateCalendarEvent/deleteCalendarEvent throw (no Result), callers don't catch → unhandled rejection, button stuck "Saving…", drag-drop reschedule silently lost on error. Evidence: CalendarClient.tsx:261–265, 276, 288; root cause calendarActions.ts (no Zod/Result — known 3.2.6 debt, client half uncatalogued). Fix direction: W5 uplift + client result.ok handling. Resolution: W4 (client half) / W5 (server half).
 - **N52 (P2)** — Pages violate the repo's own parallel-scoped-ops BAN: Promise.all over 3 (calendar) / 2 (cases) scoped actions, each opening its own GUC transaction — the exact P2024 shape prisma-rls.ts:18–26 bans. Latent pool-exhaustion under concurrent users at connection_limit=5. Evidence: calendar/page.tsx:6–10, cases/page.tsx:5–8. Fix direction: Sequential awaits, or one withServerUserContext loader per page. Resolution: W5.
 - **N53 (P2)** — ✅ closed @ `0179f38` (#39, W1). getTasks + updateTaskAssignee: last two bare-Prisma functions, both dead code (zero callers). Original handoff wording claimed WS1 deleted both — INCORRECT: WS1 deleted `getTasks` but UPLIFTED `updateTaskAssignee` to full Contract 3.2 (Zod + withServerUserContext + Result envelope). W1 Decision A locked: keep PR8's uplifted version (RLS-safe, 0 callers, preserves optionality). See N71 for full Decision A rationale.
-- **N54 (P2)** — LLM tools can't touch independent tasks: create_task requires caseId, update_task_status/delete_task require caseId and route to case-task actions; dispatch pre-read filters { id, caseId }. Voice user says "add task: file GST return" → agent must invent/attach a case or fail. Only update_task got the hybrid treatment (on the PR8 branch, not main). Evidence: schemas.ts:34–37, 62–66, 93–96; dispatch.ts:171–174, 227–236, 292. Fix direction: Extend WS3 hybrid-dispatch pattern to the other three tools. Resolution: W3.
-- **N55 (P2)** — /tasks create modal requires a case (canSubmit gates on caseId !== ""); independent tasks creatable only via the Calendar modal. Feature shipped in #37 is undiscoverable on its home page. Evidence: TasksClient.tsx:799, 840–853. Fix direction: Add "— No Case (Independent) —" option wired to createTask (mirror CalendarClient.tsx:747–749). Resolution: W3.
+- **N54 (P2)** — ✅ closed @ `09113dc` (#40, W3). LLM tools couldn't touch independent tasks: create_task required caseId, update_task_status/delete_task required caseId and routed to case-task actions; dispatch pre-read filtered { id, caseId }. Only update_task had the hybrid treatment (on the PR8 branch, not main). Resolution: create_task/update_task_status/delete_task extended to hybrid-dispatch — null caseId routes to independent-task actions (createTask/updateTaskStatus/deleteTask), UUID caseId routes to case-linked adapters. Verified end-to-end via Chrome MCP matrix (CP-1/CP-2/CP-3, all PASS): LLM create/complete/delete of an independent task via /chat, confirmed against /tasks board state each step.
+- **N55 (P2)** — ✅ closed @ `09113dc` (#40, W3). /tasks create modal required a case (canSubmit gated on caseId !== ""); independent tasks creatable only via the Calendar modal. Feature shipped in #37 was undiscoverable on its home page. Resolution: "— No Case (Independent Task)" option added to /tasks modal (mirrors CalendarClient pattern), canSubmit gate dropped, handleCreate branches on caseId="" → createTask call, isUrgent checkbox conditionally rendered only when caseId !== "". Verified via Chrome MCP matrix (CP-4, all sub-checks PASS): default option text verbatim + "Case (optional)" label, isUrgent hide/show/reset across selection changes, task creation with no case link, cleanup delete.
 - **N56 (P2)** — UI asserts "End-to-End Encrypted Workspace" — false: server-side AI processing; voice audio is written to server tmpdir and uploaded to Gemini File API. SOT §11 flags the pitch-deck claim; the in-app badge was uncatalogued. For a legal-confidentiality product this is a liability, not copy polish. Evidence: SettingsClient.tsx:235; supporting: transcribe/route.ts:43–51. Fix direction: Rescope to "Encrypted in transit & at rest"; pair with Gemini-retention verification. Resolution: W10.
 - **N57 (P2)** — Signup accepts a 1-character password: createAccount has no Zod, no strength rule, no email-format check — while changePassword enforces min 8. Weakest link is account creation. Evidence: signup/actions.ts:33–44 vs settingsActions.ts:264–266. Fix direction: Zod schema mirroring changePasswordSchema (min 8) + z.string().email(). Resolution: W5.
 - **N58 (P2)** — createPayment status is free-text on money rows: z.string().optional(). Anything other than "paid" is excluded from received totals (financeActions.ts:67) — a typo'd status silently understates collections. LLM boundary restricts to the enum; direct action callers aren't. Evidence: financeActions.ts:167. Fix direction: z.enum(["paid","pending"]) now; DB enum in schema-cleanup pass. Resolution: W5.
@@ -518,7 +526,7 @@ Every Claude Code prompt for Lawdger must include:
 | W6 | ✅ Done @ `1c49346` (#38) | IST date-semantics + N67 cache-render guard. Closes N49, N67, N68. N63 (drag-drop time wipe) split out — see W6b. | — |
 | W6b | N63 (drag-drop month-view time wipe) | Preserve source event time-of-day on date-only drops. `CalendarClient.tsx:284–290`. | Parallel filler |
 | W2 | Seed-script RLS fix (N47) | auth_create_user RPC or DIRECT_URL | Parallel |
-| W3 | Independent-task LLM tool + /tasks UI parity (N54/N55) | Extend WS3 hybrid pattern; add "Independent" option to /tasks modal | After W1 |
+| W3 | ✅ Done @ `09113dc` (#40) | LLM tools + /tasks modal independent-task parity. `create_task`/`update_task_status`/`delete_task` extended to hybrid-dispatch (null `caseId` → independent-task actions, UUID `caseId` → case-linked adapters, mirrors pre-existing `update_task` pattern). /tasks modal gains "— No Case (Independent Task)" option, `canSubmit` gate dropped, `isUrgent` checkbox conditionally rendered only when a case is selected. Closes N54/N55. Verified end-to-end via Chrome MCP matrix (7/7 checks PASS). No RLS surface touched — 38/7 assertion baseline unchanged. | — |
 | W4 | Silent-failure UI sweep (N50/N51 client half) | Every mutation caller checks Result | With W5 |
 | W5 | Contract uplift completion (3.2.6 tail) | calendarActions + dashboardActions + getFinancesData Zod+Result; shared @/lib/result; auth-helper unification; kill sentinel strings; updateCaseAgreedFee; sequential loaders | After W1 |
 | W7 | PR6b hex-token sweep (N35/N36) | Replace 16 raw hex with @theme tokens | Parallel filler |
@@ -529,8 +537,14 @@ Every Claude Code prompt for Lawdger must include:
 | W12 | Phase 7 — Notifications | Daily brief, task/payment reminders, overlap alerts | After W11 |
 | W13 | Chatbot widget uplift | Parked until W3 stabilizes tool surface | After W3 |
 
-**Critical path:** W1 → W3 → W5 → W8 → W9 → W11.
+**Critical path:** ~~W1~~ → ~~W3~~ → W5 (next) → W8 → W9 → W11.
+**Parallel fillers still available:** W2 (N47 seed script bare-Prisma), W6b (N63 month-view drag-drop time wipe).
 **Out of scope:** Phase 6 Legal Brain RAG + voice-infra polish (Chirag).
+
+### Fable ledger
+
+- 1 used (W1 stress-test, T1–T10 → CONDITIONAL GO / findings N69–N77)
+- 1 remaining, reserved for WS5 drag-drop design review. Do NOT burn on W5 or parallel fillers.
 
 ---
 
