@@ -26,6 +26,7 @@ import {
   ContentHeading,
 } from "@/components/ui/LayoutShell";
 import {
+  createTask,
   createCaseTask,
   toggleCaseTaskStatus,
   deleteCaseTask,
@@ -240,9 +241,12 @@ export default function TasksClient({
     dueDate?: Date;
     isUrgent: boolean;
   }) {
+    // Independent task: empty caseId selection. Skip the case lookup/guard and
+    // render an unlinked optimistic row; createTask handles the null-case write.
+    const isIndependent = input.caseId === "";
     const snap = snapshot();
-    const caseInfo = cases.find((c) => c.id === input.caseId);
-    if (!caseInfo) {
+    const caseInfo = isIndependent ? null : cases.find((c) => c.id === input.caseId);
+    if (!isIndependent && !caseInfo) {
       setErrorMsg("Case not found");
       return;
     }
@@ -253,15 +257,17 @@ export default function TasksClient({
       status: "pending",
       dueDate: input.dueDate ?? null,
       assignee: "Unassigned",
-      isUrgent: input.isUrgent,
+      isUrgent: isIndependent ? false : input.isUrgent,
       createdAt: new Date(),
       updatedAt: new Date(),
-      caseId: input.caseId,
-      case: {
-        id: caseInfo.id,
-        title: caseInfo.title,
-        caseNumber: caseInfo.caseNumber,
-      },
+      caseId: isIndependent ? null : input.caseId,
+      case: caseInfo
+        ? {
+            id: caseInfo.id,
+            title: caseInfo.title,
+            caseNumber: caseInfo.caseNumber,
+          }
+        : null,
     };
     const target = bucketTask({ assignee: optimistic.assignee }, userName);
     const nextUnassigned = target === "unassigned" ? [optimistic, ...unassigned] : unassigned;
@@ -274,12 +280,19 @@ export default function TasksClient({
     setCreateOpen(false);
 
     startTransition(async () => {
-      const result = await createCaseTask({
-        caseId: input.caseId,
-        description: input.description,
-        dueDate: input.dueDate,
-        isUrgent: input.isUrgent,
-      });
+      const result = isIndependent
+        ? await createTask({
+            caseId: null,
+            description: input.description,
+            dueDate: input.dueDate ?? null,
+            assignee: null,
+          })
+        : await createCaseTask({
+            caseId: input.caseId,
+            description: input.description,
+            dueDate: input.dueDate,
+            isUrgent: input.isUrgent,
+          });
       if (!result.ok) {
         rollback(snap);
         setErrorMsg(result.error);
@@ -796,7 +809,7 @@ function CreateTaskDialog({
   const [dueStr, setDueStr] = useState("");
   const [isUrgent, setIsUrgent] = useState(false);
 
-  const canSubmit = caseId !== "" && description.trim() !== "";
+  const canSubmit = description.trim() !== "";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -837,14 +850,18 @@ function CreateTaskDialog({
         </div>
 
         <form onSubmit={submit} className="p-6 space-y-5">
-          <Field label="Case (required)">
+          <Field label="Case (optional)">
             <select
               value={caseId}
-              onChange={(e) => setCaseId(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setCaseId(next);
+                // Independent tasks have no urgent flag — reset when unlinking.
+                if (next === "") setIsUrgent(false);
+              }}
               className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground focus:outline-none focus:border-lawdger-gold/50"
-              required
             >
-              <option value="">— Select a case —</option>
+              <option value="" className="bg-card">— No Case (Independent Task)</option>
               {cases.map((c) => (
                 <option key={c.id} value={c.id}>
                   {caseChipLabel(c)}
@@ -874,17 +891,19 @@ function CreateTaskDialog({
             />
           </Field>
 
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={isUrgent}
-              onChange={(e) => setIsUrgent(e.target.checked)}
-              className="h-4 w-4 rounded border-lawdger-border/40 text-lawdger-gold focus:ring-lawdger-gold/30"
-            />
-            <span className="text-[12.5px] font-medium text-lawdger-espresso dark:text-foreground">
-              Mark as urgent
-            </span>
-          </label>
+          {caseId !== "" && (
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isUrgent}
+                onChange={(e) => setIsUrgent(e.target.checked)}
+                className="h-4 w-4 rounded border-lawdger-border/40 text-lawdger-gold focus:ring-lawdger-gold/30"
+              />
+              <span className="text-[12.5px] font-medium text-lawdger-espresso dark:text-foreground">
+                Mark as urgent
+              </span>
+            </label>
+          )}
 
           <div className="flex justify-end pt-2">
             <button
