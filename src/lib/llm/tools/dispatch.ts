@@ -16,8 +16,11 @@ import {
   updateTask,
   updateCaseTask,
   listAllTasks,
+  createTask,
   createCaseTask,
+  updateTaskStatus,
   toggleCaseTaskStatus,
+  deleteTask,
   deleteCaseTask,
 } from "@/actions/taskActions";
 import { getServerScopedPrisma } from "@/lib/session";
@@ -169,10 +172,13 @@ export async function executeTool(
 
     case "create_task":
       return withSchema("create_task", rawArgs, async (args) => {
-        const result = await createCaseTask({
-          caseId: args.caseId,
+        // Single-call path (mirrors CalendarClient): createTask accepts a UUID
+        // or null caseId. null/omitted → independent task; UUID → case-linked.
+        const result = await createTask({
+          caseId: args.caseId ?? null,
           description: args.description,
-          dueDate: args.dueDate ? new Date(args.dueDate) : undefined,
+          dueDate: args.dueDate ? new Date(args.dueDate) : null,
+          assignee: null,
         });
         if (!result.ok) return { result: result.error };
         return { result: "Task created.", action: `✅ Created task: ${args.description}` };
@@ -222,19 +228,23 @@ export async function executeTool(
 
     case "update_task_status":
       return withSchema("update_task_status", rawArgs, async (args) => {
-        // 3.2 sibling toggleCaseTaskStatus is a TOGGLE (flips current). LLM
-        // tool surface accepts an explicit target status. Adapter: read
-        // current, no-op if already target, else delegate to toggle.
+        // Pre-flight (RLS-only, scoped — mirrors update_task) to discover the
+        // task's real caseId; the DB is authoritative, args.caseId is ignored
+        // for routing. Independent tasks (caseId null in DB) → updateTaskStatus
+        // (idempotent set). Case-linked → toggleCaseTaskStatus adapter, which
+        // is a TOGGLE, so read current status and no-op if already target.
         const db = await getServerScopedPrisma();
-        const task = await db.task.findFirst({
-          where: { id: args.taskId, caseId: args.caseId },
-          select: { status: true },
+        const existing = await db.task.findFirst({
+          where: { id: args.taskId },
+          select: { status: true, caseId: true },
         });
-        if (!task) return { result: "Task not found." };
-        if (task.status === args.status) {
+        if (!existing) return { result: "Task not found." };
+        if (existing.status === args.status) {
           return { result: `Task already ${args.status}.` };
         }
-        const result = await toggleCaseTaskStatus(args.taskId, task.status, args.caseId);
+        const result = existing.caseId
+          ? await toggleCaseTaskStatus(args.taskId, existing.status, existing.caseId)
+          : await updateTaskStatus(args.taskId, args.status);
         if (!result.ok) return { result: result.error };
         return {
           result: "Task status updated.",
@@ -333,7 +343,18 @@ export async function executeTool(
 
     case "delete_task":
       return withSchema("delete_task", rawArgs, async (args) => {
-        const result = await deleteCaseTask(args.taskId, args.caseId);
+        // Pre-flight (RLS-only, scoped — mirrors update_task) to discover the
+        // task's real caseId; DB authoritative. Independent (caseId null) →
+        // deleteTask; case-linked → deleteCaseTask.
+        const db = await getServerScopedPrisma();
+        const existing = await db.task.findFirst({
+          where: { id: args.taskId },
+          select: { caseId: true },
+        });
+        if (!existing) return { result: "Task not found." };
+        const result = existing.caseId
+          ? await deleteCaseTask(args.taskId, existing.caseId)
+          : await deleteTask(args.taskId);
         if (!result.ok) return { result: result.error };
         return { result: "Task deleted.", action: `🗑️ Deleted task` };
       });

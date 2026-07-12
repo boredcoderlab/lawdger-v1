@@ -81,18 +81,21 @@ export const TOOLS: LLMTool[] = [
   {
     name: "create_task",
     description:
-      "Create a new task linked to an existing case. Use get_cases to find caseId.",
+      "Create a new task. Link it to a case with caseId (use get_cases to find it), or omit caseId / pass null for an independent task.",
     parameters: {
       type: "object",
       properties: {
         description: { type: "string", description: "What needs to be done." },
-        caseId: { type: "string", description: "Case ID this task belongs to." },
+        caseId: {
+          type: "string",
+          description: "Case ID to link, or null for an independent task (optional).",
+        },
         dueDate: {
           type: "string",
           description: "ISO 8601 due date, e.g. '2026-06-15T00:00:00Z' (optional).",
         },
       },
-      required: ["description", "caseId"],
+      required: ["description"],
     },
   },
   {
@@ -167,10 +170,13 @@ export const TOOLS: LLMTool[] = [
       type: "object",
       properties: {
         taskId: { type: "string", description: "Task ID." },
-        caseId: { type: "string", description: "Case ID the task belongs to." },
+        caseId: {
+          type: "string",
+          description: "Case ID the task belongs to, or null for an independent task (optional).",
+        },
         status: { type: "string", enum: ["pending", "completed"] },
       },
-      required: ["taskId", "caseId", "status"],
+      required: ["taskId", "status"],
     },
   },
   {
@@ -246,9 +252,12 @@ export const TOOLS: LLMTool[] = [
       type: "object",
       properties: {
         taskId: { type: "string", description: "Task ID to delete." },
-        caseId: { type: "string", description: "Case ID the task belongs to." },
+        caseId: {
+          type: "string",
+          description: "Case ID the task belongs to, or null for an independent task (optional).",
+        },
       },
-      required: ["taskId", "caseId"],
+      required: ["taskId"],
     },
   },
   {

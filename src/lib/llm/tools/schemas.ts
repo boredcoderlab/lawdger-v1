@@ -33,7 +33,7 @@ export const toolSchemas = {
 
   create_task: z.object({
     description: z.string(),
-    caseId: z.string(),
+    caseId: z.string().nullable().optional(),
     dueDate: z.string().optional(),
   }),
 
@@ -61,7 +61,7 @@ export const toolSchemas = {
   // ── WRITE — UPDATE ──────────────────────────────────────────────────────────
   update_task_status: z.object({
     taskId: z.string(),
-    caseId: z.string(),
+    caseId: z.string().nullable().optional(),
     status: z.enum(["pending", "completed"]),
   }),
 
@@ -92,7 +92,7 @@ export const toolSchemas = {
   // ── WRITE — DELETE ──────────────────────────────────────────────────────────
   delete_task: z.object({
     taskId: z.string(),
-    caseId: z.string(),
+    caseId: z.string().nullable().optional(),
   }),
 
   delete_hearing: z.object({
