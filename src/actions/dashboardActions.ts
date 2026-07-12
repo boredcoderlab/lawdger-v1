@@ -1,11 +1,47 @@
 "use server";
 
-import { requireUserId } from "@/actions/requireUserId";
-import { withServerUserContext } from "@/lib/session";
+import { getServerUser, withServerUserContext } from "@/lib/session";
 import { startOfTodayIST, endOfTodayIST, filterStalePastHearing } from "@/lib/date";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
+import type { Result } from "@/lib/result";
 
-export async function getDashboardData() {
-  const userId = await requireUserId();
+type EventWithCase = Prisma.CalendarEventGetPayload<{
+  include: { case: { select: { id: true; title: true } } };
+}>;
+
+type TaskWithCase = Prisma.TaskGetPayload<{
+  include: { case: { select: { id: true; title: true } } };
+}>;
+
+type DashboardCase = Prisma.CaseGetPayload<{
+  select: {
+    id: true;
+    title: true;
+    clientName: true;
+    status: true;
+    nextHearingDate: true;
+  };
+}>;
+
+export type DashboardData = {
+  todayEvents: EventWithCase[];
+  upcomingEvents: EventWithCase[];
+  pendingTasks: TaskWithCase[];
+  allCases: DashboardCase[];
+  totalCases: number;
+  totalTasks: number;
+};
+
+const getDashboardDataSchema = z.object({}).strict();
+
+export async function getDashboardData(): Promise<Result<DashboardData>> {
+  const parsed = getDashboardDataSchema.safeParse({});
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { id: userId } = await getServerUser();
 
   return withServerUserContext(async (tx) => {
     const todayEvents = await tx.calendarEvent.findMany({
@@ -46,12 +82,15 @@ export async function getDashboardData() {
     const allCasesFresh = filterStalePastHearing(allCases);
 
     return {
-      todayEvents,
-      upcomingEvents,
-      pendingTasks,
-      allCases: allCasesFresh,
-      totalCases,
-      totalTasks,
+      ok: true,
+      data: {
+        todayEvents,
+        upcomingEvents,
+        pendingTasks,
+        allCases: allCasesFresh,
+        totalCases,
+        totalTasks,
+      },
     };
   });
 }

@@ -105,8 +105,9 @@ export async function executeTool(
   switch (name) {
     case "get_dashboard":
       return withSchema("get_dashboard", rawArgs, async () => {
-        const data = await getDashboardData();
-        return { result: JSON.stringify(data) };
+        const result = await getDashboardData();
+        if (!result.ok) return { result: result.error };
+        return { result: JSON.stringify(result.data) };
       });
 
     case "get_cases":

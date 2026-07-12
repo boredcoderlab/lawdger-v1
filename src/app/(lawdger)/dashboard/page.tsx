@@ -6,7 +6,20 @@ export default async function DashboardPage() {
   const user = await getServerUser();
   const userName = user.name ?? "Advocate";
 
-  const data = await getDashboardData();
+  const result = await getDashboardData();
+  if (!result.ok) {
+    console.error("[DashboardPage] getDashboardData failed:", result.error);
+  }
+  const data = result.ok
+    ? result.data
+    : {
+        todayEvents: [],
+        upcomingEvents: [],
+        pendingTasks: [],
+        allCases: [],
+        totalCases: 0,
+        totalTasks: 0,
+      };
 
   return (
     <div className="h-full">
