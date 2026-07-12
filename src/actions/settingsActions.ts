@@ -13,10 +13,10 @@
  *      actions / actions needing atomicity (e.g. read-modify-write of
  *      the preferences JSON column).
  *   5. Include `where: { id: session.id }` as defence-in-depth on every
- *      User-table query. RLS is the primary isolation guarantee; the
- *      app-layer filter is a seatbelt against the current
- *      `relforcerowsecurity = false` posture (where the `postgres`
- *      superuser owner bypasses policies at runtime — see 3.0.1).
+ *      User-table query. RLS — with FORCE ROW LEVEL SECURITY, live since
+ *      3.0.1a and bound at runtime via the NOBYPASSRLS `lawdger_app` role —
+ *      is the primary isolation guarantee; the app-layer filter is a
+ *      seatbelt against future RLS misconfiguration.
  *   6. Return Result<T>:
  *        { ok: true, data: T } | { ok: false, error: string }
  *      Validation errors return Result.error. System errors (Prisma
@@ -28,9 +28,10 @@
  *
  * NOTE on User table access: 3.2.5a enabled RLS on User with
  * symmetric USING + WITH CHECK policies keyed off
- * current_setting('app.current_user_id', true). Until 3.0.1's FORCE
- * RLS lands, the `postgres` runtime user bypasses these — so the
- * `where: { id: session.id }` defence-in-depth is load-bearing.
+ * current_setting('app.current_user_id', true); 3.0.1a added FORCE ROW
+ * LEVEL SECURITY and cut the runtime over to the NOBYPASSRLS `lawdger_app`
+ * role. Policies now bind at runtime — the `where: { id: session.id }`
+ * defence-in-depth is a seatbelt, no longer the sole runtime guard.
  *
  */
 
@@ -44,12 +45,7 @@ import {
   getServerUser,
   withServerUserContext,
 } from "@/lib/session";
-
-// ── Result envelope (mirrors caseActions) ─────────────────────────────────────
-
-export type Result<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+import type { Result } from "@/lib/result";
 
 // ── Preferences shape + helpers ───────────────────────────────────────────────
 

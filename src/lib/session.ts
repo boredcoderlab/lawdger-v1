@@ -22,7 +22,10 @@ export async function getServerUser() {
  * Document). For multi-query actions, prefer `withServerUserContext`.
  *
  * Do NOT use for the auth path itself — the base `prisma` client handles
- * User lookup (User has no RLS).
+ * User lookup via the SECURITY DEFINER auth RPCs (auth_find_user_by_email,
+ * see src/auth.ts), which run before any per-request RLS context is set.
+ * User has RLS + FORCE ROW LEVEL SECURITY as of 3.2.5a / 3.0.1a; those RPCs
+ * are the sanctioned pre-session bypass.
  *
  * Example:
  *   const db = await getServerScopedPrisma()

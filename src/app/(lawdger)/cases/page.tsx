@@ -2,10 +2,8 @@ import CasesClient from "@/components/CasesClient";
 import { getCaseCounts, listCases } from "@/actions/caseActions";
 
 export default async function CasesPage() {
-  const [casesResult, countsResult] = await Promise.all([
-    listCases({ skip: 0, take: 50 }),
-    getCaseCounts(),
-  ]);
+  const casesResult = await listCases({ skip: 0, take: 50 });
+  const countsResult = await getCaseCounts();
 
   if (!casesResult.ok) throw new Error(casesResult.error);
   if (!countsResult.ok) throw new Error(countsResult.error);

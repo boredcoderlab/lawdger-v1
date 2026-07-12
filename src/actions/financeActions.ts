@@ -1,16 +1,13 @@
 "use server";
 
-import { requireUserId } from "@/actions/requireUserId";
 import {
   getServerScopedPrisma,
+  getServerUser,
   withServerUserContext,
 } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-export type Result<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+import type { Result } from "@/lib/result";
 
 const STAGNANT_DAYS = 60;
 
@@ -46,8 +43,15 @@ export type FinancesData = {
   caseRows: FinanceCaseRow[];
 };
 
-export async function getFinancesData(): Promise<FinancesData> {
-  const userId = await requireUserId();
+const getFinancesDataSchema = z.object({}).strict();
+
+export async function getFinancesData(): Promise<Result<FinancesData>> {
+  const parsed = getFinancesDataSchema.safeParse({});
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { id: userId } = await getServerUser();
   const scoped = await getServerScopedPrisma();
 
   const cases = await scoped.case.findMany({
@@ -118,14 +122,17 @@ export async function getFinancesData(): Promise<FinancesData> {
     : 0;
 
   return {
-    totals: {
-      expected: totalExpected,
-      received: totalReceived,
-      balance: totalBalance,
-      collectionRate,
+    ok: true,
+    data: {
+      totals: {
+        expected: totalExpected,
+        received: totalReceived,
+        balance: totalBalance,
+        collectionRate,
+      },
+      forgottenDues,
+      caseRows,
     },
-    forgottenDues,
-    caseRows,
   };
 }
 
@@ -143,7 +150,7 @@ export async function updateCaseAgreedFee(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const userId = await requireUserId();
+  const { id: userId } = await getServerUser();
   const scoped = await getServerScopedPrisma();
 
   const result = await scoped.case.updateMany({
@@ -164,7 +171,7 @@ export async function updateCaseAgreedFee(
 const createPaymentSchema = z.object({
   caseId: z.string().uuid(),
   amount: z.number().positive(),
-  status: z.string().optional(),
+  status: z.enum(["paid", "pending"]).optional(),
   dueDate: z.coerce.date().optional(),
 });
 
@@ -176,7 +183,7 @@ export async function createPayment(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
   }
 
-  const userId = await requireUserId();
+  const { id: userId } = await getServerUser();
 
   const result = await withServerUserContext(async (tx) => {
     const caseItem = await tx.case.findFirst({
@@ -219,7 +226,7 @@ export async function deletePayment(id: string): Promise<Result<{ id: string }>>
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid id" };
   }
 
-  const userId = await requireUserId();
+  const { id: userId } = await getServerUser();
   const scoped = await getServerScopedPrisma();
 
   const payment = await scoped.payment.findFirst({

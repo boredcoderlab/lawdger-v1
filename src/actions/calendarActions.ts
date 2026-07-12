@@ -1,124 +1,200 @@
 "use server";
 
-import { requireUserId } from "@/actions/requireUserId";
 import {
   getServerScopedPrisma,
+  getServerUser,
   withServerUserContext,
 } from "@/lib/session";
 import { syncNextHearingDate } from "@/lib/calendar-sync";
-import { CaseStatus } from "@prisma/client";
+import { CaseStatus, Prisma, type CalendarEvent } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import type { Result } from "@/lib/result";
 
-export async function getCalendarEvents() {
-  const userId = await requireUserId();
+type CalendarEventWithCase = Prisma.CalendarEventGetPayload<{
+  include: { case: true };
+}>;
+
+type CaseForSelect = Prisma.CaseGetPayload<{
+  select: { id: true; title: true; caseNumber: true };
+}>;
+
+const getCalendarEventsSchema = z.object({}).strict();
+
+export async function getCalendarEvents(): Promise<
+  Result<CalendarEventWithCase[]>
+> {
+  const parsed = getCalendarEventsSchema.safeParse({});
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { id: userId } = await getServerUser();
   const scoped = await getServerScopedPrisma();
-  return scoped.calendarEvent.findMany({
+  const events = await scoped.calendarEvent.findMany({
     where: { userId },
     include: { case: true },
     orderBy: { hearingDate: "asc" },
   });
+  return { ok: true, data: events };
 }
 
-export async function createCalendarEvent(data: {
-  title: string;
-  hearingDate: Date;
-  description?: string;
-  caseId: string;
-  noteId?: string;
-}) {
-  const userId = await requireUserId();
+const createCalendarEventSchema = z.object({
+  title: z.string().min(1),
+  hearingDate: z.coerce.date(),
+  description: z.string().nullable().optional(),
+  caseId: z.string().uuid(),
+  noteId: z.string().uuid().optional(),
+});
 
-  await withServerUserContext(async (tx) => {
+export async function createCalendarEvent(
+  data: z.input<typeof createCalendarEventSchema>,
+): Promise<Result<CalendarEvent>> {
+  const parsed = createCalendarEventSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { id: userId } = await getServerUser();
+
+  const result = await withServerUserContext(async (tx) => {
     const caseItem = await tx.case.findFirst({
-      where: { id: data.caseId, userId },
+      where: { id: parsed.data.caseId, userId },
       select: { id: true },
     });
 
     if (!caseItem) {
-      throw new Error("Unauthorized");
+      return { ok: false, error: "Not authorized" } as const;
     }
 
-    await tx.calendarEvent.create({
+    const created = await tx.calendarEvent.create({
       data: {
         userId,
-        caseId: data.caseId,
-        title: data.title,
-        hearingDate: data.hearingDate,
-        description: data.description ?? null,
-        ...(data.noteId !== undefined && { noteId: data.noteId }),
+        caseId: parsed.data.caseId,
+        title: parsed.data.title,
+        hearingDate: parsed.data.hearingDate,
+        description: parsed.data.description ?? null,
+        ...(parsed.data.noteId !== undefined && { noteId: parsed.data.noteId }),
       },
     });
 
-    await syncNextHearingDate(data.caseId, tx);
+    await syncNextHearingDate(parsed.data.caseId, tx);
+
+    return { ok: true, data: created } as const;
   });
 
-  revalidatePath("/calendar");
-  revalidatePath("/dashboard");
-  revalidatePath("/cases/[id]", "page");
+  if (result.ok) {
+    revalidatePath("/calendar");
+    revalidatePath("/dashboard");
+    revalidatePath("/cases/[id]", "page");
+  }
+  return result;
 }
+
+const updateCalendarEventSchema = z.object({
+  title: z.string().min(1).optional(),
+  hearingDate: z.coerce.date().optional(),
+  description: z.string().nullable().optional(),
+});
 
 export async function updateCalendarEvent(
   id: string,
-  data: { title?: string; hearingDate?: Date; description?: string }
-) {
-  const userId = await requireUserId();
+  data: z.input<typeof updateCalendarEventSchema>,
+): Promise<Result<CalendarEvent>> {
+  const parsed = updateCalendarEventSchema.safeParse(data);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
 
-  await withServerUserContext(async (tx) => {
+  const { id: userId } = await getServerUser();
+
+  const result = await withServerUserContext(async (tx) => {
     const existing = await tx.calendarEvent.findFirst({
       where: { id, userId },
       select: { caseId: true },
     });
 
     if (!existing) {
-      throw new Error("Unauthorized");
+      return { ok: false, error: "Not authorized" } as const;
     }
 
-    await tx.calendarEvent.update({
+    const updated = await tx.calendarEvent.update({
       where: { id },
       data: {
-        ...(data.title && { title: data.title }),
-        ...(data.hearingDate && { hearingDate: data.hearingDate }),
-        ...(data.description !== undefined && { description: data.description }),
+        ...(parsed.data.title !== undefined && { title: parsed.data.title }),
+        ...(parsed.data.hearingDate !== undefined && {
+          hearingDate: parsed.data.hearingDate,
+        }),
+        ...(parsed.data.description !== undefined && {
+          description: parsed.data.description,
+        }),
       },
     });
 
     await syncNextHearingDate(existing.caseId, tx);
+
+    return { ok: true, data: updated } as const;
   });
 
-  revalidatePath("/calendar");
-  revalidatePath("/dashboard");
-  revalidatePath("/cases/[id]", "page");
+  if (result.ok) {
+    revalidatePath("/calendar");
+    revalidatePath("/dashboard");
+    revalidatePath("/cases/[id]", "page");
+  }
+  return result;
 }
 
-export async function deleteCalendarEvent(id: string) {
-  const userId = await requireUserId();
+const deleteCalendarEventSchema = z.object({ id: z.string().uuid() });
 
-  await withServerUserContext(async (tx) => {
+export async function deleteCalendarEvent(
+  id: string,
+): Promise<Result<{ id: string }>> {
+  const parsed = deleteCalendarEventSchema.safeParse({ id });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { id: userId } = await getServerUser();
+
+  const result = await withServerUserContext(async (tx) => {
     const existing = await tx.calendarEvent.findFirst({
-      where: { id, userId },
+      where: { id: parsed.data.id, userId },
       select: { caseId: true },
     });
 
     if (!existing) {
-      throw new Error("Unauthorized");
+      return { ok: false, error: "Not authorized" } as const;
     }
 
-    await tx.calendarEvent.deleteMany({ where: { id, userId } });
+    await tx.calendarEvent.deleteMany({ where: { id: parsed.data.id, userId } });
 
     await syncNextHearingDate(existing.caseId, tx);
+
+    return { ok: true, data: { id: parsed.data.id } } as const;
   });
 
-  revalidatePath("/calendar");
-  revalidatePath("/dashboard");
-  revalidatePath("/cases/[id]", "page");
+  if (result.ok) {
+    revalidatePath("/calendar");
+    revalidatePath("/dashboard");
+    revalidatePath("/cases/[id]", "page");
+  }
+  return result;
 }
 
-export async function getCasesForSelect() {
-  const userId = await requireUserId();
+const getCasesForSelectSchema = z.object({}).strict();
+
+export async function getCasesForSelect(): Promise<Result<CaseForSelect[]>> {
+  const parsed = getCasesForSelectSchema.safeParse({});
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  }
+
+  const { id: userId } = await getServerUser();
   const scoped = await getServerScopedPrisma();
-  return scoped.case.findMany({
+  const cases = await scoped.case.findMany({
     where: { userId, status: CaseStatus.ACTIVE },
     select: { id: true, title: true, caseNumber: true },
     orderBy: { title: "asc" },
   });
+  return { ok: true, data: cases };
 }
