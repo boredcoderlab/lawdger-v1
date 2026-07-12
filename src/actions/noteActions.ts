@@ -21,10 +21,7 @@ import { startOfTodayIST } from "@/lib/date";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { NOTE_CATEGORIES, type NoteCategory } from "./noteActions.types";
-
-type Result<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+import type { Result } from "@/lib/result";
 
 const createNoteSchema = z.object({
   caseId: z.string().uuid(),

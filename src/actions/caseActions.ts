@@ -45,10 +45,7 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-export type Result<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+import type { Result } from "@/lib/result";
 
 // ─── Shared Zod fragments ────────────────────────────────────────────────────
 

@@ -44,12 +44,7 @@ import {
   getServerUser,
   withServerUserContext,
 } from "@/lib/session";
-
-// ── Result envelope (mirrors caseActions) ─────────────────────────────────────
-
-export type Result<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+import type { Result } from "@/lib/result";
 
 // ── Preferences shape + helpers ───────────────────────────────────────────────
 

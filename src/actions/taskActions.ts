@@ -20,10 +20,7 @@ import {
 } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-export type Result<T> =
-  | { ok: true; data: T }
-  | { ok: false; error: string };
+import type { Result } from "@/lib/result";
 
 const createTaskSchema = z.object({
   caseId: z.string().uuid().nullable(),
