@@ -3,15 +3,23 @@ import { getTasksWithDueDate } from "@/actions/taskActions";
 import CalendarClient from "@/components/CalendarClient";
 
 export default async function CalendarPage() {
-  const [events, cases, tasksResult] = await Promise.all([
+  const [eventsResult, casesResult, tasksResult] = await Promise.all([
     getCalendarEvents(),
     getCasesForSelect(),
     getTasksWithDueDate(),
   ]);
 
+  if (!eventsResult.ok) {
+    console.error("[CalendarPage] getCalendarEvents failed:", eventsResult.error);
+  }
+  if (!casesResult.ok) {
+    console.error("[CalendarPage] getCasesForSelect failed:", casesResult.error);
+  }
   if (!tasksResult.ok) {
     console.error("[CalendarPage] getTasksWithDueDate failed:", tasksResult.error);
   }
+  const events = eventsResult.ok ? eventsResult.data : [];
+  const cases = casesResult.ok ? casesResult.data : [];
   const tasks = tasksResult.ok ? tasksResult.data : [];
 
   return (

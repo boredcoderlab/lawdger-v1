@@ -259,9 +259,9 @@ export default function CalendarClient({
         form.time,
       );
       if (editId) {
-        await updateCalendarEvent(editId, { title: form.title, hearingDate, description: form.description || undefined });
+        await updateCalendarEvent(editId, { title: form.title, hearingDate, description: form.description });
       } else {
-        await createCalendarEvent({ title: form.title, hearingDate, description: form.description || undefined, caseId: form.caseId });
+        await createCalendarEvent({ title: form.title, hearingDate, description: form.description, caseId: form.caseId });
       }
       setIsSubmitting(false);
     }

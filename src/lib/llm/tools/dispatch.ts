@@ -134,8 +134,9 @@ export async function executeTool(
 
     case "get_calendar_events":
       return withSchema("get_calendar_events", rawArgs, async () => {
-        const events = await getCalendarEvents();
-        return { result: JSON.stringify(events) };
+        const result = await getCalendarEvents();
+        if (!result.ok) return { result: result.error };
+        return { result: JSON.stringify(result.data) };
       });
 
     case "get_finances":
@@ -187,12 +188,13 @@ export async function executeTool(
 
     case "create_hearing":
       return withSchema("create_hearing", rawArgs, async (args) => {
-        await createCalendarEvent({
+        const result = await createCalendarEvent({
           title: args.title,
           caseId: args.caseId,
           hearingDate: new Date(args.hearingDate),
           description: args.description,
         });
+        if (!result.ok) return { result: result.error };
         return {
           result: "Hearing created.",
           action: `✅ Scheduled hearing: ${args.title} on ${new Date(args.hearingDate).toLocaleDateString("en-IN")}`,
@@ -314,11 +316,12 @@ export async function executeTool(
 
     case "update_hearing":
       return withSchema("update_hearing", rawArgs, async (args) => {
-        await updateCalendarEvent(args.hearingId, {
+        const result = await updateCalendarEvent(args.hearingId, {
           title: args.title,
           hearingDate: args.hearingDate ? new Date(args.hearingDate) : undefined,
           description: args.description,
         });
+        if (!result.ok) return { result: result.error };
         return { result: "Hearing updated.", action: `✅ Updated hearing` };
       });
 
@@ -362,7 +365,8 @@ export async function executeTool(
 
     case "delete_hearing":
       return withSchema("delete_hearing", rawArgs, async (args) => {
-        await deleteCalendarEvent(args.hearingId);
+        const result = await deleteCalendarEvent(args.hearingId);
+        if (!result.ok) return { result: result.error };
         return { result: "Hearing deleted.", action: `🗑️ Cancelled hearing` };
       });
   }

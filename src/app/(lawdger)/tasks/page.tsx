@@ -12,7 +12,11 @@ export default async function TasksPage() {
   const userName = user.name ?? null;
 
   const tasksResult = await listAllTasks();
-  const cases = await getCasesForSelect();
+  const casesResult = await getCasesForSelect();
+  if (!casesResult.ok) {
+    console.error("[TasksPage] getCasesForSelect failed:", casesResult.error);
+  }
+  const cases = casesResult.ok ? casesResult.data : [];
 
   if (!tasksResult.ok) {
     return (
