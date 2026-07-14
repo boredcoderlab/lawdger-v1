@@ -9,7 +9,7 @@ import { syncNextHearingDate } from "@/lib/calendar-sync";
 import { CaseStatus, Prisma, type CalendarEvent } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { Result } from "@/lib/result";
+import { fail, type Result } from "@/lib/result";
 
 type CalendarEventWithCase = Prisma.CalendarEventGetPayload<{
   include: { case: true };
@@ -26,7 +26,7 @@ export async function getCalendarEvents(): Promise<
 > {
   const parsed = getCalendarEventsSchema.safeParse({});
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { id: userId } = await getServerUser();
@@ -52,7 +52,7 @@ export async function createCalendarEvent(
 ): Promise<Result<CalendarEvent>> {
   const parsed = createCalendarEventSchema.safeParse(data);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { id: userId } = await getServerUser();
@@ -64,7 +64,7 @@ export async function createCalendarEvent(
     });
 
     if (!caseItem) {
-      return { ok: false, error: "Not authorized" } as const;
+      return fail("not_found", "Not authorized");
     }
 
     const created = await tx.calendarEvent.create({
@@ -103,7 +103,7 @@ export async function updateCalendarEvent(
 ): Promise<Result<CalendarEvent>> {
   const parsed = updateCalendarEventSchema.safeParse(data);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { id: userId } = await getServerUser();
@@ -115,7 +115,7 @@ export async function updateCalendarEvent(
     });
 
     if (!existing) {
-      return { ok: false, error: "Not authorized" } as const;
+      return fail("not_found", "Not authorized");
     }
 
     const updated = await tx.calendarEvent.update({
@@ -151,7 +151,7 @@ export async function deleteCalendarEvent(
 ): Promise<Result<{ id: string }>> {
   const parsed = deleteCalendarEventSchema.safeParse({ id });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { id: userId } = await getServerUser();
@@ -163,7 +163,7 @@ export async function deleteCalendarEvent(
     });
 
     if (!existing) {
-      return { ok: false, error: "Not authorized" } as const;
+      return fail("not_found", "Not authorized");
     }
 
     await tx.calendarEvent.deleteMany({ where: { id: parsed.data.id, userId } });
@@ -186,7 +186,7 @@ const getCasesForSelectSchema = z.object({}).strict();
 export async function getCasesForSelect(): Promise<Result<CaseForSelect[]>> {
   const parsed = getCasesForSelectSchema.safeParse({});
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { id: userId } = await getServerUser();
