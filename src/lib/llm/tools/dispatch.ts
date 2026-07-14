@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { formatINR } from "@/lib/format";
+import type { ErrorCode } from "@/lib/result";
 import { toolSchemas, isToolName, type ToolName } from "./schemas";
 
 // ── Server actions used as tools ──────────────────────────────────────────────
@@ -72,7 +73,7 @@ function similarity(a: string, b: string): number {
 
 // ── Per-tool schema-bound dispatch helper ────────────────────────────────────
 
-type ToolResult = { result: string; action?: string };
+type ToolResult = { result: string; action?: string; error_code?: ErrorCode };
 
 /**
  * Validate rawArgs against the named tool's zod schema before invoking the
@@ -106,7 +107,7 @@ export async function executeTool(
     case "get_dashboard":
       return withSchema("get_dashboard", rawArgs, async () => {
         const result = await getDashboardData();
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: JSON.stringify(result.data) };
       });
 
@@ -115,35 +116,35 @@ export async function executeTool(
         const result = await listCases(
           args.status ? { status: args.status as CaseStatus } : undefined,
         );
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: JSON.stringify(result.data.items) };
       });
 
     case "get_case_detail":
       return withSchema("get_case_detail", rawArgs, async (args) => {
         const result = await getCase(args.caseId);
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: JSON.stringify(result.data) };
       });
 
     case "get_tasks":
       return withSchema("get_tasks", rawArgs, async () => {
         const result = await listAllTasks();
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: JSON.stringify(result.data) };
       });
 
     case "get_calendar_events":
       return withSchema("get_calendar_events", rawArgs, async () => {
         const result = await getCalendarEvents();
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: JSON.stringify(result.data) };
       });
 
     case "get_finances":
       return withSchema("get_finances", rawArgs, async () => {
         const result = await getFinancesData();
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: JSON.stringify(result.data) };
       });
 
@@ -151,7 +152,7 @@ export async function executeTool(
       return withSchema("create_case", rawArgs, async (args) => {
         // Server-side dedup guard — prevents the agent from creating a near-duplicate case.
         const existingResult = await listCases({ take: 200 });
-        if (!existingResult.ok) return { result: existingResult.error };
+        if (!existingResult.ok) return { result: existingResult.error, error_code: existingResult.code };
         const incomingNorm = normalizeCaseTitle(args.title);
         const match = existingResult.data.items.find((c) => {
           const existingNorm = normalizeCaseTitle(c.title);
@@ -169,7 +170,7 @@ export async function executeTool(
           agreedFee: args.agreedFee,
           caseType: args.caseType,
         });
-        if (!created.ok) return { result: created.error };
+        if (!created.ok) return { result: created.error, error_code: created.code };
         return { result: "Case created.", action: `✅ Created case: ${args.title}` };
       });
 
@@ -183,7 +184,7 @@ export async function executeTool(
           dueDate: args.dueDate ? new Date(args.dueDate) : null,
           assignee: null,
         });
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: "Task created.", action: `✅ Created task: ${args.description}` };
       });
 
@@ -195,7 +196,7 @@ export async function executeTool(
           hearingDate: new Date(args.hearingDate),
           description: args.description,
         });
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return {
           result: "Hearing created.",
           action: `✅ Scheduled hearing: ${args.title} on ${new Date(args.hearingDate).toLocaleDateString("en-IN")}`,
@@ -211,7 +212,7 @@ export async function executeTool(
           source: "manual",
           nextDate: args.nextDate,
         });
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: "Note created.", action: `✅ Added note (${args.category})` };
       });
 
@@ -223,7 +224,7 @@ export async function executeTool(
           status: args.status,
           dueDate: args.dueDate ? new Date(args.dueDate) : undefined,
         });
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return {
           result: "Payment recorded.",
           action: `✅ Recorded payment: ${formatINR(args.amount)}`,
@@ -242,14 +243,14 @@ export async function executeTool(
           where: { id: args.taskId },
           select: { status: true, caseId: true },
         });
-        if (!existing) return { result: "Task not found." };
+        if (!existing) return { result: "Task not found.", error_code: "not_found" as ErrorCode };
         if (existing.status === args.status) {
           return { result: `Task already ${args.status}.` };
         }
         const result = existing.caseId
           ? await toggleCaseTaskStatus(args.taskId, existing.status, existing.caseId)
           : await updateTaskStatus(args.taskId, args.status);
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return {
           result: "Task status updated.",
           action: `✅ Marked task as ${args.status}`,
@@ -276,7 +277,7 @@ export async function executeTool(
             dueDate: normalizedDueDate,
             caseId: args.caseId,
           });
-          if (!result.ok) return { result: result.error };
+          if (!result.ok) return { result: result.error, error_code: result.code };
           return { result: "Task updated.", action: `✅ Updated task` };
         }
 
@@ -287,7 +288,7 @@ export async function executeTool(
           select: { caseId: true },
         });
         if (!existing) {
-          return { result: "Task not found or not yours" };
+          return { result: "Task not found or not yours", error_code: "not_found" as ErrorCode };
         }
 
         if (!existing.caseId) {
@@ -298,7 +299,7 @@ export async function executeTool(
             description: args.description,
             dueDate: normalizedDueDate,
           });
-          if (!result.ok) return { result: result.error };
+          if (!result.ok) return { result: result.error, error_code: result.code };
           return { result: "Task updated.", action: `✅ Updated task` };
         }
 
@@ -311,7 +312,7 @@ export async function executeTool(
           ...(args.description !== undefined && { description: args.description }),
           ...(normalizedDueDate !== undefined && { dueDate: normalizedDueDate }),
         });
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: "Task updated.", action: `✅ Updated task` };
       });
 
@@ -322,14 +323,14 @@ export async function executeTool(
           hearingDate: args.hearingDate ? new Date(args.hearingDate) : undefined,
           description: args.description,
         });
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: "Hearing updated.", action: `✅ Updated hearing` };
       });
 
     case "update_case_status":
       return withSchema("update_case_status", rawArgs, async (args) => {
         const result = await updateCaseStatus(args.caseId, args.status as CaseStatus);
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return {
           result: "Case status updated.",
           action: `✅ Case marked as ${args.status}`,
@@ -339,7 +340,7 @@ export async function executeTool(
     case "update_case_fee":
       return withSchema("update_case_fee", rawArgs, async (args) => {
         const result = await updateCaseAgreedFee(args.caseId, args.agreedFee);
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return {
           result: "Agreed fee updated.",
           action: `✅ Updated agreed fee to ${formatINR(args.agreedFee)}`,
@@ -356,18 +357,18 @@ export async function executeTool(
           where: { id: args.taskId },
           select: { caseId: true },
         });
-        if (!existing) return { result: "Task not found." };
+        if (!existing) return { result: "Task not found.", error_code: "not_found" as ErrorCode };
         const result = existing.caseId
           ? await deleteCaseTask(args.taskId, existing.caseId)
           : await deleteTask(args.taskId);
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: "Task deleted.", action: `🗑️ Deleted task` };
       });
 
     case "delete_hearing":
       return withSchema("delete_hearing", rawArgs, async (args) => {
         const result = await deleteCalendarEvent(args.hearingId);
-        if (!result.ok) return { result: result.error };
+        if (!result.ok) return { result: result.error, error_code: result.code };
         return { result: "Hearing deleted.", action: `🗑️ Cancelled hearing` };
       });
   }
