@@ -20,7 +20,7 @@ import {
 } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { Result } from "@/lib/result";
+import { fail, type Result } from "@/lib/result";
 
 const createTaskSchema = z.object({
   caseId: z.string().uuid().nullable(),
@@ -33,7 +33,7 @@ export async function createTask(
   data: z.input<typeof createTaskSchema>,
 ): Promise<Result<{ id: string }>> {
   const parsed = createTaskSchema.safeParse(data);
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
 
   const user = await getServerUser();
   const result = await withServerUserContext(async (tx) => {
@@ -42,7 +42,7 @@ export async function createTask(
         where: { id: parsed.data.caseId, userId: user.id },
         select: { id: true },
       });
-      if (!caseItem) return { ok: false, error: "Case not found or unauthorized" } as const;
+      if (!caseItem) return fail("not_found", "Case not found or unauthorized");
     }
     const task = await tx.task.create({
       data: {
@@ -82,7 +82,7 @@ export async function updateTask(
   data: { description?: string; dueDate?: Date | null; caseId?: string | null },
 ): Promise<Result<{ id: string }>> {
   const parsed = updateTaskSchema.safeParse({ id, ...data });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
 
   const user = await getServerUser();
   const result = await withServerUserContext(async (tx) => {
@@ -90,14 +90,14 @@ export async function updateTask(
       where: { id: parsed.data.id, userId: user.id },
       select: { id: true, caseId: true },
     });
-    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
+    if (!existing) return fail("not_found", "Task not found or not yours");
 
     if (parsed.data.caseId) {
       const caseItem = await tx.case.findFirst({
         where: { id: parsed.data.caseId, userId: user.id },
         select: { id: true },
       });
-      if (!caseItem) return { ok: false, error: "Case not found or unauthorized" } as const;
+      if (!caseItem) return fail("not_found", "Case not found or unauthorized");
     }
 
     await tx.task.update({
@@ -126,7 +126,7 @@ const deleteTaskSchema = z.object({ id: z.string().uuid() });
 
 export async function deleteTask(id: string): Promise<Result<{ id: string }>> {
   const parsed = deleteTaskSchema.safeParse({ id });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
 
   const user = await getServerUser();
   const result = await withServerUserContext(async (tx) => {
@@ -134,7 +134,7 @@ export async function deleteTask(id: string): Promise<Result<{ id: string }>> {
       where: { id, userId: user.id },
       select: { id: true, caseId: true },
     });
-    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
+    if (!existing) return fail("not_found", "Task not found or not yours");
     await tx.task.delete({ where: { id } });
     return { ok: true, data: { id: existing.id, caseId: existing.caseId } } as const;
   });
@@ -160,7 +160,7 @@ export async function updateTaskAssignee(
 ): Promise<Result<{ id: string }>> {
   const parsed = updateTaskAssigneeSchema.safeParse({ id, assignee });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -171,7 +171,7 @@ export async function updateTaskAssignee(
       select: { id: true },
     });
     if (!existing) {
-      return { ok: false, error: "Task not found" } as const;
+      return fail("not_found", "Task not found");
     }
 
     await tx.task.update({
@@ -199,7 +199,7 @@ export async function updateTaskStatus(
   status: "pending" | "completed",
 ): Promise<Result<{ id: string }>> {
   const parsed = updateTaskStatusSchema.safeParse({ id, status });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  if (!parsed.success) return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
 
   const user = await getServerUser();
   const result = await withServerUserContext(async (tx) => {
@@ -207,7 +207,7 @@ export async function updateTaskStatus(
       where: { id, userId: user.id },
       select: { id: true, caseId: true },
     });
-    if (!existing) return { ok: false, error: "Task not found or not yours" } as const;
+    if (!existing) return fail("not_found", "Task not found or not yours");
     await tx.task.update({ where: { id }, data: { status: parsed.data.status } });
     return { ok: true, data: { id: existing.id, caseId: existing.caseId } } as const;
   });
@@ -233,7 +233,7 @@ export type TaskWithDueDateRow = {
 export async function getTasksWithDueDate(): Promise<Result<TaskWithDueDateRow[]>> {
   const parsed = getTasksWithDueDateSchema.safeParse({});
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -277,7 +277,7 @@ export async function createCaseTask(input: {
 }): Promise<Result<{ id: string }>> {
   const parsed = createCaseTaskSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -288,7 +288,7 @@ export async function createCaseTask(input: {
     where: { id: parsed.data.caseId, userId: user.id },
     select: { id: true },
   });
-  if (!parent) return { ok: false, error: "Case not found" };
+  if (!parent) return fail("not_found", "Case not found");
 
   const task = await db.task.create({
     data: {
@@ -322,7 +322,7 @@ export async function toggleCaseTaskStatus(
 ): Promise<Result<{ id: string; status: string }>> {
   const parsed = toggleCaseTaskStatusSchema.safeParse({ id, currentStatus, caseId });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -335,7 +335,7 @@ export async function toggleCaseTaskStatus(
     data: { status: newStatus },
   });
 
-  if (!result.count) return { ok: false, error: "Task not found" };
+  if (!result.count) return fail("not_found", "Task not found");
 
   revalidatePath(`/cases/${parsed.data.caseId}`);
   revalidatePath("/tasks");
@@ -355,7 +355,7 @@ export async function deleteCaseTask(
 ): Promise<Result<{ id: string }>> {
   const parsed = deleteCaseTaskSchema.safeParse({ id, caseId });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -365,7 +365,7 @@ export async function deleteCaseTask(
     where: { id: parsed.data.id, userId: user.id, caseId: parsed.data.caseId },
   });
 
-  if (!result.count) return { ok: false, error: "Task not found" };
+  if (!result.count) return fail("not_found", "Task not found");
 
   revalidatePath(`/cases/${parsed.data.caseId}`);
   revalidatePath("/tasks");
@@ -394,7 +394,7 @@ export type TaskRow = {
 export async function listAllTasks(): Promise<Result<TaskRow[]>> {
   const parsed = listAllTasksSchema.safeParse({});
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -457,7 +457,7 @@ export async function updateCaseTask(
 ): Promise<Result<TaskRow>> {
   const parsed = updateCaseTaskSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   try {
@@ -468,7 +468,7 @@ export async function updateCaseTask(
       where: { id: parsed.data.taskId, OR: [{ case: { userId: user.id } }, { userId: user.id, caseId: null }] },
       select: { id: true },
     });
-    if (!existing) return { ok: false, error: "Task not found or not yours" };
+    if (!existing) return fail("not_found", "Task not found or not yours");
 
     const updated = await db.task.update({
       where: { id: parsed.data.taskId },
@@ -499,6 +499,6 @@ export async function updateCaseTask(
     return { ok: true, data: updated };
   } catch (e) {
     console.error("[updateCaseTask]", e);
-    return { ok: false, error: "Failed to update task" };
+    return fail("system", "Failed to update task");
   }
 }
