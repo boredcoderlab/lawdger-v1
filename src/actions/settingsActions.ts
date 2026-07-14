@@ -45,7 +45,7 @@ import {
   getServerUser,
   withServerUserContext,
 } from "@/lib/session";
-import type { Result } from "@/lib/result";
+import { fail, type Result } from "@/lib/result";
 
 // ── Preferences shape + helpers ───────────────────────────────────────────────
 
@@ -159,10 +159,7 @@ export async function updateProfile(
 ): Promise<ActionResult> {
   const parsed = profileSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input",
-    };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { name, barNumber, firmName, officeAddress } = parsed.data;
@@ -195,10 +192,7 @@ export async function updateWorkspacePreferences(
 ): Promise<ActionResult> {
   const parsed = workspaceSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input",
-    };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { jurisdiction, voiceLanguage, autoSummarise } = parsed.data;
@@ -230,10 +224,7 @@ export async function updateNotificationPreferences(
 ): Promise<ActionResult> {
   const parsed = notificationsSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) {
-    return {
-      ok: false,
-      error: parsed.error.issues[0]?.message ?? "Invalid input",
-    };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { hearingReminders, taskDueReminders, weeklySummary } = parsed.data;
@@ -278,12 +269,12 @@ export async function changePassword(
     confirmPassword: formData.get("confirmPassword"),
   });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { currentPassword, newPassword } = parsed.data;
 
-  if (!session.email) return { ok: false, error: "Session missing email." };
+  if (!session.email) return fail("credential", "Session missing email.");
 
   type AuthUserRow = { id: string; email: string; name: string | null; password: string }
 
@@ -293,10 +284,10 @@ export async function changePassword(
   `
   const user = userRows[0] ?? null
 
-  if (!user?.password) return { ok: false, error: "Account has no password set." };
+  if (!user?.password) return fail("credential", "Account has no password set.");
 
   const valid = await compare(currentPassword, user.password);
-  if (!valid) return { ok: false, error: "Current password is incorrect." };
+  if (!valid) return fail("credential", "Current password is incorrect.");
 
   const hashed = await hash(newPassword, 12);
 
@@ -305,7 +296,7 @@ export async function changePassword(
     FROM public.auth_update_password(${user.email}, ${hashed})
   `;
 
-  if (rows.length === 0) return { ok: false, error: "User not found." };
+  if (rows.length === 0) return fail("not_found", "User not found.");
 
   return { ok: true, data: { message: "Password changed successfully." } };
 }

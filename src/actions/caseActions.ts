@@ -45,7 +45,7 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { Result } from "@/lib/result";
+import { fail, type Result } from "@/lib/result";
 
 // ─── Shared Zod fragments ────────────────────────────────────────────────────
 
@@ -124,7 +124,7 @@ export async function createCase(
 ): Promise<Result<Case>> {
   const parsed = caseWritableSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -156,7 +156,7 @@ export async function listCases(
 ): Promise<Result<{ items: Case[]; total: number }>> {
   const parsed = listCasesSchema.safeParse(input ?? {});
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -194,7 +194,7 @@ export async function listCases(
 export async function getCase(id: string): Promise<Result<Case | null>> {
   const parsed = idSchema.safeParse(id);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid id" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid id");
   }
 
   const user = await getServerUser();
@@ -220,7 +220,7 @@ export async function getCaseWithChildren(
 ): Promise<Result<CaseWithChildren | null>> {
   const parsed = idSchema.safeParse(id);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid id" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid id");
   }
 
   const user = await getServerUser();
@@ -248,11 +248,11 @@ export async function updateCase(
 ): Promise<Result<Case>> {
   const parsedId = idSchema.safeParse(id);
   if (!parsedId.success) {
-    return { ok: false, error: parsedId.error.issues[0]?.message ?? "Invalid id" };
+    return fail("validation", parsedId.error.issues[0]?.message ?? "Invalid id");
   }
   const parsed = updateCaseSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -266,7 +266,7 @@ export async function updateCase(
     where: { id: parsedId.data, userId: user.id },
     select: { id: true },
   });
-  if (!owned) return { ok: false, error: "Case not found" };
+  if (!owned) return fail("not_found", "Case not found");
 
   const updated = await db.case.update({
     where: { id: parsedId.data },
@@ -295,7 +295,7 @@ export async function updateCaseStatus(
 ): Promise<Result<Case>> {
   const parsed = updateCaseStatusSchema.safeParse({ id, status });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -305,7 +305,7 @@ export async function updateCaseStatus(
     where: { id: parsed.data.id, userId: user.id },
     select: { id: true },
   });
-  if (!owned) return { ok: false, error: "Case not found" };
+  if (!owned) return fail("not_found", "Case not found");
 
   const updated = await db.case.update({
     where: { id: parsed.data.id },
@@ -356,7 +356,7 @@ export async function getCaseCounts(): Promise<
 export async function deleteCase(id: string): Promise<Result<{ id: string }>> {
   const parsed = idSchema.safeParse(id);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid id" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid id");
   }
 
   const user = await getServerUser();
@@ -373,7 +373,7 @@ export async function deleteCase(id: string): Promise<Result<{ id: string }>> {
     where: { id: parsed.data, userId: user.id },
   });
 
-  if (!result.count) return { ok: false, error: "Case not found" };
+  if (!result.count) return fail("not_found", "Case not found");
 
   revalidatePath("/cases");
   revalidatePath("/dashboard");

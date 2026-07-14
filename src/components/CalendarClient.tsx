@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon,
@@ -163,6 +163,12 @@ export default function CalendarClient({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [draggedId, setDraggedId] = useState<string | null>(null);
 
+  // Local mirror of server events so drag-drop can apply an optimistic move and
+  // roll back on failure. Re-syncs whenever the server revalidates (new prop),
+  // which is how modal create/update/delete keep the grid fresh.
+  const [events, setEvents] = useState(initialEvents);
+  useEffect(() => { setEvents(initialEvents); }, [initialEvents]);
+
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -258,12 +264,11 @@ export default function CalendarClient({
         parse(form.date, "yyyy-MM-dd", new Date()),
         form.time,
       );
-      if (editId) {
-        await updateCalendarEvent(editId, { title: form.title, hearingDate, description: form.description });
-      } else {
-        await createCalendarEvent({ title: form.title, hearingDate, description: form.description, caseId: form.caseId });
-      }
+      const result = editId
+        ? await updateCalendarEvent(editId, { title: form.title, hearingDate, description: form.description })
+        : await createCalendarEvent({ title: form.title, hearingDate, description: form.description, caseId: form.caseId });
       setIsSubmitting(false);
+      if (!result.ok) { setErrorMsg(result.error); return; }
     }
     closeModal();
   };
@@ -273,7 +278,8 @@ export default function CalendarClient({
       const result = await deleteTask(editTaskId);
       if (!result.ok) { setErrorMsg(result.error); return; }
     } else if (editId) {
-      await deleteCalendarEvent(editId);
+      const result = await deleteCalendarEvent(editId);
+      if (!result.ok) { setErrorMsg(result.error); return; }
     }
     setErrorMsg(null);
     closeModal();
@@ -285,9 +291,18 @@ export default function CalendarClient({
   const handleDrop = async (e: React.DragEvent, targetDay: Date, targetTime?: string) => {
     e.preventDefault();
     if (!draggedId) return;
+    const id = draggedId;
     const hearingDate = targetTime ? buildDateFromDayAndTime(targetDay, targetTime) : targetDay;
-    await updateCalendarEvent(draggedId, { hearingDate });
+    // Snapshot for rollback, then apply the optimistic move.
+    const snapshot = events;
+    setEvents((prev) => prev.map((ev) => (ev.id === id ? { ...ev, hearingDate } : ev)));
     setDraggedId(null);
+    setErrorMsg(null);
+    const result = await updateCalendarEvent(id, { hearingDate });
+    if (!result.ok) {
+      setEvents(snapshot);
+      setErrorMsg(result.error);
+    }
   };
 
   /* ── Derived ── */
@@ -303,11 +318,11 @@ export default function CalendarClient({
     end:   endOfWeek(endOfMonth(pickerMonth)),
   });
 
-  const eventsOnDay        = (day: Date) => initialEvents.filter((ev) => isSameDay(ev.hearingDate, day));
+  const eventsOnDay        = (day: Date) => events.filter((ev) => isSameDay(ev.hearingDate, day));
   const eventsOnDayTime    = (day: Date, time: string) =>
-    initialEvents.filter((ev) => isSameDay(ev.hearingDate, day) && toDisplayTime(ev.hearingDate) === time);
+    events.filter((ev) => isSameDay(ev.hearingDate, day) && toDisplayTime(ev.hearingDate) === time);
   const allDayEventsOnDay  = (day: Date) =>
-    initialEvents.filter((ev) => isSameDay(ev.hearingDate, day) && isAllDayEvent(ev.hearingDate));
+    events.filter((ev) => isSameDay(ev.hearingDate, day) && isAllDayEvent(ev.hearingDate));
   const tasksOnDay         = (day: Date) => tasks.filter((t) => isSameDay(t.dueDate, day));
 
   const autoAllocateTasks = (day: Date): { slotMap: Record<string, TaskItem>; overflow: TaskItem[] } => {

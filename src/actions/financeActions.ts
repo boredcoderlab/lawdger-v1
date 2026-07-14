@@ -7,7 +7,7 @@ import {
 } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { Result } from "@/lib/result";
+import { fail, type Result } from "@/lib/result";
 
 const STAGNANT_DAYS = 60;
 
@@ -48,7 +48,7 @@ const getFinancesDataSchema = z.object({}).strict();
 export async function getFinancesData(): Promise<Result<FinancesData>> {
   const parsed = getFinancesDataSchema.safeParse({});
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { id: userId } = await getServerUser();
@@ -147,7 +147,7 @@ export async function updateCaseAgreedFee(
 ): Promise<Result<{ caseId: string; agreedFee: number }>> {
   const parsed = updateCaseAgreedFeeSchema.safeParse({ caseId, agreedFee });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { id: userId } = await getServerUser();
@@ -159,7 +159,7 @@ export async function updateCaseAgreedFee(
   });
 
   if (!result.count) {
-    return { ok: false, error: "Case not found" };
+    return fail("not_found", "Case not found");
   }
 
   revalidatePath("/finances");
@@ -180,7 +180,7 @@ export async function createPayment(
 ): Promise<Result<{ id: string }>> {
   const parsed = createPaymentSchema.safeParse(data);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { id: userId } = await getServerUser();
@@ -192,7 +192,7 @@ export async function createPayment(
     });
 
     if (!caseItem) {
-      return { ok: false, error: "Case not found" } as const;
+      return fail("not_found", "Case not found");
     }
 
     const created = await tx.payment.create({
@@ -223,7 +223,7 @@ const deletePaymentSchema = z.object({
 export async function deletePayment(id: string): Promise<Result<{ id: string }>> {
   const parsed = deletePaymentSchema.safeParse({ id });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid id" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid id");
   }
 
   const { id: userId } = await getServerUser();
@@ -234,7 +234,7 @@ export async function deletePayment(id: string): Promise<Result<{ id: string }>>
     select: { caseId: true },
   });
   if (!payment) {
-    return { ok: false, error: "Payment not found" };
+    return fail("not_found", "Payment not found");
   }
 
   await scoped.payment.deleteMany({ where: { id: parsed.data.id, userId } });

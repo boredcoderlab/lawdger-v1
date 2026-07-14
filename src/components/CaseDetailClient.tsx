@@ -108,6 +108,7 @@ export default function CaseDetailClient({
   // ── Case info edit ──────────────────────────────────────────────────────────
   const [isEditing, setIsEditing] = useState(false);
   const [saving,    setSaving]    = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [info, setInfo] = useState({
     title:      initialTitle,
     clientName: initialClientName ?? "",
@@ -131,8 +132,9 @@ export default function CaseDetailClient({
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
     const isCriminal = matterData.caseType === CRIMINAL_CASE_TYPE;
-    await updateCase(caseId, {
+    const updateResult = await updateCase(caseId, {
       title:           info.title || undefined,
       clientName:      info.clientName || undefined,
       court:           info.courtName || undefined,
@@ -146,7 +148,17 @@ export default function CaseDetailClient({
       firNumber:       isCriminal && matterData.firNumber ? matterData.firNumber : undefined,
       policeStation:   isCriminal && matterData.policeStation ? matterData.policeStation : undefined,
     });
-    await updateCaseStatus(caseId, info.status);
+    if (!updateResult.ok) {
+      setSaveError(updateResult.error);
+      setSaving(false);
+      return;
+    }
+    const statusResult = await updateCaseStatus(caseId, info.status);
+    if (!statusResult.ok) {
+      setSaveError(statusResult.error);
+      setSaving(false);
+      return;
+    }
     setIsEditing(false);
     setSaving(false);
   };
@@ -160,6 +172,7 @@ export default function CaseDetailClient({
       status:     initialStatus as Status,
     });
     setMatterData(initialMatterData);
+    setSaveError(null);
     setIsEditing(false);
   };
 
@@ -169,6 +182,7 @@ export default function CaseDetailClient({
   const [pickerMonth,    setPickerMonth]    = useState(new Date());
   const [newTask,        setNewTask]        = useState({ desc: "", due: "", isUrgent: false });
   const [taskSubmitting, setTaskSubmitting] = useState(false);
+  const [taskError,      setTaskError]      = useState<string | null>(null);
 
   const pendingTasks   = initialTasks.filter((t) => t.status === "pending");
   const completedTasks = initialTasks.filter((t) => t.status === "completed");
@@ -176,12 +190,18 @@ export default function CaseDetailClient({
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     setTaskSubmitting(true);
-    await createCaseTask({
+    setTaskError(null);
+    const result = await createCaseTask({
       caseId,
       description: newTask.desc,
       dueDate: newTask.due ? new Date(newTask.due) : undefined,
       isUrgent: newTask.isUrgent,
     });
+    if (!result.ok) {
+      setTaskError(result.error);
+      setTaskSubmitting(false);
+      return;
+    }
     setNewTask({ desc: "", due: "", isUrgent: false });
     setTaskModalOpen(false);
     setDatePickerOpen(false);
@@ -246,9 +266,11 @@ export default function CaseDetailClient({
   const [noteOpen,       setNoteOpen]       = useState(false);
   const [noteContent,    setNoteContent]    = useState("");
   const [noteSubmitting, setNoteSubmitting] = useState(false);
+  const [noteError,      setNoteError]      = useState<string | null>(null);
   const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
   const [deletingNoteId,      setDeletingNoteId]      = useState<string | null>(null);
   const [errorMsg,            setErrorMsg]            = useState<string | null>(null);
+  const [docketError,         setDocketError]         = useState<string | null>(null);
 
   // ── Note edit modal ─────────────────────────────────────────────────────────
   const [editNoteOpen,        setEditNoteOpen]        = useState(false);
@@ -320,10 +342,31 @@ export default function CaseDetailClient({
     e.preventDefault();
     if (!noteContent.trim()) return;
     setNoteSubmitting(true);
-    await createNote({ caseId, cleanContent: noteContent.trim(), category: "General Note" });
+    setNoteError(null);
+    const result = await createNote({ caseId, cleanContent: noteContent.trim(), category: "General Note" });
+    if (!result.ok) {
+      setNoteError(result.error);
+      setNoteSubmitting(false);
+      return;
+    }
     setNoteContent("");
     setNoteOpen(false);
     setNoteSubmitting(false);
+  };
+
+  // ── Docket task mutations (revalidatePath-driven; no local task state to
+  //    roll back — the timeline reads the same server tasks, so we let both
+  //    refresh together and only surface failures inline). ─────────────────
+  const handleToggleDocketTask = async (task: Task) => {
+    setDocketError(null);
+    const result = await toggleCaseTaskStatus(task.id, task.status, caseId);
+    if (!result.ok) setDocketError(result.error);
+  };
+
+  const handleDeleteDocketTask = async (task: Task) => {
+    setDocketError(null);
+    const result = await deleteCaseTask(task.id, caseId);
+    if (!result.ok) setDocketError(result.error);
   };
 
   // ── Next hearing ────────────────────────────────────────────────────────────
@@ -429,6 +472,12 @@ export default function CaseDetailClient({
                       ))}
                     </div>
                   </EditField>
+                  {saveError && (
+                    <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[12px] font-medium text-destructive">
+                      <span>{saveError}</span>
+                      <button type="button" onClick={() => setSaveError(null)} className="shrink-0 text-destructive/70 hover:text-destructive transition-colors"><X className="h-3.5 w-3.5" /></button>
+                    </div>
+                  )}
                   <div className="flex gap-2 pt-2">
                     <button
                       type="button"
@@ -482,8 +531,14 @@ export default function CaseDetailClient({
                     placeholder="Drop a quick thought..."
                     className="w-full bg-black/20 dark:bg-[var(--surface-2)] border border-white/5 rounded-xl px-4 py-3 text-[13px] text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all resize-none shadow-inner"
                   />
+                  {noteError && (
+                    <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-[12px] font-medium text-destructive">
+                      <span>{noteError}</span>
+                      <button type="button" onClick={() => setNoteError(null)} className="shrink-0 text-destructive/70 hover:text-destructive transition-colors"><X className="h-3.5 w-3.5" /></button>
+                    </div>
+                  )}
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => { setNoteOpen(false); setNoteContent(""); }}
+                    <button type="button" onClick={() => { setNoteOpen(false); setNoteContent(""); setNoteError(null); }}
                       className="flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest text-white/50 hover:text-white rounded-xl hover:bg-white/5 transition-colors border border-transparent">
                       Cancel
                     </button>
@@ -822,13 +877,19 @@ export default function CaseDetailClient({
 
               {/* ── Case Docket (Tasks) ─────────────────────────────────── */}
               <div>
+                {docketError && (
+                  <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 mb-4 text-[13px] font-medium text-destructive">
+                    <span>{docketError}</span>
+                    <button onClick={() => setDocketError(null)} className="shrink-0 text-destructive/70 hover:text-destructive transition-colors"><X className="h-4 w-4" /></button>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-6 pb-2 border-b border-primary/10">
                   <h3 className="text-[12px] font-bold uppercase tracking-widest text-foreground flex items-center gap-3">
                     <span className="inline-block h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
                     Case Docket
                   </h3>
                   <button
-                    onClick={() => setTaskModalOpen(true)}
+                    onClick={() => { setTaskModalOpen(true); setTaskError(null); }}
                     className="btn-ghost-gold flex items-center justify-center gap-2 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
                   >
                     <Plus className="h-3 w-3" />
@@ -850,7 +911,7 @@ export default function CaseDetailClient({
                         return (
                           <div key={task.id} className="group flex items-center gap-4 px-6 py-4 hover:bg-white dark:hover:bg-white/5 transition-colors cursor-pointer">
                             <button
-                              onClick={() => toggleCaseTaskStatus(task.id, task.status, caseId)}
+                              onClick={() => handleToggleDocketTask(task)}
                               className="h-5 w-5 rounded-full border-2 border-primary/30 shrink-0 hover:border-primary transition-colors flex items-center justify-center"
                             />
                             <div className="flex-1 min-w-0 pr-4 border-r border-primary/10">
@@ -881,7 +942,7 @@ export default function CaseDetailClient({
                               <Pencil className="h-3.5 w-3.5" />
                             </button>
                             <button
-                              onClick={() => deleteCaseTask(task.id, caseId)}
+                              onClick={() => handleDeleteDocketTask(task)}
                               className="p-2 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-full transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -924,7 +985,7 @@ export default function CaseDetailClient({
             <div className="flex justify-between items-center p-6 bg-white dark:bg-[var(--surface-2)] border-b border-primary/10 dark:border-[var(--border)]">
               <h2 className="font-serif text-[1.5rem] font-bold text-gray-900 dark:text-foreground leading-none">Append Task</h2>
               <button
-                onClick={() => { setTaskModalOpen(false); setDatePickerOpen(false); }}
+                onClick={() => { setTaskModalOpen(false); setDatePickerOpen(false); setTaskError(null); }}
                 className="text-foreground/40 hover:text-foreground transition-colors p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5"
               >
                 <X className="h-5 w-5" />
@@ -1019,6 +1080,12 @@ export default function CaseDetailClient({
                 </label>
               </div>
 
+              {taskError && (
+                <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[13px] font-medium text-destructive">
+                  <span>{taskError}</span>
+                  <button type="button" onClick={() => setTaskError(null)} className="shrink-0 text-destructive/70 hover:text-destructive transition-colors"><X className="h-4 w-4" /></button>
+                </div>
+              )}
               <div className="pt-2">
                 <button
                   type="submit"

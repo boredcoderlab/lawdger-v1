@@ -4,7 +4,7 @@ import { getServerUser, withServerUserContext } from "@/lib/session";
 import { startOfTodayIST, endOfTodayIST, filterStalePastHearing } from "@/lib/date";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import type { Result } from "@/lib/result";
+import { fail, type Result } from "@/lib/result";
 
 type EventWithCase = Prisma.CalendarEventGetPayload<{
   include: { case: { select: { id: true; title: true } } };
@@ -38,7 +38,7 @@ const getDashboardDataSchema = z.object({}).strict();
 export async function getDashboardData(): Promise<Result<DashboardData>> {
   const parsed = getDashboardDataSchema.safeParse({});
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const { id: userId } = await getServerUser();
