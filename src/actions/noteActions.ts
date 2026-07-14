@@ -21,7 +21,7 @@ import { startOfTodayIST } from "@/lib/date";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { NOTE_CATEGORIES, type NoteCategory } from "./noteActions.types";
-import type { Result } from "@/lib/result";
+import { fail, type Result } from "@/lib/result";
 
 const createNoteSchema = z.object({
   caseId: z.string().uuid(),
@@ -42,7 +42,7 @@ export async function createNote(input: {
 }): Promise<Result<{ id: string }>> {
   const parsed = createNoteSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -91,7 +91,7 @@ export async function createNote(input: {
     return { id: created.id };
   });
 
-  if (!result) return { ok: false, error: "Case not found" };
+  if (!result) return fail("not_found", "Case not found");
 
   revalidatePath(`/cases/${parsed.data.caseId}`);
   revalidatePath("/dashboard");
@@ -110,7 +110,7 @@ export async function deleteNote(
 ): Promise<Result<{ id: string }>> {
   const parsed = deleteNoteSchema.safeParse({ id, caseId });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -130,7 +130,7 @@ export async function deleteNote(
     return result.count;
   });
 
-  if (!count) return { ok: false, error: "Note not found" };
+  if (!count) return fail("not_found", "Note not found");
 
   revalidatePath(`/cases/${parsed.data.caseId}`);
   revalidatePath("/dashboard");
@@ -165,7 +165,7 @@ export async function updateNote(input: {
 }): Promise<Result<{ id: string }>> {
   const parsed = updateNoteSchema.safeParse(input);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+    return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
   }
 
   const user = await getServerUser();
@@ -261,8 +261,8 @@ export async function updateNote(input: {
       return { code: "ok" as const, id: parsed.data.id };
     });
 
-    if (result.code === "case_not_found") return { ok: false, error: "Case not found" };
-    if (result.code === "note_not_found") return { ok: false, error: "Note not found" };
+    if (result.code === "case_not_found") return fail("not_found", "Case not found");
+    if (result.code === "note_not_found") return fail("not_found", "Note not found");
 
     revalidatePath(`/cases/${parsed.data.caseId}`);
     revalidatePath("/dashboard");
@@ -270,6 +270,6 @@ export async function updateNote(input: {
     return { ok: true, data: { id: result.id } };
   } catch (err) {
     console.error("[updateNote] failed", err);
-    return { ok: false, error: "Update failed" };
+    return fail("system", "Update failed");
   }
 }
