@@ -1,6 +1,6 @@
 # Lawdger — Source of Truth
 
-**Last updated:** 2026-07-12 (post-W3 merge #40 — N54/N55 closed at 09113dc)
+**Last updated:** 2026-07-16 (post-W8 merge #43 — flip #10; N9/N65/N74/N82/N83 closed at 96067a5)
 **Maintainer:** Sahil Jain
 **Status:** Active development — pre-MVP
 
@@ -24,8 +24,8 @@ district/trial courts.
 - **GitHub:** `boredcoderlab/lawdger-v1`
 - **Local working dir:** `~/Lawdger_MVP_v1`
 - **Default branch:** `main`
-- **Current main sha:** `09113dc` (#40 — W3 LLM tools + /tasks modal squash-merge; last flip commit)
-- **Last merge:** #40 W3 independent-task LLM tools + /tasks modal parity (`09113dc`)
+- **Current main sha:** `96067a5` (#43 — W8 RLS runtime hardening batch squash-merge; last feature merge)
+- **Last merge:** #43 W8 RLS runtime hardening batch (+12 assertions → 50/9; N65 harness self-counting) (`96067a5`)
 - **W3 branch:** `w3-independent-task-llm-and-ui` MERGED via #40 (squashed to `09113dc`, branch deleted local + remote). Pre-merge tip was `7bab76d`.
 - **PR8 branch:** `feat/pr8-tasks-uplift-pillar-b` MERGED via #39 (squashed to `0179f38`, branch deleted local + remote). Pre-merge HEAD was `dd96cad` (2-parent merge of `7c56610` + `a2785f1`).
 
