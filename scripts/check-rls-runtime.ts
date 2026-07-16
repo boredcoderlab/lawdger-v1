@@ -9,9 +9,11 @@
  *       Runtime RLS cannot be meaningfully tested as superuser.
  *
  *   - If current_user === 'lawdger_app':
- *       BLOCKING mode. Run the seven verify scripts in sequence as
+ *       BLOCKING mode. Run the nine verify scripts in sequence as
  *       child processes (matches the existing smoke:rls invocation
  *       pattern for check-rls.ts). Propagate non-zero exit codes.
+ *       Aggregates each child's PASS/FAIL lines and prints a TOTAL
+ *       (N65 — the pre-W8 harness ran stdio:"inherit" and never counted).
  *
  * Child scripts spawned (sequentially, never parallel) — each exits
  * 0 pass, 1 fail, 2 precondition (missing seed). Kept in sync with the
@@ -23,6 +25,8 @@
  *   5. scripts/verify-pillar-b-rls.ts
  *   6. scripts/verify-phase52-finances-rls.ts
  *   7. scripts/verify-user-rls.ts
+ *   8. scripts/verify-phase4-c1-update-rls.ts
+ *   9. scripts/verify-phase4-a7-update-task-rls.ts
  *
  * Wrapper exit codes:
  *   0  — advisory skip (pre-cutover) OR all three children passed
@@ -43,6 +47,8 @@ const VERIFY_SCRIPTS = [
   "scripts/verify-pillar-b-rls.ts",
   "scripts/verify-phase52-finances-rls.ts",
   "scripts/verify-user-rls.ts",
+  "scripts/verify-phase4-c1-update-rls.ts",
+  "scripts/verify-phase4-a7-update-task-rls.ts",
 ];
 
 async function detectRole(): Promise<string> {
@@ -50,14 +56,24 @@ async function detectRole(): Promise<string> {
   return rows[0]?.current_user ?? "unknown";
 }
 
-function runChild(script: string): number {
+function runChild(script: string): { code: number; assertionCount: number } {
   console.log(`\n──── running ${script} ────`);
   const result = spawnSync("npx", ["tsx", script], {
-    stdio: "inherit",
+    // stdout piped (was "inherit") so we can aggregate the child's PASS/FAIL
+    // lines — the pre-N65 harness never counted anything. stdin + stderr stay
+    // inherited so prompts/errors still stream in OS real-time.
+    stdio: ["inherit", "pipe", "inherit"],
     cwd: process.cwd(),
     env: process.env,
   });
-  return result.status ?? 1;
+  const output = result.stdout?.toString() ?? "";
+  // Re-emit the captured stdout verbatim so the visible console shape stays
+  // byte-identical to the old streaming view — the only behavioural delta is
+  // flush timing (child stdout now flushes on exit, not OS real-time).
+  process.stdout.write(output);
+  // Count against the shared record() helper's uniform "PASS "/"FAIL " prefix.
+  const assertionCount = (output.match(/^(PASS|FAIL)\s/gm) ?? []).length;
+  return { code: result.status ?? 1, assertionCount };
 }
 
 async function main(): Promise<void> {
@@ -80,8 +96,10 @@ async function main(): Promise<void> {
   await prisma.$disconnect();
 
   let anyFail = false;
+  let totalAssertions = 0;
   for (const script of VERIFY_SCRIPTS) {
-    const code = runChild(script);
+    const { code, assertionCount } = runChild(script);
+    totalAssertions += assertionCount;
     if (code === 0) continue;
     anyFail = true;
     if (code === 2) {
@@ -96,6 +114,8 @@ async function main(): Promise<void> {
       );
     }
   }
+
+  console.log(`\nTOTAL: ${totalAssertions} assertions across ${VERIFY_SCRIPTS.length} scripts`);
 
   if (anyFail) {
     console.error("\n❌ [smoke:rls-runtime] one or more runtime RLS checks failed");
