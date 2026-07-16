@@ -244,6 +244,55 @@ async function main(): Promise<number> {
     `nextDate persisted=${persistedNextDateMs === expectedNextDateMs} (got=${persistedNextDateMs} expected=${expectedNextDateMs}), event=${pastNoteEvent === null ? "null" : "PRESENT"}`,
   )
 
+  // ─── Check 6: updateCalendarEvent cross-user pre-flight null ──────────────
+  // updateCalendarEvent's guard reads the event via findFirst { id, userId }
+  // before writing. Under userB's GUC that read must return null so the
+  // action fails closed with not_found rather than mutating A's event.
+  // standaloneEvent (from setup) is still alive — check 2's deleteMany was
+  // count=0.
+  const bEventPreflight = await dbB.calendarEvent.findFirst({
+    where: { id: standaloneEvent.id, userId: userB.id },
+    select: { id: true },
+  })
+  record(
+    "6. updateCalendarEvent pre-flight fail-closed: scoped(B) findFirst on A's event → null",
+    bEventPreflight === null,
+    bEventPreflight
+      ? `LEAK: B can resolve A's event ${JSON.stringify(bEventPreflight)}`
+      : "returned null — RLS hides A's event from B's pre-flight read",
+  )
+
+  // ─── Check 7: updateCalendarEvent cross-user mutation fail-closed ─────────
+  // userB attempts updateCalendarEvent's write directly — updateMany on A's
+  // event id with B's userId. count must be 0; nothing under B's GUC matches.
+  const bEventUpdate = await dbB.calendarEvent.updateMany({
+    where: { id: standaloneEvent.id, userId: userB.id },
+    data: { title: `${PROBE_PREFIX} [TAMPERED by userB]` },
+  })
+  record(
+    "7. updateCalendarEvent mutation fail-closed: scoped(B) updateMany on A's event → count=0",
+    bEventUpdate.count === 0,
+    `count=${bEventUpdate.count}`,
+  )
+
+  // ─── Check 8: updateCalendarEvent survival ───────────────────────────────
+  // After B's attack, A's re-read must show the original title/description.
+  const eventSurvivor = await dbA.calendarEvent.findFirst({
+    where: { id: standaloneEvent.id },
+    select: { id: true, title: true, description: true },
+  })
+  const eventUnchanged =
+    eventSurvivor !== null &&
+    eventSurvivor.title === STANDALONE_EVENT_TITLE &&
+    eventSurvivor.description === "probe"
+  record(
+    "8. updateCalendarEvent survival: A's re-read confirms fields unchanged after B's attack",
+    eventUnchanged,
+    eventSurvivor
+      ? `title ${eventSurvivor.title === STANDALONE_EVENT_TITLE ? "unchanged" : `MUTATED to "${eventSurvivor.title}"`}, description ${eventSurvivor.description === "probe" ? "unchanged" : "MUTATED"}`
+      : "event MISSING under A's scope",
+  )
+
   console.log("")
   const allPass = checks.every((c) => c.pass)
   console.log(allPass ? "ALL PILLAR-B RLS CHECKS PASS" : "FAILURES — Pillar B RLS NOT SAFE")

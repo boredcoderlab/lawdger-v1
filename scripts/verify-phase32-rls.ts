@@ -135,6 +135,47 @@ async function main() {
     stillThere ? `still present: ${stillThere.title}` : "MISSING — case was deleted!",
   )
 
+  // ─── Check 7: updateCaseAgreedFee cross-user mutation fail-closed ───
+  // Mirrors updateCaseAgreedFee's guard exactly:
+  //   scoped.case.updateMany({ where: { id, userId }, data: { agreedFee } })
+  //   → count===0 returns fail("not_found").
+  // Distinct from the owner-chain precheck used by updateCase (checks 3/4):
+  // there is NO separate findFirst here — the updateMany's own count is the
+  // guard. Under userB's GUC A's case row is invisible (FORCE RLS) and the
+  // userId filter mismatches, so zero rows match → count=0, fail-closed.
+  // Snapshot the seeded agreedFee first so check 8 can prove non-mutation.
+  const seededFee =
+    (
+      await dbA.case.findFirst({
+        where: { id: targetA.id },
+        select: { agreedFee: true },
+      })
+    )?.agreedFee ?? null
+  const bFeeUpdate = await dbB.case.updateMany({
+    where: { id: targetA.id, userId: userB.id },
+    data: { agreedFee: 999999 },
+  })
+  record(
+    "7. updateCaseAgreedFee fail-closed: scoped(B) updateMany on A's case → count=0",
+    bFeeUpdate.count === 0,
+    `count=${bFeeUpdate.count} — updateMany count guard blocks (no owner-chain precheck; RLS + userId filter yield 0 rows)`,
+  )
+
+  // ─── Check 8: updateCaseAgreedFee survival ───
+  // A's re-read must show the seeded agreedFee untouched by B's attack.
+  const feeSurvivor =
+    (
+      await dbA.case.findFirst({
+        where: { id: targetA.id },
+        select: { agreedFee: true },
+      })
+    )?.agreedFee ?? null
+  record(
+    "8. updateCaseAgreedFee survival: A's re-read confirms agreedFee unchanged from seed value",
+    feeSurvivor === seededFee,
+    `seeded=${seededFee}, post-attack=${feeSurvivor} — ${feeSurvivor === seededFee ? "unchanged" : "MUTATED"}`,
+  )
+
   console.log("")
   const allPass = checks.every((c) => c.pass)
   console.log(allPass ? "ALL PHASE-3.2 RLS CHECKS PASS" : "FAILURES — RLS NOT SAFE")
