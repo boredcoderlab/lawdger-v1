@@ -21,6 +21,18 @@ import {
   isToday,
 } from "date-fns";
 import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  pointerWithin,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
   PageLayout,
   DarkPaneHeaderTitle,
   ContentHeading,
@@ -36,7 +48,7 @@ import {
   type TaskRow,
   type UpdateCaseTaskInput,
 } from "@/actions/taskActions";
-import { bucketTask } from "@/lib/task-bucket";
+import { bucketTask, type TaskBucket } from "@/lib/task-bucket";
 import { istDateKey } from "@/lib/date";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -121,12 +133,35 @@ export default function TasksClient({
   const [createOpen, setCreateOpen] = useState(false);
   const [detailTaskId, setDetailTaskId] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskRow | null>(null);
+  // Drag-drop: card currently lifted (for the DragOverlay ghost) and a task
+  // dropped on Associates awaiting a name pick before any state is written.
+  const [activeTask, setActiveTask] = useState<TaskRow | null>(null);
+  const [pendingAssign, setPendingAssign] = useState<TaskRow | null>(null);
   const [, startTransition] = useTransition();
+
+  // 8px activation distance keeps plain clicks (open detail, toggle, delete)
+  // from being swallowed by the drag sensor.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
 
   const allTasks = useMemo(
     () => [...unassigned, ...myPlate, ...associates],
     [unassigned, myPlate, associates],
   );
+
+  // Distinct associate names (first-seen casing) as quick-picks for the
+  // drop-on-Associates dialog.
+  const associateNames = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const t of associates) {
+      const name = (t.assignee ?? "").trim();
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (!seen.has(key)) seen.set(key, name);
+    }
+    return [...seen.values()];
+  }, [associates]);
 
   const visibleIds = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -347,9 +382,76 @@ export default function TasksClient({
     });
   }
 
+  // Assignee-only write behind drag-drop. "Unassigned" is the null-semantics
+  // sentinel (DB column is non-nullable, bucketTask matches it case-insensitively).
+  async function handleAssign(task: TaskRow, assignee: string) {
+    const snap = snapshot();
+    const updated: TaskRow = { ...task, assignee, updatedAt: new Date() };
+
+    const removeTask = (arr: TaskRow[]) => arr.filter((t) => t.id !== task.id);
+    const nextUnassigned = removeTask(unassigned);
+    const nextMyPlate = removeTask(myPlate);
+    const nextAssociates = removeTask(associates);
+
+    const newBucket = bucketTask({ assignee }, userName);
+    if (newBucket === "unassigned") nextUnassigned.unshift(updated);
+    else if (newBucket === "my-plate") nextMyPlate.unshift(updated);
+    else nextAssociates.unshift(updated);
+
+    setUnassigned(nextUnassigned);
+    setMyPlate(nextMyPlate);
+    setAssociates(nextAssociates);
+    setStats(deriveStats(nextUnassigned, nextMyPlate, nextAssociates));
+
+    startTransition(async () => {
+      const result = await updateCaseTask({ taskId: task.id, assignee });
+      if (!result.ok) {
+        rollback(snap);
+        setErrorMsg("Couldn't move task. Try again.");
+        setTimeout(() => setErrorMsg(null), 5000);
+      } else {
+        setErrorMsg(null);
+      }
+    });
+  }
+
+  // ── drag-drop wiring ────────────────────────────────────────────────────
+  function handleDragStart(event: DragStartEvent) {
+    setActiveTask(allTasks.find((t) => t.id === event.active.id) ?? null);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveTask(null);
+    const task = allTasks.find((t) => t.id === event.active.id);
+    const target = event.over?.id as TaskBucket | undefined;
+    if (!task || !target) return;
+    if (bucketTask(task, userName) === target) return;
+
+    if (target === "unassigned") {
+      void handleAssign(task, "Unassigned");
+    } else if (target === "my-plate") {
+      const name = (userName ?? "").trim();
+      if (!name) {
+        setErrorMsg("Set your name in Settings to route tasks to your plate.");
+        setTimeout(() => setErrorMsg(null), 5000);
+        return;
+      }
+      void handleAssign(task, name);
+    } else {
+      // Associates is one bucket for many people — ask who before writing.
+      setPendingAssign(task);
+    }
+  }
+
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={pointerWithin}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveTask(null)}
+    >
       <PageLayout
         pageTitle="Tasks"
         headerAction={
@@ -481,12 +583,28 @@ export default function TasksClient({
           onSubmit={(input) => handleEdit(editingTask, input)}
         />
       )}
-    </>
+
+      {pendingAssign && (
+        <AssignAssociateDialog
+          task={pendingAssign}
+          existingNames={associateNames}
+          onClose={() => setPendingAssign(null)}
+          onAssign={(name) => {
+            setPendingAssign(null);
+            void handleAssign(pendingAssign, name);
+          }}
+        />
+      )}
+
+      <DragOverlay dropAnimation={null}>
+        {activeTask && <DragGhost task={activeTask} />}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Kanban Column (cream pane, read-only render)
+// Kanban Column (cream pane, drop target for cross-bucket drag)
 // ──────────────────────────────────────────────────────────────────────────
 function KanbanColumn({
   id,
@@ -509,16 +627,20 @@ function KanbanColumn({
 }) {
   const Icon = COLUMN_ICON[id];
   const label = COLUMN_LABEL[id];
+  const { setNodeRef, isOver } = useDroppable({ id });
   const visibleTasks = tasks.filter((t) => isVisible(t.id));
   const showMyPlateHint =
     id === "my-plate" && visibleTasks.length === 0 && (!userName || !userName.trim());
 
   return (
     <div
+      ref={setNodeRef}
       className={[
         "flex flex-col h-full min-h-0 rounded-2xl p-3 transition-colors",
         !isLast ? "border-r border-lawdger-border/15 dark:border-lawdger-border" : "",
-        "bg-lawdger-base/40",
+        isOver
+          ? "bg-lawdger-gold/10 ring-2 ring-inset ring-lawdger-gold/40"
+          : "bg-lawdger-base/40",
       ].join(" ")}
     >
       <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-lawdger-border/20 dark:border-[var(--border)] shrink-0">
@@ -577,8 +699,17 @@ function AssignedCard({
   onDelete: (t: TaskRow) => void;
 }) {
   const completed = task.status === "completed";
+  // Optimistic temp-ids aren't valid uuids yet — updateCaseTask would reject
+  // them, so those cards stay put until the create round-trip lands.
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: task.id,
+    disabled: task.id.startsWith("optimistic-"),
+  });
   return (
     <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       onClick={() => onClick(task.id)}
       className={[
         "group relative bg-white dark:bg-[var(--surface-2)] surface-inner rounded-xl shadow-sm dark:shadow-[0_14px_32px_-18px_rgba(0,0,0,0.7)]",
@@ -586,6 +717,7 @@ function AssignedCard({
         "p-4 cursor-pointer card-interactive",
         "hover:shadow-md hover:-translate-y-px hover:border-lawdger-border/30 dark:hover:bg-[var(--surface-3)] dark:hover:border-[var(--border-strong)]",
         "transition-all duration-150",
+        isDragging ? "opacity-40" : "",
       ].join(" ")}
     >
       {task.isUrgent && <UrgentPill className="absolute right-3 top-3" />}
@@ -672,8 +804,15 @@ function UnassignedZone({
   onQuickAdd: () => void;
 }) {
   const visibleTasks = tasks.filter((t) => isVisible(t.id));
+  const { setNodeRef, isOver } = useDroppable({ id: "unassigned" });
   return (
-    <div className="flex flex-col min-h-0 flex-1 rounded-2xl">
+    <div
+      ref={setNodeRef}
+      className={[
+        "flex flex-col min-h-0 flex-1 rounded-2xl transition-colors",
+        isOver ? "bg-lawdger-gold/10 ring-2 ring-inset ring-lawdger-gold/40" : "",
+      ].join(" ")}
+    >
       <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
         <div className="flex items-center gap-2">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lawdger-cream/50 dark:text-muted-foreground">
@@ -717,21 +856,160 @@ function UnassignedCard({
   task: TaskRow;
   onClick: (id: string) => void;
 }) {
+  const completed = task.status === "completed";
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: task.id,
+    disabled: task.id.startsWith("optimistic-"),
+  });
   return (
     <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       onClick={() => onClick(task.id)}
       className={[
         "relative bg-lawdger-cream/8 dark:bg-foreground/5 border border-lawdger-cream/12 dark:border-lawdger-border rounded-xl p-3",
         "cursor-pointer hover:border-lawdger-gold/40 hover:bg-lawdger-cream/15 dark:hover:bg-foreground/8",
         "transition-colors duration-150",
+        completed ? "opacity-50" : "",
+        isDragging ? "opacity-40" : "",
       ].join(" ")}
     >
       {task.isUrgent && <UrgentPill className="absolute right-2 top-2" />}
-      <div className="text-sm font-medium text-lawdger-cream/90 dark:text-foreground leading-snug line-clamp-2 pr-16">
+      <div
+        className={[
+          "text-sm font-medium leading-snug line-clamp-2 pr-16",
+          completed
+            ? "text-lawdger-cream/50 dark:text-foreground/50 line-through"
+            : "text-lawdger-cream/90 dark:text-foreground",
+        ].join(" ")}
+      >
         {task.description}
       </div>
       <div className="mt-2 flex items-center gap-1.5">
         <span className="chip-on-dark is-meta">{caseChipLabel(task.case)}</span>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Drag ghost — lightweight card clone rendered in the DragOverlay layer so
+// the lifted card isn't clipped by the columns' overflow scroll containers.
+// ──────────────────────────────────────────────────────────────────────────
+function DragGhost({ task }: { task: TaskRow }) {
+  return (
+    <div className="bg-white dark:bg-[var(--surface-2)] rounded-xl shadow-xl border border-lawdger-gold/40 p-4 cursor-grabbing rotate-2">
+      <div className="text-sm font-medium leading-snug line-clamp-2 text-lawdger-espresso dark:text-foreground">
+        {task.description}
+      </div>
+      <div className="mt-2">
+        <span className="inline-flex items-center bg-lawdger-espresso/8 dark:bg-[var(--surface-inset)] text-lawdger-espresso/70 dark:text-foreground/70 text-xs font-medium px-2 py-0.5 rounded-full max-w-full truncate">
+          {caseChipLabel(task.case)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Assign Associate Dialog — a drop on the Associates column names no single
+// person, so the write is deferred until a name is picked here. Cancel = no-op.
+// ──────────────────────────────────────────────────────────────────────────
+function AssignAssociateDialog({
+  task,
+  existingNames,
+  onClose,
+  onAssign,
+}: {
+  task: TaskRow;
+  existingNames: string[];
+  onClose: () => void;
+  onAssign: (name: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const canSubmit = name.trim() !== "";
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) return;
+    onAssign(name.trim());
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-lawdger-espresso/40 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-lawdger-cream dark:bg-[var(--surface-3)] rounded-2xl shadow-2xl border border-lawdger-border/20 dark:border-[var(--border-strong)] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-between items-start px-6 py-5 border-b border-lawdger-border/10 dark:border-lawdger-border">
+          <div className="flex-1 pr-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-lawdger-muted mb-1">
+              Assign To Associate
+            </p>
+            <h2 className="font-serif text-[1.2rem] font-bold text-lawdger-espresso dark:text-foreground leading-snug line-clamp-2">
+              {task.description}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="p-2 rounded-full hover:bg-lawdger-espresso/5 text-lawdger-muted hover:text-lawdger-espresso dark:hover:text-foreground transition-colors shrink-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="p-6 space-y-5">
+          {existingNames.length > 0 && (
+            <Field label="Quick Pick">
+              <div className="flex flex-wrap gap-2">
+                {existingNames.map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => onAssign(n)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-lawdger-border/20 dark:border-[var(--border)] text-[12.5px] font-medium text-lawdger-espresso dark:text-foreground hover:border-lawdger-gold/50 hover:bg-lawdger-gold/10 transition-colors"
+                  >
+                    <Users className="w-3 h-3 text-lawdger-muted" />
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          )}
+
+          <Field label={existingNames.length > 0 ? "Or Someone New" : "Name"}>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Associate name…"
+              autoFocus
+              className="w-full bg-white dark:bg-[var(--surface-inset)] border border-lawdger-border/20 dark:border-[var(--border)] rounded-lg px-3 py-2.5 text-[13px] text-lawdger-espresso dark:text-foreground placeholder:text-lawdger-muted focus:outline-none focus:border-lawdger-gold/50"
+            />
+          </Field>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-2.5 rounded-lg text-[11px] tracking-widest uppercase text-lawdger-muted hover:text-lawdger-espresso dark:hover:text-foreground border border-lawdger-border/20 dark:border-[var(--border)] hover:border-lawdger-border/40 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              className="btn-gold px-6 py-2.5 rounded-lg text-[11px] tracking-widest uppercase disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Assign
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
