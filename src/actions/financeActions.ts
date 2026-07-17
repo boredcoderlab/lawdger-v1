@@ -5,6 +5,7 @@ import {
   getServerUser,
   withServerUserContext,
 } from "@/lib/session";
+import { PaymentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { fail, type Result } from "@/lib/result";
@@ -68,7 +69,7 @@ export async function getFinancesData(): Promise<Result<FinancesData>> {
 
   for (const c of cases) {
     const agreedFee = c.agreedFee;
-    const paidPayments = c.payments.filter((p) => p.status === "paid");
+    const paidPayments = c.payments.filter((p) => p.status === PaymentStatus.paid);
     const received = paidPayments.reduce((a, p) => a + p.amount, 0);
     const balance = (agreedFee ?? 0) - received;
 
@@ -171,7 +172,7 @@ export async function updateCaseAgreedFee(
 const createPaymentSchema = z.object({
   caseId: z.string().uuid(),
   amount: z.number().positive(),
-  status: z.enum(["paid", "pending"]).optional(),
+  status: z.nativeEnum(PaymentStatus).optional(),
   dueDate: z.coerce.date().optional(),
 });
 
@@ -200,7 +201,7 @@ export async function createPayment(
         userId,
         caseId: parsed.data.caseId,
         amount: parsed.data.amount,
-        status: parsed.data.status ?? "paid",
+        status: parsed.data.status ?? PaymentStatus.paid,
         dueDate: parsed.data.dueDate ?? null,
       },
     });

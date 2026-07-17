@@ -19,6 +19,11 @@ enum MatterType {
   PRE_LITIGATION
 }
 
+enum PaymentStatus {
+  paid
+  pending
+}
+
 model User {
   id             String          @id @default(uuid())
   email          String          @unique
@@ -78,10 +83,13 @@ model Note {
   cleanContent  String
   category      String // Client Update, Next Date, Task, General Note
   nextDate      DateTime?
-  case          Case      @relation(fields: [caseId], references: [id])
+  case          Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
   user          User      @relation(fields: [userId], references: [id])
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([caseId])
 }
 
 model Task {
@@ -93,10 +101,13 @@ model Task {
   assignee    String    @default("Unassigned")
   dueDate     DateTime?
   isUrgent    Boolean   @default(false)
-  case        Case?     @relation(fields: [caseId], references: [id])
+  case        Case?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
   user        User      @relation(fields: [userId], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@index([caseId])
+  @@index([userId, status])
 }
 
 model CalendarEvent {
@@ -107,23 +118,30 @@ model CalendarEvent {
   hearingDate DateTime
   description String?
   noteId      String?  @unique
-  case        Case     @relation(fields: [caseId], references: [id])
+  case        Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
   user        User     @relation(fields: [userId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Payment {
-  id        String    @id @default(uuid())
+  id        String        @id @default(uuid())
   caseId    String
   userId    String
   amount    Float
-  status    String    @default("pending") // pending, paid
+  status    PaymentStatus @default(pending)
   dueDate   DateTime?
-  case      Case      @relation(fields: [caseId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  // onDelete intentionally omitted → Prisma implicit Restrict. Financial audit
+  // boundary: deleting a Case with Payments must fail loudly, not cascade.
+  case      Case          @relation(fields: [caseId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([caseId])
 }
 
 model Document {
