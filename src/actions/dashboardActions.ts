@@ -2,6 +2,7 @@
 
 import { getServerUser, withServerUserContext } from "@/lib/session";
 import { startOfTodayIST, endOfTodayIST, filterStalePastHearing } from "@/lib/date";
+import { getNextHearingDatesByCase } from "@/lib/next-hearing";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { fail, type Result } from "@/lib/result";
@@ -76,10 +77,19 @@ export async function getDashboardData(): Promise<Result<DashboardData>> {
     const totalCases = await tx.case.count({ where: { userId, status: "ACTIVE" } });
     const totalTasks = await tx.task.count({ where: { userId, status: "pending" } });
 
-    // Cache is only re-synced on calendar mutations, so its "next" event can
-    // fall into the past between mutations. Filter stale-past values here so
-    // the dashboard never surfaces a "next hearing" that has already occurred.
-    const allCasesFresh = filterStalePastHearing(allCases);
+    // Live next-hearing from CalendarEvent (source of truth) instead of the
+    // Case.nextHearingDate cache column. Same IST-today floor as the old
+    // filterStalePastHearing path — the query filters >= floor, so the value
+    // can never be stale-past. W9 PR2.
+    const nextByCase = await getNextHearingDatesByCase(
+      tx,
+      allCases.map((c) => c.id),
+      startOfTodayIST(),
+    );
+    const allCasesFresh = allCases.map((c) => ({
+      ...c,
+      nextHearingDate: nextByCase.get(c.id) ?? null,
+    }));
 
     return {
       ok: true,

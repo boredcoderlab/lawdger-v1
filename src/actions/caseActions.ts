@@ -29,7 +29,8 @@
  */
 
 import { CASE_TYPES } from "@/lib/case-constants";
-import { filterStalePastHearing, stripStalePastHearing } from "@/lib/date";
+import { filterStalePastHearing, stripStalePastHearing, startOfTodayIST } from "@/lib/date";
+import { getNextHearingDatesByCase } from "@/lib/next-hearing";
 import {
   getServerScopedPrisma,
   getServerUser,
@@ -185,7 +186,20 @@ export async function listCases(
       take,
     });
     const total = await tx.case.count({ where });
-    return { ok: true, data: { items: filterStalePastHearing(items), total } };
+    // Live next-hearing from CalendarEvent (source of truth) instead of the
+    // Case.nextHearingDate cache column. Same IST-today floor as the old
+    // filterStalePastHearing path — the query filters >= floor, so no stale
+    // value can survive. W9 PR2.
+    const nextByCase = await getNextHearingDatesByCase(
+      tx,
+      items.map((c) => c.id),
+      startOfTodayIST(),
+    );
+    const withHearing = items.map((c) => ({
+      ...c,
+      nextHearingDate: nextByCase.get(c.id) ?? null,
+    }));
+    return { ok: true, data: { items: withHearing, total } };
   });
 }
 
@@ -224,18 +238,29 @@ export async function getCaseWithChildren(
   }
 
   const user = await getServerUser();
-  const db = await getServerScopedPrisma();
 
-  const found = await db.case.findFirst({
-    where: { id: parsed.data, userId: user.id },
-    include: {
-      tasks: { orderBy: { createdAt: "desc" } },
-      notes: { orderBy: { createdAt: "desc" } },
-      calendarEvents: { orderBy: { hearingDate: "asc" } },
-    },
+  // Two scoped queries (case include + live next-hearing groupBy) → one RLS tx,
+  // per the multi-query convention. Was a single getServerScopedPrisma read
+  // before W9 PR2 added the groupBy.
+  return withServerUserContext(async (tx) => {
+    const found = await tx.case.findFirst({
+      where: { id: parsed.data, userId: user.id },
+      include: {
+        tasks: { orderBy: { createdAt: "desc" } },
+        notes: { orderBy: { createdAt: "desc" } },
+        calendarEvents: { orderBy: { hearingDate: "asc" } },
+      },
+    });
+
+    if (!found) return { ok: true, data: null };
+
+    // Live next-hearing from CalendarEvent instead of the cache column. Same
+    // IST-today floor as the old stripStalePastHearing path. W9 PR2.
+    const nextByCase = await getNextHearingDatesByCase(tx, [found.id], startOfTodayIST());
+    const withHearing = { ...found, nextHearingDate: nextByCase.get(found.id) ?? null };
+
+    return { ok: true, data: withHearing };
   });
-
-  return { ok: true, data: found ? stripStalePastHearing(found) : null };
 }
 
 // ─── updateCase ──────────────────────────────────────────────────────────────
