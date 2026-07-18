@@ -65,9 +65,9 @@ export async function getDashboardData(): Promise<Result<DashboardData>> {
       take: 10,
     });
 
-    // Case.nextHearingDate is a synced cache column (see src/lib/calendar-sync.ts,
-    // wired into all CalendarEvent mutations in calendarActions.ts). Read it
-    // directly instead of re-deriving via a per-request groupBy.
+    // nextHearingDate is selected here but overridden below with a live
+    // CalendarEvent groupBy (getNextHearingDatesByCase); the cache column is
+    // vestigial and dropped in W9 PR2 CP-5.
     const allCases = await tx.case.findMany({
       where: { userId },
       select: { id: true, title: true, clientName: true, status: true, nextHearingDate: true },
