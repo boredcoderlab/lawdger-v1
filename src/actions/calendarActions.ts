@@ -5,7 +5,6 @@ import {
   getServerUser,
   withServerUserContext,
 } from "@/lib/session";
-import { syncNextHearingDate } from "@/lib/calendar-sync";
 import { CaseStatus, Prisma, type CalendarEvent } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -78,8 +77,6 @@ export async function createCalendarEvent(
       },
     });
 
-    await syncNextHearingDate(parsed.data.caseId, tx);
-
     return { ok: true, data: created } as const;
   });
 
@@ -131,8 +128,6 @@ export async function updateCalendarEvent(
       },
     });
 
-    await syncNextHearingDate(existing.caseId, tx);
-
     return { ok: true, data: updated } as const;
   });
 
@@ -167,8 +162,6 @@ export async function deleteCalendarEvent(
     }
 
     await tx.calendarEvent.deleteMany({ where: { id: parsed.data.id, userId } });
-
-    await syncNextHearingDate(existing.caseId, tx);
 
     return { ok: true, data: { id: parsed.data.id } } as const;
   });

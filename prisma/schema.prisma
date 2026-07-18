@@ -53,7 +53,6 @@ model Case {
   caseNumber      String?
   caseType        String? // CIVIL | CRIMINAL | WRIT | APPEAL | COMMERCIAL | FAMILY | ARBITRATION | OTHER
   matterType      MatterType @default(LITIGATION)
-  nextHearingDate DateTime?
   description     String?
 
   // Phase 2a additive — litigation metadata
@@ -124,6 +123,7 @@ model CalendarEvent {
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+  @@index([caseId, hearingDate])
 }
 
 model Payment {

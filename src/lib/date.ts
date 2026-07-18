@@ -60,38 +60,6 @@ export function isFutureIST(d: Date): boolean {
 }
 
 /**
- * Filter a list, nulling out any item whose date field is strictly before IST-today.
- * Preserves items with null date field. Returns a new list; does not mutate.
- *
- * Used to guard cache columns (Case.nextHearingDate) that can go stale between
- * calendar mutations — server-side stale-past filter shared across dashboard/cases/case-detail.
- */
-export function filterStalePastHearing<T extends { nextHearingDate: Date | null }>(
-  items: T[]
-): T[] {
-  const floor = startOfTodayIST();
-  return items.map((c) => ({
-    ...c,
-    nextHearingDate: c.nextHearingDate && c.nextHearingDate >= floor ? c.nextHearingDate : null,
-  }));
-}
-
-/**
- * Nulls out `nextHearingDate` if it's strictly before IST-today.
- * Single-record variant of filterStalePastHearing — same guard, non-array shape.
- * Used for cache columns on single Case reads (case detail loader).
- */
-export function stripStalePastHearing<T extends { nextHearingDate: Date | null }>(
-  item: T
-): T {
-  const floor = startOfTodayIST();
-  return {
-    ...item,
-    nextHearingDate: item.nextHearingDate && item.nextHearingDate >= floor ? item.nextHearingDate : null,
-  };
-}
-
-/**
  * True if `d` represents IST-local midnight — i.e., an all-day event stored
  * as the UTC instant corresponding to 00:00 IST (which is 18:30 UTC prev day).
  * Uses Intl formatter — same canonical pattern as istDateKey/formatIndianDate.

@@ -1,7 +1,8 @@
 "use server";
 
 import { getServerUser, withServerUserContext } from "@/lib/session";
-import { startOfTodayIST, endOfTodayIST, filterStalePastHearing } from "@/lib/date";
+import { startOfTodayIST, endOfTodayIST } from "@/lib/date";
+import { getNextHearingDatesByCase } from "@/lib/next-hearing";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { fail, type Result } from "@/lib/result";
@@ -20,9 +21,11 @@ type DashboardCase = Prisma.CaseGetPayload<{
     title: true;
     clientName: true;
     status: true;
-    nextHearingDate: true;
   };
-}>;
+}> & {
+  // Derived live from CalendarEvent (former cache column dropped in W9 PR2).
+  nextHearingDate: Date | null;
+};
 
 export type DashboardData = {
   todayEvents: EventWithCase[];
@@ -64,22 +67,30 @@ export async function getDashboardData(): Promise<Result<DashboardData>> {
       take: 10,
     });
 
-    // Case.nextHearingDate is a synced cache column (see src/lib/calendar-sync.ts,
-    // wired into all CalendarEvent mutations in calendarActions.ts). Read it
-    // directly instead of re-deriving via a per-request groupBy.
+    // nextHearingDate is derived below via a live CalendarEvent groupBy
+    // (getNextHearingDatesByCase) — the cache column was dropped in W9 PR2.
     const allCases = await tx.case.findMany({
       where: { userId },
-      select: { id: true, title: true, clientName: true, status: true, nextHearingDate: true },
+      select: { id: true, title: true, clientName: true, status: true },
       orderBy: { updatedAt: "desc" },
     });
 
     const totalCases = await tx.case.count({ where: { userId, status: "ACTIVE" } });
     const totalTasks = await tx.task.count({ where: { userId, status: "pending" } });
 
-    // Cache is only re-synced on calendar mutations, so its "next" event can
-    // fall into the past between mutations. Filter stale-past values here so
-    // the dashboard never surfaces a "next hearing" that has already occurred.
-    const allCasesFresh = filterStalePastHearing(allCases);
+    // Live next-hearing from CalendarEvent (source of truth) instead of the
+    // Case.nextHearingDate cache column. Same IST-today floor as the old
+    // stale-past filter path — the query filters >= floor, so the value can
+    // never be stale-past. W9 PR2.
+    const nextByCase = await getNextHearingDatesByCase(
+      tx,
+      allCases.map((c) => c.id),
+      startOfTodayIST(),
+    );
+    const allCasesFresh = allCases.map((c) => ({
+      ...c,
+      nextHearingDate: nextByCase.get(c.id) ?? null,
+    }));
 
     return {
       ok: true,

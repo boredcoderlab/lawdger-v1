@@ -14,11 +14,12 @@ import {
   Hash,
   ArrowRight,
 } from "lucide-react";
-import { createCase } from "@/actions/caseActions";
+import { createCase, type CaseListItem } from "@/actions/caseActions";
 import { CASE_TYPES, type CaseType } from "@/lib/case-constants";
-// CaseRecord retired with cases/types.ts; the list view consumes the raw
-// Prisma Case shape now. 3.3 will swap this for a UI-tailored DTO.
-import type { Case as CaseRecord } from "@prisma/client";
+// The list view consumes the listCases row shape: the raw Prisma Case plus the
+// live-derived nextHearingDate (the cache column was dropped in W9 PR2).
+// 3.3 will swap this for a UI-tailored DTO.
+type CaseRecord = CaseListItem;
 import {
   PageLayout,
   DarkPaneHeaderTitle,
