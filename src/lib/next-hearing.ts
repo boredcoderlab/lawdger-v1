@@ -10,8 +10,8 @@ import { Prisma } from "@prisma/client";
  * `now` MUST be the same floor the old cache pipeline used — `startOfTodayIST()`
  * — NOT the current instant. The floor keeps all-day events (stored at IST
  * midnight = 18:30 UTC prev day) visible through the whole IST day (N49), and
- * makes the result byte-identical to the old `filterStalePastHearing(cache)`
- * path when the cache was in sync. Because the query itself filters `>= now`,
+ * makes the result byte-identical to the old stale-past filter over the cache
+ * read when the cache was in sync. Because the query itself filters `>= now`,
  * the result can never be stale-past — no separate stale filter is needed.
  *
  * Must be called with an RLS-scoped client (a `withServerUserContext` tx or a

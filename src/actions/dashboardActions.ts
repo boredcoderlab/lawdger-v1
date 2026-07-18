@@ -1,7 +1,7 @@
 "use server";
 
 import { getServerUser, withServerUserContext } from "@/lib/session";
-import { startOfTodayIST, endOfTodayIST, filterStalePastHearing } from "@/lib/date";
+import { startOfTodayIST, endOfTodayIST } from "@/lib/date";
 import { getNextHearingDatesByCase } from "@/lib/next-hearing";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -79,8 +79,8 @@ export async function getDashboardData(): Promise<Result<DashboardData>> {
 
     // Live next-hearing from CalendarEvent (source of truth) instead of the
     // Case.nextHearingDate cache column. Same IST-today floor as the old
-    // filterStalePastHearing path — the query filters >= floor, so the value
-    // can never be stale-past. W9 PR2.
+    // stale-past filter path — the query filters >= floor, so the value can
+    // never be stale-past. W9 PR2.
     const nextByCase = await getNextHearingDatesByCase(
       tx,
       allCases.map((c) => c.id),

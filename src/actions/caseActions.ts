@@ -29,7 +29,7 @@
  */
 
 import { CASE_TYPES } from "@/lib/case-constants";
-import { filterStalePastHearing, stripStalePastHearing, startOfTodayIST } from "@/lib/date";
+import { startOfTodayIST } from "@/lib/date";
 import { getNextHearingDatesByCase } from "@/lib/next-hearing";
 import {
   getServerScopedPrisma,
@@ -188,8 +188,8 @@ export async function listCases(
     const total = await tx.case.count({ where });
     // Live next-hearing from CalendarEvent (source of truth) instead of the
     // Case.nextHearingDate cache column. Same IST-today floor as the old
-    // filterStalePastHearing path — the query filters >= floor, so no stale
-    // value can survive. W9 PR2.
+    // stale-past filter path — the query filters >= floor, so no stale value
+    // can survive. W9 PR2.
     const nextByCase = await getNextHearingDatesByCase(
       tx,
       items.map((c) => c.id),
@@ -255,7 +255,7 @@ export async function getCaseWithChildren(
     if (!found) return { ok: true, data: null };
 
     // Live next-hearing from CalendarEvent instead of the cache column. Same
-    // IST-today floor as the old stripStalePastHearing path. W9 PR2.
+    // IST-today floor as the old stale-past filter path. W9 PR2.
     const nextByCase = await getNextHearingDatesByCase(tx, [found.id], startOfTodayIST());
     const withHearing = { ...found, nextHearingDate: nextByCase.get(found.id) ?? null };
 
