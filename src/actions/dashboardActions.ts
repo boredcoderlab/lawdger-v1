@@ -21,9 +21,11 @@ type DashboardCase = Prisma.CaseGetPayload<{
     title: true;
     clientName: true;
     status: true;
-    nextHearingDate: true;
   };
-}>;
+}> & {
+  // Derived live from CalendarEvent (former cache column dropped in W9 PR2).
+  nextHearingDate: Date | null;
+};
 
 export type DashboardData = {
   todayEvents: EventWithCase[];
@@ -65,12 +67,11 @@ export async function getDashboardData(): Promise<Result<DashboardData>> {
       take: 10,
     });
 
-    // nextHearingDate is selected here but overridden below with a live
-    // CalendarEvent groupBy (getNextHearingDatesByCase); the cache column is
-    // vestigial and dropped in W9 PR2 CP-5.
+    // nextHearingDate is derived below via a live CalendarEvent groupBy
+    // (getNextHearingDatesByCase) — the cache column was dropped in W9 PR2.
     const allCases = await tx.case.findMany({
       where: { userId },
-      select: { id: true, title: true, clientName: true, status: true, nextHearingDate: true },
+      select: { id: true, title: true, clientName: true, status: true },
       orderBy: { updatedAt: "desc" },
     });
 

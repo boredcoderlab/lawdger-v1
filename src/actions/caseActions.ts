@@ -154,7 +154,7 @@ const listCasesSchema = z.object({
 
 export async function listCases(
   input?: z.input<typeof listCasesSchema>,
-): Promise<Result<{ items: Case[]; total: number }>> {
+): Promise<Result<{ items: CaseListItem[]; total: number }>> {
   const parsed = listCasesSchema.safeParse(input ?? {});
   if (!parsed.success) {
     return fail("validation", parsed.error.issues[0]?.message ?? "Invalid input");
@@ -223,10 +223,18 @@ export async function getCase(id: string): Promise<Result<Case | null>> {
 
 // ─── getCaseWithChildren ─────────────────────────────────────────────────────
 
+// A Case list row with the live next-hearing derived from CalendarEvent
+// (former Case.nextHearingDate cache column dropped in W9 PR2). listCases
+// populates it via getNextHearingDatesByCase.
+export type CaseListItem = Case & { nextHearingDate: Date | null };
+
 export type CaseWithChildren = Case & {
   tasks: Task[];
   notes: Note[];
   calendarEvents: CalendarEvent[];
+  // Derived live from CalendarEvent (former cache column dropped in W9 PR2);
+  // populated by getCaseWithChildren via getNextHearingDatesByCase.
+  nextHearingDate: Date | null;
 };
 
 export async function getCaseWithChildren(
