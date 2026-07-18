@@ -176,6 +176,69 @@ async function main() {
     `seeded=${seededFee}, post-attack=${feeSurvivor} — ${feeSurvivor === seededFee ? "unchanged" : "MUTATED"}`,
   )
 
+  // ─── Check 9: deleteCase cross-tenant Document isolation (closes N59) ────
+  // Simulates a cross-tenant deleteCase-shaped attack directly against RLS
+  // (no userId filter in the where-clause — this tests the FORCE RLS
+  // boundary itself, not the app-level userId defence-in-depth exercised by
+  // checks 1-8). Confirms userB can neither delete userA's Case nor orphan
+  // userA's Document via the caseId path. Structural-only per N40.
+  const PROBE_CASE_TITLE = "[verify-phase32] N59 probe case"
+  const PROBE_DOC_FILENAME = "[verify-phase32] N59 probe doc"
+
+  // Idempotent bail-safe: sweep any leftover probe rows from a prior failed run.
+  await dbA.document.deleteMany({ where: { filename: PROBE_DOC_FILENAME } })
+  await dbA.case.deleteMany({ where: { title: PROBE_CASE_TITLE } })
+
+  const probeCase = await dbA.case.create({
+    data: { userId: userA.id, title: PROBE_CASE_TITLE },
+    select: { id: true },
+  })
+  const probeDoc = await dbA.document.create({
+    data: { userId: userA.id, caseId: probeCase.id, filename: PROBE_DOC_FILENAME },
+    select: { id: true },
+  })
+
+  try {
+    let bCaseDeleteCount: number | null = null
+    let bCaseDeleteThrew = false
+    try {
+      const r = await dbB.case.deleteMany({ where: { id: probeCase.id } })
+      bCaseDeleteCount = r.count
+    } catch {
+      bCaseDeleteThrew = true
+    }
+
+    let bDocDeleteCount: number | null = null
+    let bDocDeleteThrew = false
+    try {
+      const r = await dbB.document.deleteMany({ where: { caseId: probeCase.id } })
+      bDocDeleteCount = r.count
+    } catch {
+      bDocDeleteThrew = true
+    }
+
+    const caseSurvivor = await dbA.case.findFirst({ where: { id: probeCase.id } })
+    const docSurvivor = await dbA.document.findFirst({ where: { id: probeDoc.id } })
+
+    const attackBlocked =
+      (bCaseDeleteThrew || bCaseDeleteCount === 0) &&
+      (bDocDeleteThrew || bDocDeleteCount === 0)
+    const caseIntact = caseSurvivor !== null
+    const docIntact = docSurvivor !== null && docSurvivor.caseId === probeCase.id
+
+    record(
+      "9. deleteCase cross-tenant Document isolation (closes N59): scoped(B) attack on A's case+document blocked",
+      attackBlocked && caseIntact && docIntact,
+      `case-delete: ${bCaseDeleteThrew ? "threw" : `count=${bCaseDeleteCount}`}, ` +
+        `document-delete: ${bDocDeleteThrew ? "threw" : `count=${bDocDeleteCount}`}, ` +
+        `case survives: ${caseIntact}, document survives with caseId intact: ${docIntact}` +
+        (docSurvivor ? ` (caseId=${docSurvivor.caseId})` : " (document MISSING)"),
+    )
+  } finally {
+    await dbA.document.deleteMany({ where: { filename: PROBE_DOC_FILENAME } })
+    await dbA.case.deleteMany({ where: { title: PROBE_CASE_TITLE } })
+  }
+
   console.log("")
   const allPass = checks.every((c) => c.pass)
   console.log(allPass ? "ALL PHASE-3.2 RLS CHECKS PASS" : "FAILURES — RLS NOT SAFE")

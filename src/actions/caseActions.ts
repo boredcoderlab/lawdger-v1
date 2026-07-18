@@ -393,17 +393,19 @@ export async function deleteCase(id: string): Promise<Result<{ id: string }>> {
   }
 
   const user = await getServerUser();
-  const db = await getServerScopedPrisma();
 
-  // Manual cascade preserved from pre-3.2 behaviour. Schema-level onDelete
-  // is 3.2.x territory.
-  await db.task.deleteMany({ where: { caseId: parsed.data, userId: user.id } });
-  await db.note.deleteMany({ where: { caseId: parsed.data, userId: user.id } });
-  await db.calendarEvent.deleteMany({ where: { caseId: parsed.data, userId: user.id } });
-  await db.payment.deleteMany({ where: { caseId: parsed.data, userId: user.id } });
-
-  const result = await db.case.deleteMany({
-    where: { id: parsed.data, userId: user.id },
+  // Multi-write atomicity via withServerUserContext (N59 close).
+  // Note/CalendarEvent app-side deletes are belt-and-suspenders vs PR1's DB-level Cascade —
+  // defensive posture retained per W9 PR3 scope decision; cleanup finding logged as N87.
+  const result = await withServerUserContext(async (tx) => {
+    await tx.task.deleteMany({ where: { caseId: parsed.data, userId: user.id } });
+    await tx.note.deleteMany({ where: { caseId: parsed.data, userId: user.id } });
+    await tx.calendarEvent.deleteMany({ where: { caseId: parsed.data, userId: user.id } });
+    await tx.payment.deleteMany({ where: { caseId: parsed.data, userId: user.id } });
+    await tx.document.deleteMany({ where: { caseId: parsed.data, userId: user.id } });
+    return tx.case.deleteMany({
+      where: { id: parsed.data, userId: user.id },
+    });
   });
 
   if (!result.count) return fail("not_found", "Case not found");
