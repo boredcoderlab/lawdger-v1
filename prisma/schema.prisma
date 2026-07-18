@@ -124,6 +124,7 @@ model CalendarEvent {
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+  @@index([caseId, hearingDate])
 }
 
 model Payment {
