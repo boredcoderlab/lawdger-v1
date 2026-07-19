@@ -232,7 +232,7 @@ export default function SettingsClient({
           <div className="mt-auto pt-10 shrink-0">
             <div className="flex items-center gap-2 text-lawdger-cream/30 dark:text-muted-foreground">
               <Shield className="w-3 h-3" />
-              <span className="text-[9px] font-bold uppercase tracking-widest">End-to-End Encrypted Workspace</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest">Encrypted in transit & at rest</span>
             </div>
           </div>
         </>
